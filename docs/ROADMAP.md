@@ -6,9 +6,9 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 | --- | --- | --- |
 | 0 | Deterministic simulation, commands, checksums | Done |
 | 1 | Isometric field, selection, movement around obstacles | Done |
-| 2 | Workers, ore, aether, construction, production | Not started |
-| 3 | Combat, destruction, victory and defeat | Not started |
-| 4 | Conventional opponent, fog of war, replay file | Not started |
+| 2 | Workers, ore, aether, construction, production | Done |
+| 3 | Combat, destruction, victory and defeat | Done |
+| 4 | Conventional opponent, fog of war, replay file | Done |
 | 5 | Optional commander gateway and deterministic fallback | Not started |
 | 6 | Headless arena, benchmarks, comparable seeds | Not started |
 | 7 | Authoritative multiplayer | Not started |
@@ -29,4 +29,4 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 
 ## Later milestones
 
-Economy, combat, fog, a conventional opponent, replays, commanders, the arena and multiplayer wait until the move slice is playable. Language-model integration does not begin before milestone 5, and the match must still run with that integration disabled.
+Milestones 2, 3 and 4 are the skirmish: economy, combat, fog, General Varek and a human replay file. The same match runs under Vitest, which is the headless check for this seed. Benchmarks, the commander gateway and multiplayer are not in the client. Language-model integration does not begin before milestone 5, and the match must still run with that integration disabled.

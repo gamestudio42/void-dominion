@@ -8,27 +8,29 @@ packages/content     field size, costs, spawns
 packages/kernel      RNG, FNV-1a, fixed-step clock
 ```
 
-Dependencies point down only: `game → view3d → simulation → content, kernel`. The deterministic packages have no DOM and no clock, so they run the same in the browser and in Vitest.
+Dependencies point down only: `game` uses `view3d` and `simulation`; `view3d` does not import the simulation; `simulation` uses `content` and `kernel`. The deterministic packages have no DOM and no clock, so they run the same in the browser and in Vitest.
 
 `apps/game` owns the frame loop. `FixedStepper` converts frame time into whole 1/20 s steps. Frames longer than 0.25 s and anything beyond 8 steps per frame are dropped. The renderer interpolates with the leftover alpha. Wall time never enters the simulation.
 
-`packages/view3d` draws the field and picks points on the ground. It does not decide whether an order is legal. Selection is interface state. A `move` command carries the selected ids.
+`packages/view3d` draws units, buildings, nodes, rocks and the fog. It does not decide whether an order is legal. Selection is interface state. The client sends intentions: move, stop, attack, attack-move, gather, build and produce.
 
 ## Commands
 
-A command is an intention. The engine applies queued commands at the start of a tick, in sequence order, then moves units.
+A command is an intention. The engine applies queued human commands at the start of a tick, in sequence order. General Varek then issues the same kind of command directly. Rejected intentions do not change the world.
 
 ```ts
-interface CommandEnvelope { seq: number; tick: number; cmd: Command }
-type Command = {
-  type: 'move';
-  playerId: number;
-  unitIds: number[];
-  to: { x: number; y: number };
-};
+type Command =
+  | { type: 'move' | 'attack_move'; playerId: number; unitIds: number[]; to: { x: number; y: number } }
+  | { type: 'stop'; playerId: number; unitIds: number[] }
+| { type: 'attack'; playerId: number; unitIds: number[]; targetId: number }
+  | { type: 'gather'; playerId: number; unitIds: number[]; nodeId: number }
+  | { type: 'build'; playerId: number; unitIds: number[]; kind: string; at: { x: number; y: number } }
+  | { type: 'produce'; playerId: number; buildingId: number; kind: string };
 ```
 
-A rejected command returns a reason key (`unknown_unit`, `not_owner`, `out_of_bounds`, `blocked`, `no_path`) and does not change the checksum.
+A rejected command returns a reason key (`unknown_unit`, `not_owner`, `out_of_bounds`, `blocked`, `no_path`, `no_ore`, `no_aether`, `no_supply`, `footprint`, `no_refinery`, `not_visible`, `cannot_produce`, `not_engineer`) and does not change the checksum.
+
+After commands, one tick steers, moves, gathers and builds, refreshes vision, resolves shots and deaths, then remembers buildings. A decided match stops stepping. The human replay stores `{ ticks, commands }` for player 1 only. Varek is simulated again on load.
 
 ## Determinism
 

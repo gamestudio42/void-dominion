@@ -2,7 +2,7 @@
 
 ## Fantasy
 
-You are a commander of the Helion Directorate on the Erebus Frontier. You take and hold ground by spending ore and aether faster than a rival can answer. Inferred from the project brief; this build does not yet contain a rival.
+You are a commander of the Helion Directorate on the Erebus Frontier. You take and hold ground by spending ore and aether faster than a rival can answer. Inferred from the project brief.
 
 ## Pillars
 
@@ -15,24 +15,26 @@ You are a commander of the Helion Directorate on the Erebus Frontier. You take a
 
 Scout, gather, build, produce, fight, expand.
 
-The beat this build changes is **select and order a move**. Success is the engineers arriving on open ground by walking around the blockage. Failure is a blocked cell: the engineers stay, a mark sits on the blockage, and the interface says why.
+The beat this build changes is the whole skirmish: gather ore, spend it, train soldiers, and lose the match if the command center falls. Success is ore rising and a building or unit appearing after you pay. Failure is a refused order whose reason stays on screen, or a command center destroyed by the opponent.
 
 ## What this build does
 
-- Shows a 128×128 field, one blockage and twenty engineers.
-- Selects one engineer or a box of them. Shift adds to the selection.
-- Right-click walks the selection around the blockage to open ground.
-- Refuses a blocked cell without moving anyone, and shows the reason.
-- Pans with WASD, zooms with the wheel. Tick and FPS stay behind F3.
+- Starts a Helion versus Helion skirmish on the 128×128 field. The human is player 1. General Varek, a weight-driven opponent, is player 2.
+- Engineers already mine the nearest ore. Ore is delivered to a command center or a finished extractor. Aether needs a finished refinery touching the node.
+- Builds the Helion roster from `packages/content`: extractor, refinery, generator, barracks, factory, turret and a second command center. Barracks and the factory train the combat units.
+- Fights with hit points, armor and cooldown. A unit or turret only shoots what its player can see. Destroying every command center of a player ends the match. Both lost on the same tick is a draw.
+- Hides unexplored ground. Explored ground keeps a memory of enemy buildings, including a wreck if one falls out of sight.
+- Records the human's commands. Loading that file resimulates Varek; his orders are not stored.
+- Shows ore, aether, supply, power and the match clock. The command card stops, mines, attacks, builds and trains. WASD pans, the wheel zooms, F3 shows tick and FPS.
 
 ## What this build does not do
 
-Ore, aether, supply, workers, construction, production, weapons, fog of war, a conventional opponent, replays on disk, language-model commanders, multiplayer, and the Mycelian Collective and Aether Ascendancy. Those stay on the roadmap. The interface must not show counters for them.
+Language-model commanders, network multiplayer, and the Mycelian Collective and Aether Ascendancy. The match runs with those absent. Meshes and effect sequences are not baked into this client; units and buildings are still geometric.
 
-## Factions, later
+## Factions
 
-Helion Directorate is the only faction in the first playable match: mechanised units, turrets, long-range guns, repairs, modular bases, slow logistics. Mycelian and Aether are design notes only until that match exists.
+Helion Directorate is the only faction on the field: mechanised units, turrets, long-range guns and a modular base. Mycelian and Aether remain design notes.
 
-## Hypothesis for the move slice
+## Hypothesis
 
-The player will select the engineers and send them around the blockage, and will see a refusal when the destination cannot be reached. Revert the slice if a unit crosses the blockage, if the refusal is not readable, or if two runs with the same orders disagree.
+The player will mine, refuse an illegal building, and spend ore on a structure or a soldier, and will not see the enemy base until something of theirs has sight of it. Revert the slice if ore never moves, if a refused order still spends resources, or if two runs with the same human commands disagree.

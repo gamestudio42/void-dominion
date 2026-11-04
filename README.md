@@ -1,8 +1,8 @@
 # Void Dominion
 
-A science-fiction real-time strategy game for the browser. You command the Helion Directorate on the Erebus Frontier: select forces, spend ore and aether, and take ground from a rival. The same orders will later be available to a conventional opponent and to optional AI commanders. The match does not require a language model.
+A science-fiction real-time strategy game for the browser. You command the Helion Directorate on the Erebus Frontier: select forces, spend ore and aether, and take ground from General Varek. The same orders are available to that opponent. The match does not require a language model or a network.
 
-This build is a field test. Twenty engineers stand on a 128×128 grid with one blockage. Select them, then right-click open ground to walk them around it. A blocked cell is refused, and they stay put. There is no economy, combat or commander yet.
+This build is one skirmish. Two Helion bases share a 128×128 field. Engineers mine at the start. The command card builds and trains. Fog hides the other base until you have sight of it. Destroying the enemy command center wins. A refused order names the reason and does not spend resources.
 
 ## Develop
 

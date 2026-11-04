@@ -4,15 +4,16 @@
 
 ## Required for the simulation
 
-- Two simulations with the same seed and the same commands report the same `hashState()` after the same ticks.
-- A rejected `move` leaves the checksum equal to a run that did not receive the command.
-- A path from the demo spawns to the far side of the field does not enter `DEMO_OBSTACLE`.
-- Twenty units given one order finish on distinct walkable cells.
+- Two simulations with the same seed and the same human commands report the same `hashState()` after the same ticks, including Varek's resimulated orders.
+- A rejected command leaves the checksum equal to a run that did not receive it.
+- A path around `DEMO_OBSTACLE` does not cut corners, and a match unit never finishes a tick on a blocked cell.
+- Ore rises when the starting engineers mine. An unaffordable building, an aether gather without a refinery, a hidden attack and a supply overflow are refused.
+- A seen building that dies out of sight remains a wreck in memory. A replay file of human commands restores the checksum.
 
 ## What a browser session must show
 
-When the field is in the client: select units, move them around the blockage, and order a cell they cannot enter. Record what happened separately from why you think it happened. An agent session is not a player playtest.
+When the skirmish is in the client: ore increasing, a refused build or train with a readable reason, and the enemy base hidden at the start. Record what happened separately from why you think it happened. An agent session is not a player playtest.
 
 ## Not in this stage
 
-Playwright, performance benches and headless match reports start when a match exists.
+Playwright and performance benches are not set up. The match itself already runs headless under Vitest.

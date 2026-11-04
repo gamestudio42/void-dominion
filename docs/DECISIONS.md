@@ -44,4 +44,8 @@ The simulation stays free of the DOM, so a worker can host it later. The first f
 
 ## 011. The first player-facing slice is select and move
 
-Success and failure of a move order are the definition of done for that slice. Ore, aether, combat and a commander strip are not shown before those systems exist.
+Success and failure of a move order were the definition of done for that slice. It has been replaced as the boot experience by the skirmish in 012.
+
+## 012. The boot experience is one Helion skirmish
+
+The playable game is player against General Varek on a shared deterministic match: ore, aether, construction, production, combat, fog and a human replay. Varek uses personality weights and the same commands as the player. He is simulated again when a replay loads, so his orders are not written into the file. The enemy start is public scenario data; unit positions still have to be seen. Colyseus, the language-model gateway and Docker are not added. The match has to run without them. Numbers live in `packages/content`. Visuals stay geometric until a mesh or effect sequence passes its pipeline.

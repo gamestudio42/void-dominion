@@ -18,7 +18,7 @@ Generated art follows `docs/artcraft-pipeline.md` and `docs/blender-pipeline.md`
 6. Every new system gets unit tests in `packages/<package>/test/`.
 7. Run `pnpm check` (typecheck, lint, unit tests) before each commit. Run `pnpm build` when the client changes.
 8. Original work only. No names, art, text or unit designs from the games that inspired this one. Third-party assets need a license entry in `docs/assets.md`.
-9. Code, comments, docs and commits are in English. Player text goes through `apps/game/src/locales/` (English source, `pt-BR` translation).
+9. Code, comments, docs and commits are in English. Player text goes through `apps/game/src/locales.ts` (English source, `pt-BR` translation).
 10. Commits use the studio format in `.gitmessage`: `[TAG] area: short description`, with the reason in the body.
 11. 2D generated art goes through ArtCraft and lands in the client only after `manifest.json` says `pass` or `warn`. 3D meshes are generated from a JSON spec by the headless Blender pipeline and ship as verified GLB. Do not rotate a mesh in the client to fix an export.
 12. If a rule in the docs proves wrong in practice, implement the simplest alternative that keeps the pillars, record it in `docs/DECISIONS.md` and continue.
