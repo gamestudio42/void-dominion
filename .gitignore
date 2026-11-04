@@ -1,0 +1,21 @@
+# Machine-local asset staging: renders, build logs and wrapped command files.
+# Only verified exports and their manifests leave staging (see docs/artcraft-pipeline.md).
+assets/_staging/
+
+# ArtCraft app logs written next to a build
+*.build.log
+.render-*.log
+
+# Godot
+.godot/
+export_templates/
+build/
+
+# Node / web clients
+node_modules/
+dist/
+.next/
+
+# OS noise
+.DS_Store
+Thumbs.db

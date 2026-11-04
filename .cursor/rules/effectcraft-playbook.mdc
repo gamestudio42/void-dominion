@@ -1,0 +1,189 @@
+---
+description: EffectCraft/PhotoCraft headless recipes — comp builds, particle VFX, expressions, verification, engine handoff
+globs: assets/**,tools/asset-pipeline/**,**/*.ecproj,**/*.build.json,docs/artcraft-pipeline.md
+alwaysApply: false
+---
+
+# EffectCraft playbook
+
+Measured on EffectCraft 0.21.0 / PhotoCraft 0.20.1, Linux, no GPU, no display.
+Numbers below are from this machine, not from the docs. Re-verify after an
+upgrade: the registry (`effectcraft-cli commands`) is authoritative, params
+drift between weekly releases.
+
+## CLI surface
+
+`info` · `commands [--filter TEXT]` · `exec <id> --params JSON` ·
+`run --commands FILE` (JSON array of `{command, params}`, `id` also accepted) ·
+`props <comp> <layer> [--flat] [--time S]` · `get` / `set` · `render` ·
+`render-frame` · `script FILE.jsx` · `mcp` · `bench`.
+
+**Every subcommand is a fresh process.** `exec comp.new` in one call is gone in
+the next. Either chain the whole build in one `run --commands`, or pass the
+`.ecproj` as the trailing argument and save:
+
+```bash
+effectcraft-cli run --commands build.json          # ends with file.saveAs
+effectcraft-cli render --comp X --format png --channels rgba --fps 30 \
+  --start 0 --end 0.6 --out frames/f.png asset.ecproj
+effectcraft-cli props impact_hit sparks --flat asset.ecproj   # discover paths
+```
+
+## Building a comp
+
+Layer kinds: `rect|rounded|ellipse|star|polygon|none`. `kind: "none"` is an
+empty layer — required before particle/pattern effects, otherwise the layer's
+own fill sits behind the effect and the export is opaque.
+
+`effect.apply {effect: "CC Particle World", layers: ["sparks"]}` then every
+param is `effects/#1/<param>` (index is 1-based per layer). Confirm with
+`props <comp> <layer> --flat`.
+
+Layer transform paths: `transform/scale` (**vec3**), `transform/opacity`,
+`transform/rotation`, `transform/rotationX|rotationY`. Colors in 3D materials
+live at `materialOptions/baseColor` and `materialOptions/emissive` — emissive is
+a **color**, a scalar leaves the material black.
+
+**Never use `prop.toggleAnimation` for the first key**: it ignores `value` and
+inherits the current one (100%), so a layer meant to start at 15% renders at
+full size. Use `prop.addKey` at `time: 0` explicitly.
+
+## Particle VFX (`ec.sim.ccparticleworld`)
+
+| Path | Meaning |
+|---|---|
+| `birthRate` | emission rate; key it high → 0 to get a burst instead of a stream |
+| `longevity` | particle lifetime, seconds |
+| `producer/producerX|Y|Z`, `producer/radiusX|Y|Z` | emitter position and spread (world units, default radius 0.025) |
+| `physics/animation` | enum `0 Explosive, 1 Direction Axis, 2 Cone Axis, 3 Viscouse, 4 Twirly, 5 Vortex, 6 Fire, 7 Jet Sideways, 8 Fractal Omni, 9 Fractal Uni` |
+| `physics/velocity`, `physics/gravity`, `physics/resistance` | motion; gravity shifts the alpha centroid, a fast "is the sim running" check |
+| `particle/particleType` | enum `0 Line, 1 Shaded Sphere, 2 Faded Sphere, 3 Bubble, 4 Star, 5 Motion Polygon, 6 Tri-Polygon, 7 Cube, 8 Textured Square` |
+| `particle/birthSize`, `deathSize`, `sizeVariation`, `maxOpacity` | look and density |
+| `particle/birthColor`, `deathColor` | **RGBA arrays**, not hex |
+| `particle/transferMode` | enum `0 Composite, 1 Screen, 2 Add, 3 Black Matte` — use 2 for sparks |
+| `extras/randomSeed` | 0–10000, the per-instance variation knob |
+
+Working burst (the tested recipe in `tools/asset-pipeline/examples/impact_burst.build.json`):
+320×320, 30 fps, 0.6 s → `birthRate` keyed 60 → 0 over 0.07 s, `longevity` 0.45,
+`velocity` 1.6, `gravity` 0.9, `particleType` 2, `maxOpacity` 100,
+`birthColor [1,0.85,0.45,1]` → `deathColor [1,0.25,0.05,0]`. Measured: peak
+coverage 1.84 % at frame 5 (0.167 s), zero by 0.567 s. Render cost ~0.07 s/frame
+at 320², ~0.17 s for the whole 18-frame WebM encode.
+
+Timing window for a hit: peak between 0.15 s and 0.25 s, fully gone before
+0.6 s. Raise density and *shorten* longevity rather than asking for more
+particles — same peak, earlier death.
+
+## Expressions
+
+`prop.setExpression {layer, path, expression}` — AE-style JS (`time`, `value`,
+`Math`, `wiggle`, `seedRandom`).
+
+```
+100 * Math.exp(-3.0 * time) * Math.max(0, 1 - time / 0.78)   # fade that reaches 0
+value + wiggle(11, 1.1)                                      # camera shake
+```
+
+`Math.exp` alone never reaches zero: a fading layer still reports alpha on the
+last frame. Multiply by the linear ramp and verify the **last** frame.
+
+## Seed families
+
+One comp, N renders: `prop.set effects/#1/extras/randomSeed`, `file.saveAs
+<asset>_<seed>.ecproj`, render, verify. Ship an `index.json` with seed, file,
+sha256, peak coverage, peak time, death time so the engine reads an index
+instead of guessing names. Keep the variation in *pattern*, never in *timing*:
+every variant must peak and die at the same instants or swapping them changes
+the feel of the hit. Prove variants differ by a per-pixel alpha diff above a
+threshold — a changed pixel count means new geometry, an identical count with a
+new palette means only the colour moved.
+
+## Verification (never skip)
+
+```bash
+FB="${FFMPEG_BIN:-$(command -v ffmpeg)}"
+"$FB" ... # or, all of it, via the repo script:
+tools/asset-pipeline/verify_export.sh assets/_staging/<asset>/frames --asset <asset> --fps 30
+```
+
+What it does under the hood, if you ever need it by hand:
+
+```bash
+ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,width,height \
+  -show_entries stream_tags=alpha_mode -of default=nw=1 out.webm
+# VP9 alpha lives in BlockAdditions: only libvpx-vp9 decodes it
+ffmpeg -v error -y -c:v libvpx-vp9 -i out.webm -vf alphaextract -f rawvideo -pix_fmt gray a.raw
+# then count alpha >= 8 per frame in a.raw (python3 reading the file, never a pipe-to-interpreter)
+```
+
+Measured pitfalls:
+
+- Frame 0 of an animated comp decodes to alpha 0 — correct, not a broken channel.
+- `pix_fmt=yuv420p` on WebM is normal; `alpha_mode=1` only proves the tag.
+- Lossy VP9 spreads energy: the same asset measured 1.84 % coverage in PNG and
+  1.84 % peak / wider tails in WebM. Compare PNG to PNG.
+- ProRes 4444 writes `yuva444p12le` (12-bit); convert to 8-bit before engine use.
+- VP9 `quality best` runs ~3 fps at 1080p on CPU; budget encode time, and build
+  at the size the engine needs (320², not 1080p) unless the asset is a hero card.
+
+## PhotoCraft (batch 2D)
+
+```bash
+photocraft-cli batch --actions actions.json --in frames --out mobile
+photocraft-cli convert in.psd out.png
+photocraft-cli info in.psd          # layer tree as JSON
+```
+
+- `actions.json` is `[{"command": "image.imageSize", "params": {...}}]` — the id
+  is `image.imageSize`, not `image.resize`; a wrong id fails per file and the
+  run still exits 1 with `FAIL … unknown command` per file. Read the counts.
+- Downscaling keeps alpha exactly (400→200 px: coverage 7.53 % → 7.60 %).
+- `file.automate.contactSheetII` flattens onto **white** and drops alpha. Use it
+  for review grids only; build alpha atlases with ffmpeg/xatlas/the engine.
+
+## Engine handoff (Godot 4.7 verified)
+
+```bash
+godot --headless --path . --import
+godot --headless --path . --script res://scripts/validate.gd   # exit 0 = PASS
+godot --path . --rendering-driver opengl3 --write-movie /tmp/f.png --fixed-fps 30 --quit-after 36
+```
+
+- `validate.gd` extends **`SceneTree`**, runs from `_init()`, loads each texture,
+  asserts size and `Image.detect_alpha()`, prints `RESULT … status=PASS|FAIL`,
+  calls `quit(0|1)`.
+- `SpriteFrames.get_frame_count()` needs the animation name:
+  `get_frame_count("default")` — without it the script fails to parse.
+- `VideoStreamTheora` has no `get_length()` in 4.7; calling it is a SCRIPT ERROR
+  that does not fail the run.
+- Exported PCK: `DirAccess` + `ends_with(".png")` matches nothing; build paths
+  and test `ResourceLoader.exists()`.
+- Atlases: packing 240 frames into 8 sheets took 240 files → 8, 5.0 MB → 2.9 MB
+  and 37–40 fps → 43–45 fps, but **did not reduce draw calls** (106–108 vs
+  105–109). Measure with `Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME`.
+
+## MCP (interactive only)
+
+Registered in `.cursor/mcp.json` as `effectcraft`, write root
+`assets/_staging`. Tools: `mcp_effectcraft_<tool>`. Prefer
+`describe_command` before `execute_command` (it returns the param schema);
+`command_batch` takes `{"steps": [{"id": …, "params": …}]}` — the key is `id`,
+not `command`. 27 tools; keep them out of the loop for anything a script can do.
+
+Verified on this machine: `open_project {"demo":true}` loads the built-in demo
+(comps `Lower Third` 1920×1080, `EffectCraft Intro`, `3D Showcase`),
+`save_project` writes inside the staging root and refuses anything outside it
+(`cannot write …: it is outside the automation roots`). The demo project is the
+cheapest smoke target when you only need to prove the server is alive.
+
+## Never trust a report
+
+Measured failure: a small model invoked as a subprocess answered
+`"status":"OK", "outputPath":"…/output.webm"` with zero tool calls and no file on
+disk. Check the artifact exists, decode it, quote the manifest.
+
+## SoundCraft 0.17.0
+
+`file.bounce_mix` writes a 110-byte, 0.00002 s WAV on a fresh session and on the
+demo project — headless bounce does not work. For SFX use ffmpeg
+(`anoisesrc` + `sine`, `afade=curve=exp`); keep SoundCraft for interactive work.

@@ -1,0 +1,22 @@
+[
+  {"command": "comp.new", "params": {"name": "impact_burst", "width": 320, "height": 320, "frameRate": 30, "duration": 0.6}},
+  {"command": "layer.newShape", "params": {"kind": "none", "name": "sparks"}},
+  {"command": "effect.apply", "params": {"effect": "CC Particle World", "layers": ["sparks"]}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/particle/particleType", "value": 2}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/particle/transferMode", "value": 2}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/particle/maxOpacity", "value": 100}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/particle/birthSize", "value": 0.06}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/particle/deathSize", "value": 0.005}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/particle/sizeVariation", "value": 45}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/particle/birthColor", "value": [1.0, 0.85, 0.45, 1.0]}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/particle/deathColor", "value": [1.0, 0.25, 0.05, 0.0]}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/longevity", "value": 0.45}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/physics/animation", "value": 0}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/physics/velocity", "value": 1.6}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/physics/gravity", "value": 0.9}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/producer/radiusX", "value": 0.05}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/producer/radiusY", "value": 0.05}},
+  {"command": "prop.set", "params": {"layer": "sparks", "path": "effects/#1/extras/randomSeed", "value": 1234}},
+  {"command": "prop.addKey", "params": {"layer": "sparks", "path": "effects/#1/birthRate", "time": 0, "value": 60}},
+  {"command": "prop.addKey", "params": {"layer": "sparks", "path": "effects/#1/birthRate", "time": 0.07, "value": 0}}
+]

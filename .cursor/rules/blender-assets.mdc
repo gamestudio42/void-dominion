@@ -1,0 +1,51 @@
+---
+description: Blender low-poly mesh rules — spec-driven generation, headless bake, GLB parsed before shipping
+globs: tools/asset-pipeline/blender/**,assets/models/**,**/*.glb,**/*.gltf,docs/blender-pipeline.md
+alwaysApply: false
+---
+
+# Blender meshes (low-poly) — rules
+
+Convention: `docs/blender-pipeline.md`. Everything below is measured on
+Blender 5.2.2 LTS, headless, CPU only.
+
+1. **Generate from a spec, not from a .blend.** The JSON spec plus
+   `generate_lowpoly.py` is the source of truth; a `.blend` saved by hand is not
+   reviewable in a diff. If a mesh truly needs hand work, say so and commit the
+   `.blend` next to the spec.
+
+2. **Never run `python3 generate_lowpoly.py`.** `bpy` exists only inside
+   Blender: `blender -b --factory-startup -P generate_lowpoly.py -- --spec …`.
+   `--factory-startup` is mandatory, or the user's preferences leak into the
+   build.
+
+3. **Render into `assets/_staging/<asset>/`, ship to `assets/models/<asset>/`.**
+   Only after verification. Staging is gitignored.
+
+4. **A GLB is not an asset until it is parsed.** Run
+   `python3 tools/asset-pipeline/blender/verify_glb.py <file.glb> --asset <name>
+   --max-tris <budget> --no-textures`. It reads the container, not the exporter
+   log, and writes/merges `manifest.json`.
+
+5. **Orientation contract:** nose **+Y in Blender** → **−Z in glTF** (forward in
+   Godot/three.js). Longest side = `unit_scale`. Origin at the bbox centre, or
+   at the base with `"ground": true`.
+
+6. **Budgets:** prop 150–400 tris, ship/character 300–1500. One mesh, one node,
+   flat shading, one material slot per palette entry. No textures — colour is
+   materials. Bevel costs triangles and is what makes low-poly read as
+   intentional.
+
+7. **Report the numbers, not an opinion:** triangles, materials, GLB bytes,
+   bounds, bake time. "Looks good in the viewport" is not a validation, and this
+   pipeline is headless — there is no viewport.
+
+8. **Check the render, cheaply.** An ASCII silhouette from the alpha channel
+   catches a camera inside the mesh, black frames, or an off-centre asset. Keep
+   `atlas.png` for the human.
+
+9. **Do not install add-ons, add a second exporter, or switch the engine to
+   EEVEE** without asking. Cycles CPU at 16–24 samples is the working default.
+
+Staging stays gitignored; committing, pushing, merging and rebasing still need
+explicit authorization (GameStudio42 standards, §7).

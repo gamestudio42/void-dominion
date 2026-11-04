@@ -1,0 +1,63 @@
+---
+description: ArtCraft asset rules — generated art enters the game only through tools/asset-pipeline, verified
+alwaysApply: true
+---
+
+# Generated art (ArtCraft) — rules
+
+Read this before touching art, VFX, HUD/UI animation, sprites or textures, or
+anything under `assets/`. Convention: `docs/artcraft-pipeline.md`. Recipes:
+`.cursor/rules/effectcraft-playbook.mdc`.
+
+3D meshes (props, ships, characters) are **not** an ArtCraft job — they come from
+Blender through `tools/asset-pipeline/blender/`; see
+`.cursor/rules/blender-assets.mdc` and `docs/blender-pipeline.md`.
+
+1. **Staging only.** Render into `assets/_staging/<asset>/`. Never write a
+   render, an atlas, or a preview straight into the path the engine imports
+   (`assets/vfx/`, `res://`, the web client's static folder).
+
+2. **No manifest, no asset.** An export ships only after
+   `tools/asset-pipeline/verify_export.sh` (or `bake.sh`, which calls it) has
+   decoded its alpha and written `manifest.json` with `verdict: pass|warn`.
+   A `warn` gets reported, never silenced.
+
+3. **PNG sequence is the asset; alpha video is the preview.** Godot 4.7 has no
+   `VideoStreamWebm`, and WebM → OGV conversion drops the alpha plane. Deliver
+   `frames/f_%05d.png` (RGBA) and let the engine build `SpriteFrames`/sheets.
+
+4. **Frame 0 of a VFX comp is empty on purpose.** Verifying at t=0 makes a
+   correct export look broken. Sample mid-animation, and check the *last*
+   frame carries no alpha (`last_frame_max_alpha < 8`).
+
+5. **Pin the tool.** Record `effectcraft-cli --version` in the manifest; after
+   an upgrade re-run `effectcraft-cli commands` and
+   `tools/asset-pipeline/selftest.sh` before re-baking anything shipped.
+
+6. **Source of truth is versioned.** The `.ecproj` plus the `*.build.json`
+   recipe reproduce the render. Never hand-edit a `.png`, a `.import`, or a
+   generated `.tres` to "fix" an asset — fix the recipe and re-bake.
+
+7. **A success line is not evidence.** EffectCraft reports `done:` for files
+   that render empty, and sub-agents have reported outputs that were never
+   written. Open the file, run the verifier, quote the numbers.
+
+8. **One app per need.** `effectcraft-cli` for animation/VFX,
+   `photocraft-cli` for batch 2D. Do not add an MCP server, install another
+   ArtCraft app, or restructure the pipeline without asking the user first.
+
+9. **Report in Portuguese, numbers over adjectives.** Version, what was built,
+   peak alpha coverage and when, when it dies, file sizes, manifest path. Say
+   plainly what was not executed.
+
+## The only commands you need
+
+```bash
+tools/asset-pipeline/selftest.sh                       # prove the toolchain
+tools/asset-pipeline/bake.sh --asset <name> --comp <comp> \
+  --build tools/asset-pipeline/examples/<recipe>.build.json --duration 0.6 --fps 30
+tools/asset-pipeline/verify_export.sh <file-or-dir> --asset <name> --fps 30
+```
+
+Staging is gitignored. Committing, pushing, merging or rebasing still requires
+explicit authorization (GameStudio42 standards, §7).
