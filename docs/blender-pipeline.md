@@ -135,14 +135,23 @@ quote the triangle count and bounds in the report — not "looks good".
 
 ## Engine handoff
 
+**This repository loads GLB files with Three.js.** Copy a verified
+`assets/models/<asset>/<asset>.glb` into the web client. Do not rotate the mesh
+in the client to fix a wrong export — the orientation contract above is the
+fix. Keep `manifest.json` beside the shipped file. After a Blender upgrade,
+re-bake and diff triangle count and bounds before replacing art.
+
+`tools/asset-pipeline/blender/examples/scout_ship.json` proves the pipeline. It
+is not a Helion unit and must not be spawned in a match.
+
+Godot can import the same GLB, but this game does not run Godot:
+
 ```bash
-godot --headless --path . --import        # picks up .glb through the importer
+godot --headless --path . --import        # other engines only
 ```
 
 - Godot 4 imports `.glb` natively; the material colours survive, the emissive
   strength is clamped by the environment — re-check glow in the scene, not in
   the file.
-- The PCK/`DirAccess` trap from `docs/artcraft-pipeline.md` applies: build
-  paths and test `ResourceLoader.exists()`, never filter `res://` listings.
-- Keep `manifest.json` next to the shipped `.glb`; after a Blender upgrade
-  re-run the bake and diff triangle count and bounds before replacing art.
+- The PCK/`DirAccess` trap from `docs/artcraft-pipeline.md` applies to Godot
+  exports only.

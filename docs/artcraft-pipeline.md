@@ -104,7 +104,12 @@ reaches zero) or `fail` (no visible alpha / effectively empty). Only `pass` and
 
 **PNG sequence is the asset. Alpha video is the preview.** Measured on Godot
 4.7.2: there is no `VideoStreamWebm`, and converting WebM → OGV drops the alpha
-plane, so a video never carries transparency into the engine.
+plane, so a video never carries transparency into a Godot project.
+
+**This repository is a Three.js client, not a Godot project.** Ship a verified
+PNG sequence (or a sheet packed from it) and load those frames from the web
+client. Do not add `res://` paths or `SpriteFrames` here. The Godot notes below
+stay as measurements of the tool, for games that still use that engine.
 
 | Target | Deliver | Note |
 |---|---|---|
@@ -135,7 +140,7 @@ because the CLI path is the one that gets verified.
 
 ## Reporting
 
-Report in Portuguese, numbers over adjectives: app version, what was built and
+Report in English, numbers over adjectives: app version, what was built and
 rendered, measured alpha (peak coverage, peak time, time to zero), file sizes,
 and the manifest path. Say plainly what was not run. A render that "completed
 successfully" is not evidence — the manifest is.

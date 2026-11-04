@@ -15,6 +15,12 @@ build/
 node_modules/
 dist/
 .next/
+.vite/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.env
 
 # OS noise
 .DS_Store

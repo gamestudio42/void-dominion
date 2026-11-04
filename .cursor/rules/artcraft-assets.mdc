@@ -46,7 +46,7 @@ Blender through `tools/asset-pipeline/blender/`; see
    `photocraft-cli` for batch 2D. Do not add an MCP server, install another
    ArtCraft app, or restructure the pipeline without asking the user first.
 
-9. **Report in Portuguese, numbers over adjectives.** Version, what was built,
+9. **Report in English, numbers over adjectives.** Version, what was built,
    peak alpha coverage and when, when it dies, file sizes, manifest path. Say
    plainly what was not executed.
 
