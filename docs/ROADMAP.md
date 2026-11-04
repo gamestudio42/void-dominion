@@ -10,7 +10,7 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 | 3 | Combat, destruction, victory and defeat | Done |
 | 4 | Conventional opponent, fog of war, replay file | Done |
 | 5 | Optional commander gateway and deterministic fallback | Not started |
-| 6 | Headless arena, benchmarks, comparable seeds | Not started |
+| 6 | Headless arena, benchmarks, comparable seeds | One seed pinned |
 | 7 | Authoritative multiplayer | Not started |
 
 ## Milestone 0

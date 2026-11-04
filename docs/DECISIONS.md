@@ -49,3 +49,7 @@ Success and failure of a move order were the definition of done for that slice. 
 ## 012. The boot experience is one Helion skirmish
 
 The playable game is player against General Varek on a shared deterministic match: ore, aether, construction, production, combat, fog and a human replay. Varek uses personality weights and the same commands as the player. He is simulated again when a replay loads, so his orders are not written into the file. The enemy start is public scenario data; unit positions still have to be seen. Colyseus, the language-model gateway and Docker are not added. The match has to run without them. Numbers live in `packages/content`. Visuals stay geometric until a mesh or effect sequence passes its pipeline.
+
+## 013. The first march waits for the opening
+
+An unattended match used to lose its workers while the player was still learning to spend ore, and the army stayed hidden until it was already on the base. Varek still mines, builds and trains immediately. The attack-move waits until tick 2400. Defense is not delayed. The client shows Contact when an enemy unit is visible, so the arrival can be named. `pnpm sim` pins that seed's winner, tick and checksum. Benchmarks and the commander gateway stay out.

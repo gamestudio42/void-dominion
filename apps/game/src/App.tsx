@@ -21,6 +21,7 @@ const EMPTY: FieldUi = {
   buildKind: null,
   buildOpen: false,
   trains: [],
+  contact: false,
   banner: null,
 };
 
@@ -58,6 +59,7 @@ export function App() {
           {text.tick(ui.tick)} · {text.fps(ui.fps)}
         </p>
       )}
+      {ui.contact && !banner && <p className="contact">{text.contact}</p>}
       {banner && <p className="banner">{banner}</p>}
       {ui.box && (
         <div

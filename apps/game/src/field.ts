@@ -60,6 +60,7 @@ export interface FieldUi {
   buildKind: BuildingKind | null;
   buildOpen: boolean;
   trains: TrainChoice[];
+  contact: boolean;
   banner: 'victory' | 'defeat' | 'draw' | null;
 }
 
@@ -255,6 +256,14 @@ export function startField(
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
+  function enemyVisible(): boolean {
+    for (const unit of sim.world.units) {
+      if (unit.owner === PLAYER_ID) continue;
+      if (canSee(sim.world, PLAYER_ID, Math.floor(unit.x), Math.floor(unit.y))) return true;
+    }
+    return false;
+  }
+
   function publish(): void {
     const stock = sim.world.players.find((entry) => entry.id === PLAYER_ID);
     const trains = trainChoices();
@@ -276,6 +285,7 @@ export function startField(
       buildKind,
       buildOpen,
       trains,
+      contact: enemyVisible(),
       banner: banner(),
     };
     const key = JSON.stringify(next);

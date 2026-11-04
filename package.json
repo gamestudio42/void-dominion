@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.sim.json && tsc -p tsconfig.web.json",
     "lint": "eslint .",
     "test": "vitest run",
+    "sim": "vitest run packages/simulation/test/arena.test.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm test"
   },
   "devDependencies": {

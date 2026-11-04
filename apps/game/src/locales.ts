@@ -32,6 +32,7 @@ export const en = {
   victory: 'Victory',
   defeat: 'Defeat',
   draw: 'Draw',
+  contact: 'Contact',
   train: (name: string, ore: number, aether: number) => (aether > 0 ? `${name} ${ore}+${aether}` : `${name} ${ore}`),
   unitName: (kind: UnitKind) =>
     ({
@@ -85,6 +86,7 @@ export const ptBR: typeof en = {
   victory: 'Vitória',
   defeat: 'Derrota',
   draw: 'Empate',
+  contact: 'Contato',
   train: (name: string, ore: number, aether: number) => (aether > 0 ? `${name} ${ore}+${aether}` : `${name} ${ore}`),
   unitName: (kind: UnitKind) =>
     ({

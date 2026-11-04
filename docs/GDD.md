@@ -25,6 +25,8 @@ The beat this build changes is the whole skirmish: gather ore, spend it, train s
 - Fights with hit points, armor and cooldown. A unit or turret only shoots what its player can see. Destroying every command center of a player ends the match. Both lost on the same tick is a draw.
 - Hides unexplored ground. Explored ground keeps a memory of enemy buildings, including a wreck if one falls out of sight.
 - Records the human's commands. Loading that file resimulates Varek; his orders are not stored.
+- Holds Varek's first march until the opening can finish a building. Shows Contact when an enemy unit is visible.
+- Pins the unattended seed: `pnpm sim` checks that the same winner, tick and checksum come back.
 - Shows ore, aether, supply, power and the match clock. The command card stops, mines, attacks, builds and trains. WASD pans, the wheel zooms, F3 shows tick and FPS.
 
 ## What this build does not do
@@ -37,4 +39,4 @@ Helion Directorate is the only faction on the field: mechanised units, turrets, 
 
 ## Hypothesis
 
-The player will mine, refuse an illegal building, and spend ore on a structure or a soldier, and will not see the enemy base until something of theirs has sight of it. Revert the slice if ore never moves, if a refused order still spends resources, or if two runs with the same human commands disagree.
+The player will mine, refuse an illegal building, and spend ore on a structure or a soldier before Varek's army arrives. Contact stays off until an enemy unit is visible. Revert the opening delay if the command center still dies before the march tick, or if the player loses without ever seeing the army.

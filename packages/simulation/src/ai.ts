@@ -62,7 +62,8 @@ export function stepAi(world: World): void {
   if (barracks && rifles < MATCH.ai.army) {
     applyCommand(world, { type: 'produce', playerId, buildingId: barracks.id, kind: 'rifleman' });
   }
-  if (!threat && rifles >= MATCH.ai.army && MATCH.ai.aggression >= 0.5) {
+  /** First march waits so the opening can finish a building before the army is committed. */
+  if (!threat && world.tick >= MATCH.ai.marchTick && rifles >= MATCH.ai.army && MATCH.ai.aggression >= 0.5) {
     const enemy = MATCH.bases.find((base) => base.id === PLAYER_ID);
     const soldiers = world.units.filter((unit) => unit.owner === playerId && unit.kind === 'rifleman');
     if (enemy && soldiers.length > 0) {

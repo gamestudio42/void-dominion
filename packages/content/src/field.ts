@@ -62,7 +62,7 @@ export const MATCH: {
   aetherAmount: number;
   rocks: CellRect[];
   bases: StartBase[];
-  ai: { id: string; aggression: number; army: number; period: number };
+  ai: { id: string; aggression: number; army: number; period: number; marchTick: number };
 } = {
   seed: DEMO_SEED,
   startOre: 50,
@@ -99,5 +99,5 @@ export const MATCH: {
       ],
     },
   ],
-  ai: { id: 'general_varek', aggression: 0.85, army: 6, period: 20 },
+  ai: { id: 'general_varek', aggression: 0.85, army: 6, period: 20, marchTick: 2400 },
 };
