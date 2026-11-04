@@ -17,3 +17,22 @@ export function createBlocked(obstacle: CellRect): Uint8Array {
 export function isWalkable(blocked: Uint8Array, x: number, y: number): boolean {
   return inMap(x, y) && blocked[cellIndex(x, y)] === 0;
 }
+
+export const ADJACENT: readonly (readonly [number, number])[] = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [1, 1],
+  [-1, 1],
+  [1, -1],
+  [-1, -1],
+];
+
+export function paintCells(blocked: Uint8Array, x: number, y: number, width: number, height: number): void {
+  for (let cy = y; cy < y + height; cy++) {
+    for (let cx = x; cx < x + width; cx++) {
+      if (inMap(cx, cy)) blocked[cellIndex(cx, cy)] = 1;
+    }
+  }
+}

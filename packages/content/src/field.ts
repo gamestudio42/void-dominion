@@ -1,15 +1,13 @@
 /** Logical cells on a side. One cell is the pathfinding and building grid. */
 export const MAP_SIZE = 128;
 
-/** Cells travelled each simulation tick. Six cells per second at 20 Hz. */
-export const CELLS_PER_TICK = 0.3;
-
 /** Orthogonal and diagonal step costs. Fixed so every path search agrees. */
 export const ORTHOGONAL_COST = 10;
 export const DIAGONAL_COST = 14;
 
 export const DEMO_SEED = 0x5eed;
 export const PLAYER_ID = 1;
+export const ENEMY_ID = 2;
 
 export interface CellRect {
   x: number;
@@ -18,7 +16,7 @@ export interface CellRect {
   height: number;
 }
 
-/** Blocks the straight line between the demo spawns and the far side of the field. */
+/** Kept for path tests. The match uses MATCH.rocks instead. */
 export const DEMO_OBSTACLE: CellRect = { x: 28, y: 52, width: 18, height: 20 };
 
 export interface Spawn {
@@ -46,3 +44,60 @@ export function inMap(x: number, y: number): boolean {
 export function rectContains(rect: CellRect, x: number, y: number): boolean {
   return x >= rect.x && y >= rect.y && x < rect.x + rect.width && y < rect.y + rect.height;
 }
+
+export interface StartBase {
+  id: number;
+  cc: { x: number; y: number };
+  ore: { x: number; y: number };
+  aether: { x: number; y: number };
+  workers: { x: number; y: number }[];
+}
+
+/** Two known starts. Both players can see them on the briefing; vision still hides units. */
+export const MATCH: {
+  seed: number;
+  startOre: number;
+  startAether: number;
+  oreAmount: number;
+  aetherAmount: number;
+  rocks: CellRect[];
+  bases: StartBase[];
+  ai: { id: string; aggression: number; army: number; period: number };
+} = {
+  seed: DEMO_SEED,
+  startOre: 50,
+  startAether: 0,
+  oreAmount: 8000,
+  aetherAmount: 4000,
+  rocks: [
+    { x: 58, y: 30, width: 10, height: 24 },
+    { x: 58, y: 74, width: 10, height: 24 },
+  ],
+  bases: [
+    {
+      id: PLAYER_ID,
+      cc: { x: 8, y: 96 },
+      ore: { x: 16, y: 100 },
+      aether: { x: 20, y: 92 },
+      workers: [
+        { x: 14, y: 98 },
+        { x: 15, y: 98 },
+        { x: 14, y: 99 },
+        { x: 15, y: 99 },
+      ],
+    },
+    {
+      id: ENEMY_ID,
+      cc: { x: 112, y: 24 },
+      ore: { x: 104, y: 28 },
+      aether: { x: 108, y: 18 },
+      workers: [
+        { x: 108, y: 25 },
+        { x: 109, y: 25 },
+        { x: 108, y: 26 },
+        { x: 109, y: 26 },
+      ],
+    },
+  ],
+  ai: { id: 'general_varek', aggression: 0.85, army: 6, period: 20 },
+};
