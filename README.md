@@ -2,7 +2,7 @@
 
 A science-fiction real-time strategy game for the browser. You command the Helion Directorate on the Erebus Frontier: select forces, spend ore and aether, and take ground from a rival. The same orders will later be available to a conventional opponent and to optional AI commanders. The match does not require a language model.
 
-This build is the foundation. You can open the client. A playable field, with selection and movement, follows in the client milestone. There is no match, economy or combat yet.
+This build is the foundation plus the deterministic simulation. The page is still a boot screen. Unit tests move twenty engineers around the blockage and refuse an illegal order. The field itself is the next client change.
 
 ## Develop
 

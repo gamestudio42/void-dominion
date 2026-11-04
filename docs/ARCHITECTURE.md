@@ -10,7 +10,7 @@ packages/kernel      RNG, FNV-1a, fixed-step clock
 
 Dependencies point down only: `game → view3d → simulation → content, kernel`. The deterministic packages have no DOM and no clock, so they run the same in the browser and in Vitest.
 
-The view is not in this commit. The client is a boot screen until movement lands.
+The view is not wired to the simulation yet. The client is a boot screen. `packages/simulation` already accepts `move`, paths around the demo obstacle, and refuses blocked cells without changing the checksum.
 
 ## Frame loop
 

@@ -19,9 +19,9 @@ The beat this foundation changes is none of those yet. The next player-facing be
 
 ## What this build does
 
-- Opens a browser client.
+- Opens a browser client that does not show the field yet.
 - Defines the demo field in data: a 128×128 grid, one blockage, twenty spawns, movement of 0.3 cells per tick.
-- Provides a deterministic clock, RNG and checksum. Nothing on the field moves yet.
+- Runs `move` in the simulation. Two runs with the same orders share a checksum. A blocked cell or an unknown unit is refused and does not change that checksum.
 
 ## What this build does not do
 
