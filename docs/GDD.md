@@ -15,13 +15,15 @@ You are a commander of the Helion Directorate on the Erebus Frontier. You take a
 
 Scout, gather, build, produce, fight, expand.
 
-The beat this foundation changes is none of those yet. The next player-facing beat is **select and order a move**. Success is units arriving by walking around a blockage. Failure is a blocked or unreachable cell: the units stay, and the interface shows why.
+The beat this build changes is **select and order a move**. Success is the engineers arriving on open ground by walking around the blockage. Failure is a blocked cell: the engineers stay, a mark sits on the blockage, and the interface says why.
 
 ## What this build does
 
-- Opens a browser client that does not show the field yet.
-- Defines the demo field in data: a 128×128 grid, one blockage, twenty spawns, movement of 0.3 cells per tick.
-- Runs `move` in the simulation. Two runs with the same orders share a checksum. A blocked cell or an unknown unit is refused and does not change that checksum.
+- Shows a 128×128 field, one blockage and twenty engineers.
+- Selects one engineer or a box of them. Shift adds to the selection.
+- Right-click walks the selection around the blockage to open ground.
+- Refuses a blocked cell without moving anyone, and shows the reason.
+- Pans with WASD, zooms with the wheel. Tick and FPS stay behind F3.
 
 ## What this build does not do
 

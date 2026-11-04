@@ -10,11 +10,9 @@ packages/kernel      RNG, FNV-1a, fixed-step clock
 
 Dependencies point down only: `game → view3d → simulation → content, kernel`. The deterministic packages have no DOM and no clock, so they run the same in the browser and in Vitest.
 
-The view is not wired to the simulation yet. The client is a boot screen. `packages/simulation` already accepts `move`, paths around the demo obstacle, and refuses blocked cells without changing the checksum.
+`apps/game` owns the frame loop. `FixedStepper` converts frame time into whole 1/20 s steps. Frames longer than 0.25 s and anything beyond 8 steps per frame are dropped. The renderer interpolates with the leftover alpha. Wall time never enters the simulation.
 
-## Frame loop
-
-The game will run on `requestAnimationFrame`. `FixedStepper` converts frame time into whole 1/20 s steps. Frames longer than 0.25 s and anything beyond 8 steps per frame are dropped. The renderer interpolates with the leftover alpha. Wall time never enters the simulation.
+`packages/view3d` draws the field and picks points on the ground. It does not decide whether an order is legal. Selection is interface state. A `move` command carries the selected ids.
 
 ## Commands
 

@@ -19,6 +19,7 @@
     "@void-dominion/content": "workspace:*",
     "@void-dominion/kernel": "workspace:*",
     "@void-dominion/simulation": "workspace:*",
+    "@void-dominion/view3d": "workspace:*",
     "eslint": "^9.39.5",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.72.1",

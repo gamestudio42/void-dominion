@@ -5,7 +5,7 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 | # | Milestone | Status |
 | --- | --- | --- |
 | 0 | Deterministic simulation, commands, checksums | Done |
-| 1 | Isometric field, selection, movement around obstacles | Next |
+| 1 | Isometric field, selection, movement around obstacles | Done |
 | 2 | Workers, ore, aether, construction, production | Not started |
 | 3 | Combat, destruction, victory and defeat | Not started |
 | 4 | Conventional opponent, fog of war, replay file | Not started |

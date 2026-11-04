@@ -9,6 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@void-dominion/content": "workspace:*",
+    "@void-dominion/kernel": "workspace:*",
+    "@void-dominion/simulation": "workspace:*",
+    "@void-dominion/view3d": "workspace:*",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

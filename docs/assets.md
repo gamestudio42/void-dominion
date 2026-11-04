@@ -2,7 +2,7 @@
 
 No third-party art, audio or fonts are shipped.
 
-The boot screen and, until a mesh is baked, the field units are drawn by code. Colour is a material or a flat fill, not a texture from another game.
+The boot screen and the field engineers are drawn by code. Colour is a material, not a texture from another game.
 
 ## How art enters later
 
