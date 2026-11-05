@@ -1,0 +1,14 @@
+{
+  "title": "Void Dominion",
+  "tagline": {
+    "en": "Command the Helion Directorate against General Varek.",
+    "pt": "Comande a Diretoria Helion contra o general Varek.",
+    "es": "Comanda la Dirección Helion contra el general Varek.",
+    "fr": "Commandez la Direction Helion contre le général Varek.",
+    "de": "Befehlige die Helion-Direktion gegen General Varek."
+  },
+  "cover": "apps/game/public/favicon.svg",
+  "genre": "real-time-strategy",
+  "tech": ["TypeScript", "Three.js", "React"],
+  "order": 7
+}
