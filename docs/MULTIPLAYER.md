@@ -1,10 +1,16 @@
 # Multiplayer plan (milestone 7)
 
-Status: proposed. Nothing in this document is built yet. It records the model, the protocol, the order of work and the questions that need an owner's answer before code starts.
+Status: proposed. Nothing here is built yet. This document records the model, the protocol, the order of work and the questions still open before code starts.
 
 ## Goal
 
-Two people play the current skirmish map against each other over the internet. The match stays fair: neither client can see what its fog hides, order the other seat's units, or change the outcome by editing its own copy.
+Two people play the current skirmish map against each other over the internet, with no game server to pay for or run. The client stays a static site on GitHub Pages.
+
+Three rules hold:
+
+- The guest never receives what its fog hides.
+- Neither player can order the other seat's units.
+- After the match, the guest can check that the host played the rules.
 
 Out of scope for milestone 7:
 
@@ -12,26 +18,40 @@ Out of scope for milestone 7:
 - matchmaking and ranking;
 - accounts, chat and spectators;
 - mobile;
+- a dedicated server;
+- a TURN relay;
 - a language-model commander in a seat.
 
-The server shape below leaves room for each of these later.
+## Model: the host's browser is the authority, peers talk over WebRTC
 
-## Model: one authoritative simulation on the server, fog-filtered views to clients
+The player who creates the match is the **host**. The host's browser runs the only `Simulation`, as it already does against General Varek. The other player is the **guest**. The guest sends commands and draws the fog-filtered views the host sends back. The two browsers talk directly over a WebRTC data channel. A public MQTT broker carries only the initial handshake: the offer, the answer and the ICE candidates. After that the broker is out of the match.
 
-The roadmap says "authoritative", and decision 016 says a refusal must not reveal what the fog hides. Those two rules choose between the usual RTS models:
-
-| | Deterministic lockstep (clients simulate) | Server simulation, filtered views (proposed) |
+| | Lockstep over WebRTC | Host simulation, filtered views (proposed) |
 | --- | --- | --- |
-| What a client holds | The whole world, every tick | Only what its seat sees, plus what it remembers |
-| Map hack | Possible: the hidden enemy is in client memory | Not possible: the hidden enemy is never sent |
-| Desync | Possible; needs checksum exchange and resync | Cannot happen: there is one world |
-| Bandwidth | Commands only, a few bytes per order | One view per seat, 10 to 20 times a second |
-| Server CPU | Relay only | One `Simulation.step()` per match per tick |
-| Late join and reconnect | Replay the log from tick 0 | Send the current view |
+| What the guest holds | The whole world | Only what its seat sees, plus what it remembers |
+| What the host holds | The whole world | The whole world |
+| Map hack | Both players | Host only |
+| Desync | Possible across browsers; needs checksum exchange | Cannot happen: there is one world |
+| Traffic | Commands only | Commands up, about 1 KB views down, 10 times a second |
+| Host leaves | Match ends | Match ends |
 
-Lockstep is the classic answer because of bandwidth, but the numbers here remove that reason.
+Host authority keeps decision 016's fog rule for the guest. It costs bandwidth the numbers below show is small. Lockstep would let both players read the whole map.
 
-Measured on 2026-11-05, unattended seed `0x5eed`, both seats, a view on every second tick:
+### What the host can still do
+
+The host is a player, not a neutral server:
+
+- **It sees the whole map.** Nothing in the browser can hide the world from the browser that simulates it. This is accepted for play between friends, and it is why ranking is out of scope.
+- **It plays with no network delay.** The guest's orders arrive one round trip later. A mitigation for later is to hold the host's own commands for the measured one-way delay. It is not in milestone 7.
+- **It could edit its copy of the rules.** This is detected, not prevented:
+  - At the end, the host sends the guest the replay v2 file and the final checksum.
+  - The guest replays the file locally and compares checksums.
+  - The guest also checks that every command it sent appears at the tick its `ack` named.
+  - A mismatch is shown as an unverified result, not as a win or a loss.
+
+### Measured view size
+
+Measured on 2026-11-05 on the unattended seed `0x5eed`, both seats, one view every second tick:
 
 - **View size:**
   - JSON: mean 901 bytes, p95 1661 bytes, max 2165 bytes;
@@ -39,23 +59,22 @@ Measured on 2026-11-05, unattended seed `0x5eed`, both seats, a view on every se
 - **Cost:** `observe` plus `JSON.stringify` takes 34 µs on average and 62 µs at p95.
 - **Scale:** at most 23 entities were visible at once.
 
-These figures are what `observe()` returns today. The client view below adds memory ghosts and the fog delta, so the real message is somewhat larger.
+At 10 views a second, the host's upload is about 9 KB/s raw. Any home connection carries that.
 
-At 10 views a second, that is about 9 KB/s raw per player, or about 3 KB/s with WebSocket `permessage-deflate`.
+The host's browser also pays for:
 
-A match steps in about 90 µs (`docs/BENCHMARKS.md`). With two views every second tick added, one match costs about 0.2 ms of each 50 ms tick on one core. On the small map that leaves room for on the order of a hundred concurrent matches before anything is optimized. Larger armies will lower that figure.
+- one step of about 90 µs per tick (`docs/BENCHMARKS.md`);
+- one view for the guest every second tick.
 
-The cost of this model is input latency. An order takes effect on the server's next tick, and the client sees the result one view later, so a round trip plus 50 to 100 ms. For an RTS at 20 Hz that is normal. The client already shows the order marker at once and waits for the server's verdict.
-
-**Decision proposed (024):** the server runs the same `@void-dominion/simulation` package in Node and owns the only world. Clients send commands and draw views. The simulation package does not change shape: it already runs headless, refuses foreign and hidden orders, and builds per-seat views in `commander.ts`.
+That is well inside a 50 ms tick, next to the renderer it already runs.
 
 ## Pieces
 
 ```
-apps/server            new: Node host, WebSocket, rooms, seats, tick loop
-packages/protocol      new: message types, version, parse/validate (no I/O)
+packages/protocol      new: message types, version, parse/validate, no I/O
+packages/net           new: signaling over MQTT, WebRTC session, transport interface
 packages/simulation    small changes: seats without Varek, seat-aware replay, client view
-apps/game              new net mode: connect, send commands, draw views
+apps/game              new: host mode, guest mode, the match link
 ```
 
 ### Simulation changes
@@ -66,116 +85,123 @@ apps/game              new net mode: connect, send commands, draw views
 2. **Replay v2.**
    - The format becomes `{ version: 2, seed, seats, ticks, commands }`, with commands for every human seat.
    - `deserializeReplay` still reads v1 files: player 1 only, Varek on seat 2.
-   - The per-seat rule from decision 016 moves to the host. A connection may only issue orders for its own seat, whatever `playerId` it writes.
+   - The host stamps the guest's commands with the guest's seat, whatever `playerId` they carry. This is the per-seat rule from decision 016.
 3. **Client view.** This is `observe()` grown to what a renderer needs:
    - for the seat's own entities: units with order, hp and carry; buildings with progress, queue and production;
-   - visible foreign units and buildings with hp, plus the seat's remembered ghosts;
+   - visible foreign units and buildings with hp, plus remembered ghosts;
    - explored nodes with their amounts;
    - stock, supply and power for the seat;
-   - fog as a change list: cells that turned visible or hidden since the last view, run-length encoded. The first view, and the one after a reconnect, carry the full 128×128 grid, about 2 KB as runs;
-   - for the effect watcher: cooldowns of visible units, so the client can still read shots (decision 023).
+   - fog as a change list, run-length encoded. The first view, and the one after a reconnect, carry the full grid, about 2 KB;
+   - cooldowns of visible units, so the effect watcher (decision 023) still reads shots.
 
    Neither the enemy stock nor its queue is sent. A test walks a whole match and asserts that no view contains an entity outside the seat's sight or memory.
 
+### Signaling (`packages/net`)
+
+- **Broker.** The public EMQX broker (`broker.emqx.io`) over secure WebSocket, through the `mqtt` package (MQTT.js) in the browser.
+  - The broker URL is configuration, not code, so a second public broker, or one hosted by the studio later, is a one-line change.
+  - The public broker is offered for testing, without a service guarantee. If it is down, no new match can start; a match already connected keeps running.
+- **The match link.** The host creates a 128-bit random secret and shares `…/void-dominion/#join=<secret>`.
+  - The secret sits in the URL fragment, so it never reaches GitHub Pages or any server log.
+  - The topic is `void-dominion/v1/<first 16 bytes of SHA-256(secret), hex>`. Anyone can subscribe to a public broker, so the topic name is not the protection.
+- **Encryption.** Every signaling message is encrypted and authenticated with AES-GCM under a key derived from the secret with HKDF (WebCrypto).
+  - A stranger who finds the topic cannot read the SDP or inject an answer.
+  - After the handshake, DTLS protects the data channel. Its fingerprint arrived inside an authenticated message.
+- **Handshake.** Non-trickle: each side waits for ICE gathering, then sends one offer or answer.
+  - The host republishes its offer every few seconds until an answer arrives, so the guest can open the link late.
+  - Messages are not retained on the broker.
+- **NAT traversal.**
+  - STUN only, through a public STUN server listed in configuration.
+  - There is no TURN relay: two players behind symmetric NAT or carrier-grade NAT cannot connect. That is common on mobile networks and on several Brazilian providers. The client says so plainly instead of hanging.
+  - Step 6 measures how often it happens.
+- **Channels.**
+  - Commands, acks and the end message use a reliable, ordered channel.
+  - Views use an unreliable, unordered channel, where the newest tick wins. A lost view is replaced 100 ms later.
+- **Transport interface.**
+  - `packages/net` exposes `send` and `onMessage` per channel, and the game code sees only that.
+  - A WebSocket transport to a dedicated server can implement the same interface later, without touching the protocol or the game.
+
 ### Protocol (`packages/protocol`)
 
-JSON over one WebSocket per player, `permessage-deflate` on. Every message carries `v` (the protocol version). The server closes a connection whose version it does not speak.
+JSON messages, each carrying `v`, the protocol version. A peer with another version is refused with a readable message.
 
 | Direction | Message | Payload |
 | --- | --- | --- |
-| client → server | `hello` | `v`, client build id |
-| client → server | `create` / `join` | match code for `join` |
-| server → client | `seated` | seat, seed, match code, reconnect token |
-| client → server | `cmd` | `seq` (client counter), command without `playerId` |
-| server → client | `ack` | `seq`, tick applied, reason key or null |
-| server → client | `view` | tick, client view (above) |
-| server → client | `end` | winner, final tick, checksum, replay id |
+| guest → host | `hello` | `v`, client build id |
+| host → guest | `seated` | seat, seed, start tick |
+| guest → host | `cmd` | `seq`, command without `playerId` |
+| host → guest | `ack` | `seq`, tick applied, reason key or null |
+| host → guest | `view` | tick, client view |
+| host → guest | `end` | winner, final tick, checksum, replay v2 |
 | both | `ping` / `pong` | timestamps for the latency readout |
 
 Rules:
 
-- The server stamps `playerId` from the seat, never from the payload.
 - Commands are parsed with the same `parseLogged` the replay uses. Anything else is dropped and counted.
-- A client sends at most 20 commands a second, so a flood cannot stall the tick.
-- Views go out every second tick (10 Hz) at first. The client interpolates between two views as it already does between two steps.
-- Deltas between views are the second optimization, only if a large-army measurement asks for it. Binary encoding is the third.
+- The guest may send at most 20 commands a second.
+- A message larger than 64 KB closes the session.
+- Views are full, not deltas, at 10 Hz. Deltas come only if the large-army measurement in step 2 asks for them.
 
-### Server (`apps/server`)
+### Host and guest in the client (`apps/game`)
 
-- Node 22 and the `ws` package. The server has no framework.
-  - The original brief named Colyseus. Its strength is schema state sync, which would duplicate the deterministic world and its own fog filtering.
-  - A thin host around `Simulation` is less code than adapting Colyseus to it. Revisit only if rooms, matchmaking and presence grow past what a small map can hold.
-- **Rooms.**
-  - A match code creates a room. The second `join` starts the countdown.
-  - The room steps with a fixed-step loop on the server clock, at the same 20 Hz as `FixedStepper`.
-  - When the match ends, the room writes the v2 replay and closes.
-- **Disconnects.**
-  - A seat is held for 60 seconds. The world keeps running, and the absent seat's units keep their last orders.
-  - Reconnecting with the token from `seated` restores the seat with a full view.
-  - After 60 seconds the seat forfeits.
-- **Checksums.**
-  - With one world there is no desync to detect. `end` carries `hashState()`.
-  - The test suite replays the stored v2 file and expects the same checksum. That proves the server log is a complete record of the match.
-- **Hosting** is an open question below. GitHub Pages and the current `gs42gameserver` (Flask, static uploads) serve files only and cannot hold a WebSocket. The static client stays on Pages and connects to the server by URL.
-
-### Client net mode (`apps/game`)
-
-- The title screen offers "Skirmish vs Varek" (today's offline game, unchanged) and "Play online": create a match, or join with a code.
-- In online mode the client keeps no `Simulation`.
-  - It renders the last two views.
-  - The minimap and fog come from the fog in the views.
-  - The HUD comes from the seat's stock.
-- Orders go out as `cmd`. The marker shows at once and turns into a refusal when the `ack` carries a reason, as offline refusals do now.
-- Shown on screen:
-  - a latency readout from `ping`;
-  - a banner while the other player is disconnected.
+- The title screen offers:
+  - "Skirmish vs Varek": today's offline game, unchanged;
+  - "Host a match": shows the link and a copy button;
+  - "Join": opening a `#join=` link goes straight to joining.
+- **Host mode** is today's loop with Varek off for seat 2. It also applies the guest's commands on the next tick and sends a view every second tick.
+- **Guest mode** keeps no `Simulation`.
+  - It interpolates between the last two views.
+  - It takes fog, minimap and HUD from the views.
+  - It shows the order marker at once and turns it into a refusal when the `ack` carries a reason.
+- **Shown on both sides:**
+  - a latency readout;
+  - a "the other player lost connection" banner;
+  - a pause while the guest is away, up to 60 seconds, then a forfeit.
+- If the host's page closes, the match ends for both, and the guest sees why.
 
 ## Order of work
 
 Each step ends with tests, and the client steps end with a browser session, as the roadmap asks.
 
 1. **Seats and replay v2.**
-   - `ai` option on `Simulation.create` and replay v2.
-   - All pinned checksums are unchanged, and a PvP match with two scripted logs is deterministic.
+   - The `ai` option on `Simulation.create` and replay v2.
+   - All pinned checksums are unchanged, and a match with two scripted logs is deterministic.
 2. **Client view and its fog test.**
    - The view builder in the simulation package.
    - A whole-match test: no view leaks a hidden entity.
-   - Sizes added to `pnpm bench`.
+   - A stress scenario with large armies added to `pnpm bench`.
 3. **Protocol package.** Types, version check and parsing, with tests for malformed, oversized and foreign-seat messages.
-4. **Server.**
-   - Rooms, the tick loop, seats, reconnect and forfeit.
-   - Tests run the server in process on port 0, with two scripted Node clients.
-   - The stored replay reproduces the final checksum.
-5. **Client net mode.**
-   - Connect, join by code, draw views, orders with acks.
-   - A browser session with two windows on one machine.
-6. **Deploy.**
-   - The server image and the client's server URL.
-   - A two-machine session over the internet, with latency and bandwidth recorded in `docs/BENCHMARKS.md`.
+4. **Signaling and session.**
+   - `packages/net` with an in-memory broker and an in-memory transport for tests.
+   - Encryption round trip, and a wrong secret that cannot join.
+   - A full host and guest session in Vitest without a network.
+5. **Host and guest modes.**
+   - Two browser windows on one machine through the real broker.
+   - The guest audits the replay at the end.
+6. **Field test.**
+   - Two machines on different networks, one of them on a mobile connection.
+   - Record connection success, latency and bandwidth in `docs/BENCHMARKS.md`.
 
-Milestone 7 is done when two players on different networks finish a match, neither client receives a hidden entity, and the stored replay reproduces the server's checksum.
+Milestone 7 is done when:
+
+- two players on different networks finish a match;
+- the guest never receives a hidden entity;
+- the guest's replay audit matches the host's checksum.
 
 ## Open questions for the owner
 
-1. **Where the server runs.** Options:
-   - extend `infra/gs42gameserver`, which today is Flask with static uploads and no WebSocket;
-   - a small VPS with Docker;
-   - a managed host with WebSocket support.
-
-   This decides the deploy step and the cost. The plan works with any of them.
-2. **Who may create a match.**
-   - Anyone with the link: no accounts, codes expire with the room.
-   - Or a shared secret during testing.
-3. **Whether Varek stays available online**, as a co-op or practice seat. The seat option makes this cheap, but it is not in the milestone unless asked.
+1. **The second broker.** Should a fallback broker be listed from the start, or only after the public EMQX broker fails us once? A studio-hosted broker is later work.
+2. **Players who cannot connect** (symmetric NAT or CGNAT on both ends). Is it acceptable for milestone 7 to tell them it will not work? A TURN relay costs money and a server, which this plan avoids.
+3. **Varek as an online seat**, for co-op or practice. The seat option makes it cheap, but it is not in the milestone unless asked.
 
 ## Risks
 
-- **Large armies.**
-  - The measured views come from a match that never had more than 23 visible entities.
-  - A 200-unit match could reach 10 to 20 KB per view. Step 2 adds a stress scenario to the bench before the protocol is fixed.
-- **Floating point across machines.**
-  - With one server world, client and server never have to agree bit for bit.
-  - The replay check runs on the server's own Node, so the existing determinism rules are enough.
-- **Server clock drift under load.**
-  - The tick loop catches up with a capped number of steps, as `FixedStepper` does in the client.
-  - A match that falls behind for more than a second logs it, so a slow host shows up in the logs.
+- **Large armies.** The measured views come from a match with at most 23 visible entities. Step 2 measures a large army before the protocol is fixed.
+- **The public broker changes its terms or limits.** The broker URL is configuration, and only match setup depends on it.
+- **A slow host.**
+  - A host whose tab is in the background gets throttled timers, and the match slows down for both players.
+  - Host mode keeps the tab active with a visible warning. It steps from `requestAnimationFrame` only while visible, and from a worker clock when hidden. Step 5 measures which one holds 20 Hz.
+- **A cheating host.**
+  - Map reading cannot be stopped.
+  - Rule edits are caught by the replay audit.
+  - Both are accepted for play between friends.

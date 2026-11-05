@@ -44,16 +44,19 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 
 ## Milestone 7 (planned)
 
-- The server runs the only `Simulation` and sends each seat a fog-filtered view. Clients send commands and draw views. There is no lockstep and no desync.
+- Peer to peer with no game server: the host's browser runs the only `Simulation` and sends the guest a fog-filtered view over WebRTC. The public EMQX MQTT broker carries only the encrypted handshake.
 - The order of work:
   1. seats without Varek and replay v2;
   2. the client view and a whole-match no-leak test;
   3. the protocol package;
-  4. the server, with in-process tests;
-  5. the client net mode;
-  6. deploy.
-- Done when two players on different networks finish a match, no client receives a hidden entity, and the stored replay reproduces the server checksum.
-- Where the server runs is still open.
+  4. signaling and session, tested in memory;
+  5. host and guest modes;
+  6. a field test across networks.
+- Done when:
+  - two players on different networks finish a match;
+  - the guest never receives a hidden entity;
+  - the guest's replay audit matches the host's checksum.
+- There is no TURN relay, so two players both behind CGNAT cannot connect.
 
 ## Later milestones
 
