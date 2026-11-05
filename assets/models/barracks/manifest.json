@@ -1,0 +1,115 @@
+{
+  "asset": "barracks",
+  "tool": {
+    "name": "blender",
+    "version": "Blender 5.2.2 LTS"
+  },
+  "exports": [
+    {
+      "asset": "barracks",
+      "export": {
+        "path": "assets/models/barracks/barracks.glb",
+        "kind": "glb",
+        "codec": "gltf",
+        "bytes": 16444,
+        "sha256": "a838884251dcca34d2cd5c328f39b50278ce38d0220e026f5bf8f0cfe624db48",
+        "bin_chunk_bytes": 12432
+      },
+      "mesh": {
+        "generator": "Khronos glTF Blender I/O v5.2.40",
+        "version": "2.0",
+        "triangles": 176,
+        "vertices": 360,
+        "primitives": 4,
+        "meshes": 1,
+        "meshNodes": [
+          "slab"
+        ],
+        "nodes": 1,
+        "materials": [
+          {
+            "name": "dark",
+            "baseColor": [
+              0.13,
+              0.14,
+              0.16,
+              1
+            ],
+            "metallic": 0.30000001192092896,
+            "roughness": 0.75,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "hull",
+            "baseColor": [
+              0.55,
+              0.57,
+              0.6,
+              1
+            ],
+            "metallic": 0.550000011920929,
+            "roughness": 0.5,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "team",
+            "baseColor": [
+              0.85,
+              0.55,
+              0.2,
+              1
+            ],
+            "metallic": 0.20000000298023224,
+            "roughness": 0.44999998807907104,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "glow",
+            "baseColor": [
+              0.35,
+              0.85,
+              0.95,
+              1
+            ],
+            "metallic": 0,
+            "roughness": 0.30000001192092896,
+            "emissive": [
+              0.3684210509804807,
+              0.8947368784294238,
+              1
+            ],
+            "hasTexture": false
+          }
+        ],
+        "images": 0,
+        "textures": 0,
+        "animations": 0,
+        "skins": 0,
+        "bbox": {
+          "min": [
+            -1.38,
+            0.0,
+            -1.38
+          ],
+          "max": [
+            1.38,
+            2.25,
+            1.38
+          ],
+          "dims": [
+            2.76,
+            2.25,
+            2.76
+          ]
+        }
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "generated_at": "2026-11-05T06:39:47+00:00"
+}

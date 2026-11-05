@@ -37,6 +37,7 @@ export interface DrawUnit {
 
 export interface DrawBuilding {
   id: number;
+  kind: string;
   x: number;
   y: number;
   width: number;
@@ -75,8 +76,8 @@ export interface FieldView {
   resize(): void;
   render(): void;
   setUnits(units: DrawUnit[]): void;
-  /** Load one GLB per unit kind. A kind keeps its box until its model arrives, or for good if it fails. */
-  setUnitModels(urls: Readonly<Record<string, string>>): void;
+  /** Load one GLB per unit or building kind. A kind keeps its box until its model arrives, or for good if it fails. */
+  setModels(urls: Readonly<Record<string, string>>): void;
   setBuildings(buildings: DrawBuilding[]): void;
   setNodes(nodes: DrawNode[]): void;
   setRocks(rocks: DrawRock[]): void;
@@ -98,15 +99,18 @@ const ENEMY = new Color('#d0504a');
 const MARKER_OK = new Color('#8fd0a8');
 const MARKER_BAD = new Color('#d4766a');
 
-/** Material name in each unit GLB that takes the owner colour. Set by the Blender spec palette. */
+/** Material name in each GLB that takes the owner colour. Set by the Blender spec palette. */
 const TEAM_MATERIAL = 'team';
+const WRECK = new Color('#3a342c');
 
-interface UnitBody {
+interface Body {
   root: Object3D;
   ring: Mesh;
-  /** Owner-tinted material: the box material, or this unit's copy of the model's team material. */
+  /** Owner-tinted material: the box material, or this body's copy of the model's team material. */
   tint: MeshStandardMaterial | null;
   box: boolean;
+  /** A model already repainted as a wreck. */
+  wrecked: boolean;
   lastX: number;
   lastZ: number;
 }
@@ -154,11 +158,12 @@ export function createField(
   const oreGeometry = new BoxGeometry(0.7, 0.55, 0.7);
   const aetherGeometry = new BoxGeometry(0.45, 0.9, 0.45);
 
-  const bodies = new Map<number, UnitBody>();
-  const unitModels = new Map<string, Object3D>();
+  const bodies = new Map<number, Body>();
+  const models = new Map<string, Object3D>();
+  const wreckMaterial = new MeshStandardMaterial({ color: WRECK, roughness: 0.95, metalness: 0 });
   const loader = new GLTFLoader();
   let disposed = false;
-  const structures = new Map<number, { mesh: Mesh; ring: Mesh }>();
+  const structures = new Map<number, Body>();
   const nodeMeshes = new Map<number, Mesh>();
   const rockMeshes: Mesh[] = [];
 
@@ -274,14 +279,14 @@ export function createField(
     });
   }
 
-  function makeUnitBody(kind: string, x: number, z: number): UnitBody {
+  function makeBody(kind: string, fallback: BoxGeometry, roughness: number, x: number, z: number): Body {
     const ring = new Mesh(ringGeometry, new MeshStandardMaterial({ color: '#f4e7c8', emissive: '#f4e7c8', emissiveIntensity: 0.4 }));
-    const template = unitModels.get(kind);
+    const template = models.get(kind);
     if (!template) {
-      const material = new MeshStandardMaterial({ roughness: 0.55, metalness: 0.08 });
-      return { root: new Mesh(unitGeometry, material), ring, tint: material, box: true, lastX: x, lastZ: z };
+      const material = new MeshStandardMaterial({ roughness, metalness: 0.08 });
+      return { root: new Mesh(fallback, material), ring, tint: material, box: true, wrecked: false, lastX: x, lastZ: z };
     }
-    /** Geometry and the other materials stay shared with the template; only the team colour is per unit. */
+    /** Geometry and the other materials stay shared with the template; only the team colour is per body. */
     const root = template.clone(true);
     let tint: MeshStandardMaterial | null = null;
     root.traverse((child) => {
@@ -290,10 +295,18 @@ export function createField(
       tint ??= child.material.clone();
       child.material = tint;
     });
-    return { root, ring, tint, box: false, lastX: x, lastZ: z };
+    return { root, ring, tint, box: false, wrecked: false, lastX: x, lastZ: z };
   }
 
-  function dropUnitBody(body: UnitBody): void {
+  /** Repaint a model with the shared wreck material. Its own team copy is no longer drawn. */
+  function wreckModel(body: Body): void {
+    body.root.traverse((child) => {
+      if (child instanceof Mesh) child.material = wreckMaterial;
+    });
+    body.wrecked = true;
+  }
+
+  function dropBody(body: Body): void {
     scene.remove(body.root, body.ring);
     body.tint?.dispose();
     (body.ring.material as MeshStandardMaterial).dispose();
@@ -314,12 +327,12 @@ export function createField(
       for (const unit of units) {
         seen.add(unit.id);
         let body = bodies.get(unit.id);
-        if (body && body.box && unitModels.has(unit.kind)) {
-          dropUnitBody(body);
+        if (body && body.box && models.has(unit.kind)) {
+          dropBody(body);
           body = undefined;
         }
         if (!body) {
-          body = makeUnitBody(unit.kind, unit.x, unit.y);
+          body = makeBody(unit.kind, unitGeometry, 0.55, unit.x, unit.y);
           scene.add(body.root, body.ring);
           bodies.set(unit.id, body);
         }
@@ -344,11 +357,11 @@ export function createField(
       }
       for (const [id, body] of bodies) {
         if (seen.has(id)) continue;
-        dropUnitBody(body);
+        dropBody(body);
         bodies.delete(id);
       }
     },
-    setUnitModels(urls) {
+    setModels(urls) {
       for (const [kind, url] of Object.entries(urls)) {
         loader.load(
           url,
@@ -357,10 +370,10 @@ export function createField(
               disposeTree(gltf.scene);
               return;
             }
-            unitModels.set(kind, gltf.scene);
+            models.set(kind, gltf.scene);
           },
           undefined,
-          (error) => console.warn(`unit model ${kind} failed to load; keeping the box`, error),
+          (error) => console.warn(`model ${kind} failed to load; keeping the box`, error),
         );
       }
     },
@@ -368,33 +381,41 @@ export function createField(
       const seen = new Set<number>();
       for (const building of buildings) {
         seen.add(building.id);
+        const centerX = building.x + building.width / 2;
+        const centerZ = building.y + building.height / 2;
         let body = structures.get(building.id);
+        if (body && body.box && models.has(building.kind)) {
+          dropBody(body);
+          body = undefined;
+        }
         if (!body) {
-          const mesh = new Mesh(buildingGeometry, new MeshStandardMaterial({ roughness: 0.72, metalness: 0.05 }));
-          const ring = new Mesh(ringGeometry, new MeshStandardMaterial({ color: '#f4e7c8', emissive: '#f4e7c8', emissiveIntensity: 0.4 }));
-          scene.add(mesh, ring);
-          body = { mesh, ring };
+          body = makeBody(building.kind, buildingGeometry, 0.72, centerX, centerZ);
+          scene.add(body.root, body.ring);
           structures.set(building.id, body);
         }
-        const raised = building.wreck ? 0.16 : 0.25 + Math.max(0, Math.min(1, building.progress)) * 1.15;
-        body.mesh.scale.set(building.width * 0.92, raised, building.height * 0.92);
-        body.mesh.position.set(building.x + building.width / 2, raised / 2, building.y + building.height / 2);
-        body.ring.position.set(building.x + building.width / 2, 0.08, building.y + building.height / 2);
+        const progress = Math.max(0, Math.min(1, building.progress));
+        if (body.box) {
+          const raised = building.wreck ? 0.16 : 0.25 + progress * 1.15;
+          body.root.scale.set(building.width * 0.92, raised, building.height * 0.92);
+          body.root.position.set(centerX, raised / 2, centerZ);
+          if (building.wreck && body.tint) {
+            body.tint.color.copy(WRECK);
+            body.tint.emissive.set('#000000');
+          }
+        } else {
+          /** The spec already sizes the model to the footprint. Height shows construction, or a flattened wreck. */
+          body.root.scale.set(1, building.wreck ? 0.25 : 0.15 + progress * 0.85, 1);
+          body.root.position.set(centerX, 0, centerZ);
+          if (building.wreck && !body.wrecked) wreckModel(body);
+        }
+        body.ring.position.set(centerX, 0.08, centerZ);
         body.ring.scale.setScalar(Math.max(building.width, building.height));
         body.ring.visible = building.selected;
-        const material = body.mesh.material as MeshStandardMaterial;
-        if (building.wreck) {
-          material.color.set('#3a342c');
-          material.emissive.set('#000000');
-        } else {
-          paintOwner(material, building.owner, building.selected, building.hp, building.maxHp);
-        }
+        if (!building.wreck && body.tint) paintOwner(body.tint, building.owner, building.selected, building.hp, building.maxHp);
       }
       for (const [id, body] of structures) {
         if (seen.has(id)) continue;
-        scene.remove(body.mesh, body.ring);
-        (body.mesh.material as MeshStandardMaterial).dispose();
-        (body.ring.material as MeshStandardMaterial).dispose();
+        dropBody(body);
         structures.delete(id);
       }
     },
@@ -529,10 +550,13 @@ export function createField(
     },
     dispose() {
       disposed = true;
-      for (const body of bodies.values()) dropUnitBody(body);
+      for (const body of bodies.values()) dropBody(body);
       bodies.clear();
-      for (const model of unitModels.values()) disposeTree(model);
-      unitModels.clear();
+      for (const body of structures.values()) dropBody(body);
+      structures.clear();
+      for (const model of models.values()) disposeTree(model);
+      models.clear();
+      wreckMaterial.dispose();
       renderer.dispose();
       unitGeometry.dispose();
       buildingGeometry.dispose();

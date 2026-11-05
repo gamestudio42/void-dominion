@@ -1,0 +1,160 @@
+{
+  "name": "defense_turret",
+  "out": "assets/_staging/defense_turret",
+  "tri_budget": 1500,
+  "unit_scale": 1.84,
+  "ground": true,
+  "palette": {
+    "hull": {
+      "color": [
+        0.55,
+        0.57,
+        0.6
+      ],
+      "rough": 0.5,
+      "metal": 0.55
+    },
+    "dark": {
+      "color": [
+        0.13,
+        0.14,
+        0.16
+      ],
+      "rough": 0.75,
+      "metal": 0.3
+    },
+    "team": {
+      "color": [
+        0.85,
+        0.55,
+        0.2
+      ],
+      "rough": 0.45,
+      "metal": 0.2
+    },
+    "glow": {
+      "color": [
+        0.35,
+        0.85,
+        0.95
+      ],
+      "rough": 0.3,
+      "emissive": 2.0
+    }
+  },
+  "atlas": {
+    "frames": 8,
+    "size": 256,
+    "samples": 16,
+    "elevation_deg": 30,
+    "radius": 4.7
+  },
+  "parts": [
+    {
+      "name": "base",
+      "prim": "cylinder",
+      "mat": "dark",
+      "loc": [
+        0,
+        0,
+        0.15
+      ],
+      "scale": [
+        0.92,
+        0.92,
+        0.3
+      ],
+      "params": {
+        "vertices": 8
+      }
+    },
+    {
+      "name": "pedestal",
+      "prim": "cylinder",
+      "mat": "hull",
+      "loc": [
+        0,
+        0,
+        0.6
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.6
+      ],
+      "params": {
+        "vertices": 8
+      }
+    },
+    {
+      "name": "head",
+      "prim": "cube",
+      "mat": "hull",
+      "loc": [
+        0,
+        -0.05,
+        1.1
+      ],
+      "scale": [
+        0.9,
+        0.9,
+        0.5
+      ],
+      "bevel": 0.06
+    },
+    {
+      "name": "plate",
+      "prim": "cube",
+      "mat": "team",
+      "loc": [
+        0,
+        -0.35,
+        1.42
+      ],
+      "scale": [
+        0.92,
+        0.3,
+        0.16
+      ]
+    },
+    {
+      "name": "barrel",
+      "prim": "cylinder",
+      "mat": "dark",
+      "loc": [
+        0.18,
+        0.5,
+        1.1
+      ],
+      "scale": [
+        0.07,
+        0.07,
+        0.8
+      ],
+      "rot": [
+        -90,
+        0,
+        0
+      ],
+      "mirror": true,
+      "params": {
+        "vertices": 8
+      }
+    },
+    {
+      "name": "sensor",
+      "prim": "cube",
+      "mat": "glow",
+      "loc": [
+        0,
+        0.41,
+        1.25
+      ],
+      "scale": [
+        0.3,
+        0.04,
+        0.1
+      ]
+    }
+  ]
+}

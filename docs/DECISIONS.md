@@ -83,3 +83,9 @@ The enemy tint was a blue grey (`#8aa0b5`). On the unit meshes it nearly matched
 
 Replaces 008. The skirmish is playable, so the repository now uses the studio workflows from Vazante. `pages.yml` ("CI and Pages") runs `pnpm check` and `pnpm build` on every push and pull request, publishes `apps/game/dist` from `main` to the `gh-pages` branch, and publishes a preview under `/pr-preview/pr-<number>/` for a pull request from this repository. `pages-preview-fork.yml` publishes a fork's already built preview without checking out the fork. Vazante's `snap.yml` is not copied: this game has no desktop shell or snap.
 
+## 020. Building meshes fill 92% of the footprint
+
+The seven buildings follow the unit meshes. Each spec is drawn in cells: the base spans the footprint from `packages/content` at 92%, the margin the boxes used, and `unit_scale` is that longest side so normalisation changes nothing. Height stays below that side. A test fails if a model drifts from its footprint, so a footprint change in content needs a re-bake.
+
+The client loads units and buildings through one `setModels` call. A building under construction is the model scaled in height by its progress, from 15% to full. A remembered wreck is the model at a quarter height with one shared dark material. The placement preview stays a box. Turrets do not turn: the view has no target to aim at.
+

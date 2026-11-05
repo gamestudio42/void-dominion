@@ -1,0 +1,181 @@
+{
+  "name": "vehicle_factory",
+  "out": "assets/_staging/vehicle_factory",
+  "tri_budget": 2500,
+  "unit_scale": 3.68,
+  "ground": true,
+  "palette": {
+    "hull": {
+      "color": [
+        0.55,
+        0.57,
+        0.6
+      ],
+      "rough": 0.5,
+      "metal": 0.55
+    },
+    "dark": {
+      "color": [
+        0.13,
+        0.14,
+        0.16
+      ],
+      "rough": 0.75,
+      "metal": 0.3
+    },
+    "team": {
+      "color": [
+        0.85,
+        0.55,
+        0.2
+      ],
+      "rough": 0.45,
+      "metal": 0.2
+    },
+    "glow": {
+      "color": [
+        0.35,
+        0.85,
+        0.95
+      ],
+      "rough": 0.3,
+      "emissive": 2.0
+    }
+  },
+  "atlas": {
+    "frames": 8,
+    "size": 256,
+    "samples": 16,
+    "elevation_deg": 30,
+    "radius": 8.19
+  },
+  "parts": [
+    {
+      "name": "slab",
+      "prim": "cube",
+      "mat": "dark",
+      "loc": [
+        0,
+        0,
+        0.1
+      ],
+      "scale": [
+        3.68,
+        2.7600000000000002,
+        0.2
+      ],
+      "bevel": 0.04
+    },
+    {
+      "name": "hangar",
+      "prim": "cube",
+      "mat": "hull",
+      "loc": [
+        0,
+        -0.1,
+        0.85
+      ],
+      "scale": [
+        3.3,
+        2.2,
+        1.3
+      ],
+      "bevel": 0.08
+    },
+    {
+      "name": "roof",
+      "prim": "cube",
+      "mat": "team",
+      "loc": [
+        0,
+        -0.1,
+        1.55
+      ],
+      "scale": [
+        3.36,
+        2.26,
+        0.14
+      ]
+    },
+    {
+      "name": "gate",
+      "prim": "cube",
+      "mat": "dark",
+      "loc": [
+        0,
+        1.02,
+        0.7
+      ],
+      "scale": [
+        2.0,
+        0.06,
+        1.0
+      ]
+    },
+    {
+      "name": "gate_light",
+      "prim": "cube",
+      "mat": "glow",
+      "loc": [
+        0,
+        1.03,
+        1.28
+      ],
+      "scale": [
+        2.1,
+        0.07,
+        0.1
+      ]
+    },
+    {
+      "name": "gantry_leg",
+      "prim": "cube",
+      "mat": "dark",
+      "loc": [
+        1.6,
+        1.15,
+        1.0
+      ],
+      "scale": [
+        0.14,
+        0.14,
+        1.9
+      ],
+      "mirror": true
+    },
+    {
+      "name": "gantry_beam",
+      "prim": "cube",
+      "mat": "dark",
+      "loc": [
+        0,
+        1.15,
+        2.0
+      ],
+      "scale": [
+        3.34,
+        0.14,
+        0.14
+      ]
+    },
+    {
+      "name": "stack",
+      "prim": "cylinder",
+      "mat": "dark",
+      "loc": [
+        1.1,
+        -0.8,
+        1.95
+      ],
+      "scale": [
+        0.15,
+        0.15,
+        0.8
+      ],
+      "mirror": true,
+      "params": {
+        "vertices": 8
+      }
+    }
+  ]
+}
