@@ -34,7 +34,7 @@ After commands, one tick steers, moves, gathers and builds, refreshes vision, re
 
 ## Determinism
 
-Same seed, same commands, same `hashState()`. Random draws go through `Rng`. No match rule draws from it yet, so two seeds currently share the unattended result and differ in the checksum. `runArena(seed, commands, cap)` is the headless report. Replay files record the seed. A version 1 file replays on `MATCH.seed`. Transcendental `Math` functions are forbidden in the deterministic packages. Fixed-point arithmetic is not used yet; revisit only if checksums diverge across engines.
+Same seed, same commands, same `hashState()`. Random draws go through `Rng`. No match rule draws from it yet, so two seeds currently share the unattended result and differ in the checksum. `runArena(seed, commands, cap)` is the headless report. Replay files record the seed. A version 1 file replays on `MATCH.seed`. `clientView(world, seat, full)` builds what one seat may know, for a multiplayer guest. It never includes anything that seat's fog hides. Transcendental `Math` functions are forbidden in the deterministic packages. Fixed-point arithmetic is not used yet; revisit only if checksums diverge across engines.
 
 ## What stays out of the loop
 
