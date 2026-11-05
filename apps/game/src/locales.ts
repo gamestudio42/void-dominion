@@ -16,6 +16,7 @@ export const en = {
   not_visible: 'Not visible',
   cannot_produce: "Can't produce",
   not_engineer: 'Engineers only',
+  own_target: 'That is yours',
   tick: (tick: number) => `Tick ${tick}`,
   fps: (fps: number) => `${fps} FPS`,
   ore: (amount: number) => `Ore ${amount}`,
@@ -70,6 +71,7 @@ export const ptBR: typeof en = {
   not_visible: 'Fora de visão',
   cannot_produce: 'Não pode produzir',
   not_engineer: 'Só engenheiros',
+  own_target: 'Essa é sua',
   tick: (tick: number) => `Tick ${tick}`,
   fps: (fps: number) => `${fps} FPS`,
   ore: (amount: number) => `Minério ${amount}`,
@@ -130,6 +132,7 @@ export function reasonText(messages: Messages, reason: string | null): string | 
     not_visible: messages.not_visible,
     cannot_produce: messages.cannot_produce,
     not_engineer: messages.not_engineer,
+    own_target: messages.own_target,
   };
   return table[reason] ?? reason;
 }

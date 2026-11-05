@@ -28,7 +28,7 @@ type Command =
   | { type: 'produce'; playerId: number; buildingId: number; kind: string };
 ```
 
-A rejected command returns a reason key (`unknown_unit`, `not_owner`, `out_of_bounds`, `blocked`, `no_path`, `no_ore`, `no_aether`, `no_supply`, `footprint`, `no_refinery`, `not_visible`, `cannot_produce`, `not_engineer`) and does not change the checksum.
+A rejected command returns a reason key (`unknown_unit`, `not_owner`, `out_of_bounds`, `blocked`, `no_path`, `no_ore`, `no_aether`, `no_supply`, `footprint`, `no_refinery`, `not_visible`, `cannot_produce`, `not_engineer`, `own_target`) and does not change the checksum.
 
 After commands, one tick steers, moves, gathers and builds, refreshes vision, resolves shots and deaths, then remembers buildings. A decided match stops stepping. The human replay stores `{ ticks, commands }` for player 1 only. Varek is simulated again on load.
 

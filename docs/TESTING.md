@@ -8,6 +8,7 @@
 - A rejected command leaves the checksum equal to a run that did not receive it.
 - A path around `DEMO_OBSTACLE` does not cut corners, and a match unit never finishes a tick on a blocked cell.
 - Ore rises when the starting engineers mine. An unaffordable building, an aether gather without a refinery, a hidden attack and a supply overflow are refused.
+- Attacking your own unit answers `own_target`.
 - A seen building that dies out of sight remains a wreck in memory. A replay file of human commands restores the checksum.
 - The player command center is intact when the march is allowed.
 - `pnpm sim` compares seeds `0x5eed`, `0x51eed` and `0xa11ce`. The unattended winner, tick, ore and living units match. The checksums stay pinned, and the three matches together finish in under 20 seconds. The same commands on the same seed return the same report.

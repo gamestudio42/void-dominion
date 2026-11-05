@@ -104,6 +104,7 @@ export const RejectReason = {
   notVisible: 'not_visible',
   cannotProduce: 'cannot_produce',
   notEngineer: 'not_engineer',
+  ownTarget: 'own_target',
 } as const;
 
 export type RejectReason = (typeof RejectReason)[keyof typeof RejectReason];
@@ -272,7 +273,7 @@ export function applyCommand(world: World, cmd: Command): RejectReason | null {
 function attack(world: World, units: Unit[], cmd: AttackCommand): RejectReason | null {
   const aim = aimOf(world, cmd.targetId);
   if (!aim) return RejectReason.unknownUnit;
-  if (aim.owner === cmd.playerId) return RejectReason.cannotProduce;
+  if (aim.owner === cmd.playerId) return RejectReason.ownTarget;
   if (!seesAim(world, cmd.playerId, aim)) return RejectReason.notVisible;
   for (const unit of units) {
     unit.order = 'attack';

@@ -72,6 +72,17 @@ describe('skirmish', () => {
     expect(refused.hashState()).toBe(clean.hashState());
   });
 
+  it('names an attack on your own unit', () => {
+    const clean = Simulation.create();
+    const refused = Simulation.create();
+    const [first, second] = engineers(refused);
+    refused.enqueue({ type: 'attack', playerId: PLAYER_ID, unitIds: [first!.id], targetId: second!.id });
+    clean.step();
+    refused.step();
+    expect(refused.lastRejection).toBe(RejectReason.ownTarget);
+    expect(refused.hashState()).toBe(clean.hashState());
+  });
+
   it('builds when the footprint is clear and the ore is paid', () => {
     const sim = Simulation.create();
     player(sim).ore = 500;
