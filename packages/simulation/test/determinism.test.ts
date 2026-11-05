@@ -72,13 +72,13 @@ describe('deterministic match', () => {
     expect(refused.hashState()).toBe(clean.hashState());
   });
 
-  it('refuses a unit owned by someone else', () => {
+  it('answers a hidden foreign unit like a missing one', () => {
     const sim = Simulation.create();
     const id = engineers(sim)[0]!.id;
     sim.enqueue({ type: 'move', playerId: 2, unitIds: [id], to: DESTINATION });
     const before = sim.hashState();
     sim.step();
-    expect(sim.lastRejection).toBe(RejectReason.notOwner);
+    expect(sim.lastRejection).toBe(RejectReason.unknownUnit);
     const clean = Simulation.create();
     clean.step();
     expect(sim.hashState()).toBe(clean.hashState());

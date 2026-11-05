@@ -1,15 +1,15 @@
 import {
   BUILDINGS,
   QUEUE_LIMIT,
-  buildingDef,
   inMap,
+  buildingDef,
   isBuildingKind,
   isUnitKind,
   unitDef,
   type BuildingKind,
   type UnitKind,
 } from '@void-dominion/content';
-import { isWalkable } from './grid.ts';
+import { cellIndex, isWalkable } from './grid.ts';
 import { findPath, gatherSlots, type Cell } from './path.ts';
 import {
   aimOf,
@@ -30,6 +30,7 @@ import {
   toWaypoints,
   type Aim,
 } from './query.ts';
+import { canSee, canSeeFootprint, footprintSeen } from './vision.ts';
 import { makeBuilding, playerOf, rebake, type Unit, type World } from './world.ts';
 
 export interface MoveCommand {
@@ -114,7 +115,10 @@ function takeUnits(world: World, playerId: number, ids: number[]): Unit[] | Reje
   const chosen = new Map<number, Unit>();
   for (const id of ids) {
     const unit = world.units.find((candidate) => candidate.id === id);
-    if (!unit) return RejectReason.unknownUnit;
+    /** A foreign unit the player cannot see answers like a missing one, so a refusal never reveals it. */
+    if (!unit || (unit.owner !== playerId && !canSee(world, playerId, cellOf(unit.x), cellOf(unit.y)))) {
+      return RejectReason.unknownUnit;
+    }
     if (unit.owner !== playerId) return RejectReason.notOwner;
     chosen.set(unit.id, unit);
   }
@@ -272,9 +276,9 @@ export function applyCommand(world: World, cmd: Command): RejectReason | null {
 
 function attack(world: World, units: Unit[], cmd: AttackCommand): RejectReason | null {
   const aim = aimOf(world, cmd.targetId);
-  if (!aim) return RejectReason.unknownUnit;
+  /** Missing and hidden targets share one answer, so an id cannot be probed through the fog. */
+  if (!aim || !seesAim(world, cmd.playerId, aim)) return RejectReason.notVisible;
   if (aim.owner === cmd.playerId) return RejectReason.ownTarget;
-  if (!seesAim(world, cmd.playerId, aim)) return RejectReason.notVisible;
   for (const unit of units) {
     unit.order = 'attack';
     unit.targetId = aim.id;
@@ -291,7 +295,7 @@ function gather(world: World, units: Unit[], cmd: GatherCommand): RejectReason |
   const engineers = requireEngineers(units);
   if (engineers) return engineers;
   const node = world.nodes.find((candidate) => candidate.id === cmd.nodeId);
-  if (!node) return RejectReason.unknownUnit;
+  if (!node || !explored(world, cmd.playerId, node.x, node.y)) return RejectReason.unknownUnit;
   if (node.amount <= 0) return node.kind === 'ore' ? RejectReason.noOre : RejectReason.noAether;
   if (node.kind === 'aether' && !refineryTouches(world, cmd.playerId, node.x, node.y)) return RejectReason.noRefinery;
   const carry = unitDef('engineer').carry;
@@ -313,15 +317,9 @@ function build(world: World, units: Unit[], cmd: BuildCommand): RejectReason | n
   if (engineers) return engineers;
   const player = playerOf(world, cmd.playerId);
   if (!player) return RejectReason.notOwner;
-  if (!cellOk(cmd.at)) return RejectReason.outOfBounds;
+  const site = siteRefusal(world, cmd.playerId, cmd.kind, cmd.at);
+  if (site) return site;
   const def = BUILDINGS[cmd.kind];
-  if (!footprintClear(world, cmd.at.x, cmd.at.y, def.width, def.height)) return RejectReason.footprint;
-  if (cmd.kind === 'ore_extractor' && !nodeTouches(world, 'ore', cmd.at.x, cmd.at.y, def.width, def.height)) {
-    return RejectReason.footprint;
-  }
-  if (cmd.kind === 'aether_refinery' && !nodeTouches(world, 'aether', cmd.at.x, cmd.at.y, def.width, def.height)) {
-    return RejectReason.footprint;
-  }
   if (player.ore < def.ore) return RejectReason.noOre;
   if (player.aether < def.aether) return RejectReason.noAether;
   player.ore -= def.ore;
@@ -341,12 +339,39 @@ function build(world: World, units: Unit[], cmd: BuildCommand): RejectReason | n
   return null;
 }
 
+function explored(world: World, playerId: number, x: number, y: number): boolean {
+  const index = playerId - 1;
+  if (index !== 0 && index !== 1) return false;
+  return world.explored[index]![cellIndex(x, y)] === 1;
+}
+
+/**
+ * Whether `kind` can stand at `at` for this player. The whole footprint has to be in sight
+ * before units or buildings are consulted, so a refusal never reveals what the fog hides.
+ */
+export function siteRefusal(world: World, playerId: number, kind: BuildingKind, at: Cell): RejectReason | null {
+  if (!cellOk(at)) return RejectReason.outOfBounds;
+  const def = BUILDINGS[kind];
+  if (!inMap(at.x + def.width - 1, at.y + def.height - 1)) return RejectReason.footprint;
+  if (!footprintSeen(world, playerId, at.x, at.y, def.width, def.height)) return RejectReason.notVisible;
+  if (!footprintClear(world, at.x, at.y, def.width, def.height)) return RejectReason.footprint;
+  if (kind === 'ore_extractor' && !nodeTouches(world, 'ore', at.x, at.y, def.width, def.height)) return RejectReason.footprint;
+  if (kind === 'aether_refinery' && !nodeTouches(world, 'aether', at.x, at.y, def.width, def.height)) {
+    return RejectReason.footprint;
+  }
+  return null;
+}
+
 function produce(world: World, cmd: ProduceCommand): RejectReason | null {
   const player = playerOf(world, cmd.playerId);
   if (!player) return RejectReason.notOwner;
   const building = world.buildings.find((candidate) => candidate.id === cmd.buildingId);
   if (!building) return RejectReason.unknownUnit;
-  if (building.owner !== cmd.playerId) return RejectReason.notOwner;
+  if (building.owner !== cmd.playerId) {
+    const def = buildingDef(building.kind);
+    const seen = canSeeFootprint(world, cmd.playerId, building.x, building.y, def.width, def.height);
+    return seen ? RejectReason.notOwner : RejectReason.unknownUnit;
+  }
   const def = buildingDef(building.kind);
   if (!complete(building) || !def.produces.includes(cmd.kind)) return RejectReason.cannotProduce;
   const queued = building.queue.length + (building.prod ? 1 : 0);

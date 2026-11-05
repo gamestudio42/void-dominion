@@ -6,7 +6,7 @@ import {
 } from '@void-dominion/content';
 import { isWalkable } from './grid.ts';
 import { findPath, type Cell } from './path.ts';
-import { canSee, canSeeFootprint } from './vision.ts';
+import { canSee, canSeeFootprint, footprintSeen } from './vision.ts';
 import type { Building, Unit, World } from './world.ts';
 
 export interface Aim {
@@ -191,12 +191,14 @@ export function approachPath(
   return findPath(blocked, fromX, fromY, best.x, best.y);
 }
 
-export function findTouchingSite(world: World, kind: BuildingKind, nx: number, ny: number): Cell | null {
+/** Lowest site touching a node that the player can see whole, as a build command requires. */
+export function findTouchingSite(world: World, playerId: number, kind: BuildingKind, nx: number, ny: number): Cell | null {
   const def = BUILDINGS[kind];
   let best: Cell | null = null;
   let bestScore = Infinity;
   for (let y = ny - def.height; y <= ny + 1; y++) {
     for (let x = nx - def.width; x <= nx + 1; x++) {
+      if (!footprintSeen(world, playerId, x, y, def.width, def.height)) continue;
       if (!footprintClear(world, x, y, def.width, def.height)) continue;
       if (!touches(x, y, def.width, def.height, nx, ny)) continue;
       const score = y * 1000 + x;
@@ -209,13 +211,21 @@ export function findTouchingSite(world: World, kind: BuildingKind, nx: number, n
   return best;
 }
 
-export function findOpenSite(world: World, kind: BuildingKind, originX: number, originY: number): Cell | null {
+/** Nearest clear site in rings around the origin. With a viewer, only sites that player can see whole. */
+export function findOpenSite(
+  world: World,
+  kind: BuildingKind,
+  originX: number,
+  originY: number,
+  viewer = 0,
+): Cell | null {
   const def = BUILDINGS[kind];
   for (let radius = 0; radius < 18; radius++) {
     for (let y = originY - radius; y <= originY + radius; y++) {
       for (let x = originX - radius; x <= originX + radius; x++) {
         const onEdge = radius === 0 || Math.abs(x - originX) === radius || Math.abs(y - originY) === radius;
         if (!onEdge) continue;
+        if (viewer !== 0 && !footprintSeen(world, viewer, x, y, def.width, def.height)) continue;
         if (footprintClear(world, x, y, def.width, def.height)) return { x, y };
       }
     }

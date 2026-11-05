@@ -18,6 +18,16 @@ export function canSeeFootprint(world: World, playerId: number, x: number, y: nu
   return false;
 }
 
+/** Every cell of the footprint is in sight. Building placement needs this, not one corner. */
+export function footprintSeen(world: World, playerId: number, x: number, y: number, width: number, height: number): boolean {
+  for (let cy = y; cy < y + height; cy++) {
+    for (let cx = x; cx < x + width; cx++) {
+      if (!canSee(world, playerId, cx, cy)) return false;
+    }
+  }
+  return true;
+}
+
 function reveal(world: World, index: number, cx: number, cy: number, sight: number): void {
   const limit = sight * sight;
   const grid = world.visible[index]!;

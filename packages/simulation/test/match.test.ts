@@ -1,6 +1,7 @@
 import {
   BUILDINGS,
   ENEMY_ID,
+  MAP_SIZE,
   MATCH,
   PLAYER_ID,
   UNITS,
@@ -16,6 +17,8 @@ import {
   makeUnit,
   rebake,
   serializeReplay,
+  type Command,
+  type RejectReasonName,
 } from '../src/index.ts';
 
 function player(sim: Simulation, id = PLAYER_ID) {
@@ -24,6 +27,11 @@ function player(sim: Simulation, id = PLAYER_ID) {
 
 function engineers(sim: Simulation, owner = PLAYER_ID) {
   return sim.world.units.filter((unit) => unit.owner === owner && unit.kind === 'engineer');
+}
+
+/** Mark a cell explored for player 1, as if an engineer had walked there. */
+function scout(sim: Simulation, x: number, y: number): void {
+  sim.world.explored[PLAYER_ID - 1]![y * MAP_SIZE + x] = 1;
 }
 
 function run(sim: Simulation, ticks: number): void {
@@ -47,7 +55,7 @@ describe('skirmish', () => {
       playerId: PLAYER_ID,
       unitIds: [engineers(refused)[0]!.id],
       kind: 'barracks',
-      at: { x: 24, y: 110 },
+      at: { x: 18, y: 96 },
     });
     clean.step();
     refused.step();
@@ -60,6 +68,7 @@ describe('skirmish', () => {
     const clean = Simulation.create();
     const refused = Simulation.create();
     const node = refused.world.nodes.find((entry) => entry.kind === 'aether' && entry.x === MATCH.bases[0]!.aether.x);
+    for (const sim of [clean, refused]) scout(sim, node!.x, node!.y);
     refused.enqueue({
       type: 'gather',
       playerId: PLAYER_ID,
@@ -214,5 +223,105 @@ describe('skirmish', () => {
     expect(restored).not.toBeNull();
     const replay = Simulation.replay(restored!.commands, restored!.ticks);
     expect(replay.hashState()).toBe(live.hashState());
+  });
+});
+
+describe('refusals behind the fog', () => {
+  function enemyAt(sim: Simulation, x: number, y: number) {
+    const unit = makeUnit(sim.world, ENEMY_ID, 'rifleman', x, y);
+    sim.world.units.push(unit);
+    return unit;
+  }
+
+  function refusedLikeClean(setup: (sim: Simulation) => void, cmd: (sim: Simulation) => Command): RejectReasonName | null {
+    const clean = Simulation.create();
+    const refused = Simulation.create();
+    setup(clean);
+    setup(refused);
+    refused.enqueue(cmd(refused));
+    clean.step();
+    refused.step();
+    expect(refused.hashState()).toBe(clean.hashState());
+    return refused.lastRejection;
+  }
+
+  it('answers a missing target and a hidden one alike', () => {
+    const missing = refusedLikeClean(
+      () => {},
+      (sim) => ({ type: 'attack', playerId: PLAYER_ID, unitIds: [engineers(sim)[0]!.id], targetId: 9999 }),
+    );
+    const hidden = refusedLikeClean(
+      (sim) => enemyAt(sim, 100, 30),
+      (sim) => ({
+        type: 'attack',
+        playerId: PLAYER_ID,
+        unitIds: [engineers(sim)[0]!.id],
+        targetId: sim.world.units.find((unit) => unit.owner === ENEMY_ID && unit.kind === 'rifleman')!.id,
+      }),
+    );
+    expect(missing).toBe(RejectReason.notVisible);
+    expect(hidden).toBe(RejectReason.notVisible);
+  });
+
+  it('says not yours only for a foreign unit the player can see', () => {
+    const sim = Simulation.create();
+    const seen = enemyAt(sim, 16, 96);
+    const hidden = enemyAt(sim, 100, 30);
+    sim.step();
+    expect(canSee(sim.world, PLAYER_ID, 16, 96)).toBe(true);
+    sim.enqueue({ type: 'stop', playerId: PLAYER_ID, unitIds: [seen.id] });
+    sim.step();
+    expect(sim.lastRejection).toBe(RejectReason.notOwner);
+    sim.enqueue({ type: 'stop', playerId: PLAYER_ID, unitIds: [hidden.id] });
+    sim.step();
+    expect(sim.lastRejection).toBe(RejectReason.unknownUnit);
+  });
+
+  it('does not reveal a hidden unit standing on a building site', () => {
+    const site = { x: 104, y: 34 };
+    const reason = refusedLikeClean(
+      (sim) => {
+        player(sim).ore = 500;
+        enemyAt(sim, site.x + 1, site.y + 1);
+      },
+      (sim) => ({ type: 'build', playerId: PLAYER_ID, unitIds: [engineers(sim)[0]!.id], kind: 'barracks', at: site }),
+    );
+    expect(reason).toBe(RejectReason.notVisible);
+  });
+
+  it('refuses a build site the player cannot see', () => {
+    const reason = refusedLikeClean(
+      (sim) => {
+        player(sim).ore = 500;
+      },
+      (sim) => ({ type: 'build', playerId: PLAYER_ID, unitIds: [engineers(sim)[0]!.id], kind: 'barracks', at: { x: 60, y: 64 } }),
+    );
+    expect(reason).toBe(RejectReason.notVisible);
+  });
+
+  it('answers production in a hidden enemy building like a missing building', () => {
+    const reason = refusedLikeClean(
+      () => {},
+      (sim) => ({
+        type: 'produce',
+        playerId: PLAYER_ID,
+        buildingId: sim.world.buildings.find((building) => building.owner === ENEMY_ID)!.id,
+        kind: 'engineer',
+      }),
+    );
+    expect(reason).toBe(RejectReason.unknownUnit);
+  });
+
+  it('refuses a gather on a node the player has not explored', () => {
+    const reason = refusedLikeClean(
+      () => {},
+      (sim) => ({
+        type: 'gather',
+        playerId: PLAYER_ID,
+        unitIds: [engineers(sim)[0]!.id],
+        nodeId: sim.world.nodes.find((node) => node.kind === 'ore' && node.x === MATCH.bases[1]!.ore.x)!.id,
+      }),
+    );
+    expect(reason).toBe(RejectReason.unknownUnit);
   });
 });

@@ -61,3 +61,7 @@ An unattended match used to lose its workers while the player was still learning
 ## 015. The arena compares seeds before the rules draw
 
 `runArena` plays one seed and one command list until the match ends or a step cap. The report records the winner, the tick, the checksum, both stocks of ore and the living units. Seeds `0x5eed`, `0x51eed` and `0xa11ce` share that result except the checksum, because the checksum already includes the seed and no system draws from `Rng` yet. A later draw has to update those pins. The twenty-second ceiling sits in the test. Wall time does not enter the simulation. The client is unchanged.
+
+## 016. A refusal does not see through the fog
+
+A reason key is information. `footprint` on an unseen site, `not_owner` on a hidden unit and `not_visible` against `unknown_unit` on an attack each told the player, or a commander, what the fog was hiding. A foreign entity out of sight now answers like a missing one. A build site must be in sight whole before units and buildings on it are checked, and the client's placement preview calls the same `siteRefusal` instead of a second check. A gather needs an explored node, matching what the client already draws. General Varek's finders choose only sites he can see; the pinned arena seeds did not change.

@@ -33,7 +33,7 @@ export function stepAi(world: World): void {
   const oreNode = nearestNode(world, cc.x, cc.y, 'ore');
   const hasExtractor = world.buildings.some((building) => building.owner === playerId && building.kind === 'ore_extractor');
   if (!hasExtractor && oreNode) {
-    const site = findTouchingSite(world, 'ore_extractor', oreNode.x, oreNode.y);
+    const site = findTouchingSite(world, playerId, 'ore_extractor', oreNode.x, oreNode.y);
     const builder = engineers.find((unit) => unit.order === 'gather' || unit.order === 'idle' || unit.order === 'return');
     if (site && builder) {
       applyCommand(world, {
@@ -47,7 +47,7 @@ export function stepAi(world: World): void {
   }
   const hasBarracks = world.buildings.some((building) => building.owner === playerId && building.kind === 'barracks');
   if (hasExtractor && !hasBarracks) {
-    const site = findOpenSite(world, 'barracks', cc.x - 6, cc.y);
+    const site = findOpenSite(world, 'barracks', cc.x - 6, cc.y, playerId);
     const builder = world.units.find(
       (unit) => unit.owner === playerId && unit.kind === 'engineer' && unit.order !== 'build',
     );

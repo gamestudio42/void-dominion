@@ -14,12 +14,11 @@ import {
   canSee,
   canSeeFootprint,
   deserializeReplay,
-  footprintClear,
   isWalkable,
-  nodeTouches,
   powerGive,
   powerTake,
   serializeReplay,
+  siteRefusal,
   supplyCap,
   supplyUsed,
   type Command,
@@ -295,11 +294,7 @@ export function startField(
   }
 
   function siteOk(kind: BuildingKind, at: Point): boolean {
-    const def = BUILDINGS[kind];
-    if (!footprintClear(sim.world, at.x, at.y, def.width, def.height)) return false;
-    if (kind === 'ore_extractor' && !nodeTouches(sim.world, 'ore', at.x, at.y, def.width, def.height)) return false;
-    if (kind === 'aether_refinery' && !nodeTouches(sim.world, 'aether', at.x, at.y, def.width, def.height)) return false;
-    return true;
+    return siteRefusal(sim.world, PLAYER_ID, kind, at) === null;
   }
 
   function paint(alpha: number): void {
