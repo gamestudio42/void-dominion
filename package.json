@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "sim": "vitest run packages/simulation/test/arena.test.ts",
+    "bench": "node --experimental-transform-types --no-warnings tools/bench/arena.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm test"
   },
   "devDependencies": {

@@ -22,4 +22,4 @@ When the skirmish is in the client: ore increasing, a refused build or train wit
 
 ## Not in this stage
 
-Playwright and performance benches are not set up. The match itself already runs headless under Vitest.
+Playwright is not set up. `pnpm bench` times the headless match outside Vitest, and `docs/BENCHMARKS.md` records the speed table with its machine. It is a measurement, not a test, and it never fails a run. The renderer is not benchmarked.

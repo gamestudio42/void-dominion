@@ -10,7 +10,7 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 | 3 | Combat, destruction, victory and defeat | Done |
 | 4 | Conventional opponent, fog of war, replay file | Done |
 | 5 | Optional commander gateway and deterministic fallback | Done |
-| 6 | Headless arena, benchmarks, comparable seeds | Three seeds compared |
+| 6 | Headless arena, benchmarks, comparable seeds | Done |
 | 7 | Authoritative multiplayer | Not started |
 
 ## Milestone 0
@@ -39,8 +39,9 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 - `runArena` plays a seed and a command list until the match ends or a step cap.
 - Seeds `0x5eed`, `0x51eed` and `0xa11ce` share the unattended winner, tick, ore and living units. The checksum changes with the seed. No rule draws from the random stream yet.
 - The three matches together finish in under 20 seconds. That ceiling is a test, not a clock inside the simulation.
-- The same commands on the same seed return the same report. There is no published speed table and no network match.
+- The same commands on the same seed return the same report.
+- `pnpm bench` times every step of the three seeds. The speed table in `docs/BENCHMARKS.md` shows a full match in about 0.3 s, roughly 550 times real time, with every step under 4 ms against the 50 ms budget. The renderer is not timed, and there is no network match.
 
 ## Later milestones
 
-Milestones 2, 3 and 4 are the skirmish: economy, combat, fog, General Varek and a human replay file. The commander gateway lives in the simulation and this client does not consult it. The headless arena compares three seeds. Multiplayer is not in this build.
+Milestones 2, 3 and 4 are the skirmish: economy, combat, fog, General Varek and a human replay file. The commander gateway lives in the simulation and this client does not consult it. The headless arena compares three seeds and publishes a speed table. Multiplayer is not in this build.
