@@ -7,9 +7,8 @@ import { nearestNode, type World } from './world.ts';
  * Conventional opponent. Personality weights only: no language model, no hidden positions.
  * The enemy start cell is public scenario data. Units still have to be seen to be shot.
  */
-export function stepAi(world: World): void {
+export function stepAi(world: World, playerId: number = ENEMY_ID): void {
   if (MATCH.ai.aggression <= 0) return;
-  const playerId = ENEMY_ID;
   const cc = world.buildings.find(
     (building) => building.owner === playerId && building.kind === 'command_center' && complete(building),
   );
@@ -64,7 +63,8 @@ export function stepAi(world: World): void {
   }
   /** First march waits so the opening can finish a building before the army is committed. */
   if (!threat && world.tick >= MATCH.ai.marchTick && rifles >= MATCH.ai.army && MATCH.ai.aggression >= 0.5) {
-    const enemy = MATCH.bases.find((base) => base.id === PLAYER_ID);
+    const rival = playerId === PLAYER_ID ? ENEMY_ID : PLAYER_ID;
+    const enemy = MATCH.bases.find((base) => base.id === rival);
     const soldiers = world.units.filter((unit) => unit.owner === playerId && unit.kind === 'rifleman');
     if (enemy && soldiers.length > 0) {
       const site = findOpenSite(world, 'defense_turret', enemy.cc.x + 5, enemy.cc.y);

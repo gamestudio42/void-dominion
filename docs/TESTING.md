@@ -11,6 +11,7 @@
 - Attacking your own unit answers `own_target`.
 - A refusal does not reveal hidden information: a hidden foreign unit, a missing target, an unseen building site, a hidden enemy building and an unexplored node each answer like something absent.
 - A replay file with an order for General Varek is unreadable.
+- With Varek off, seat 2 trains nothing on its own. Varek can drive seat 1. Two matches between people with the same orders share a checksum. Their version 2 file replays to that checksum. A version 1 file still replays as the skirmish. Unknown versions, bad seats and seeds outside 32 bits are refused.
 - A seen building that dies out of sight remains a wreck in memory. A replay file of human commands restores the checksum.
 - The player command center is intact when the march is allowed.
 - `pnpm sim` compares seeds `0x5eed`, `0x51eed` and `0xa11ce`. The unattended winner, tick, ore and living units match. The checksums stay pinned, and the three matches together finish in under 20 seconds. The same commands on the same seed return the same report.

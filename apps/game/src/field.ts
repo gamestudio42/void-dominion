@@ -561,7 +561,7 @@ export function startField(
       publish();
     },
     saveReplay() {
-      const blob = new Blob([serializeReplay(sim.log, sim.world.tick)], { type: 'application/json' });
+      const blob = new Blob([serializeReplay(sim.log, sim.world.tick, { seed: sim.world.seed, seats: sim.seats })], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -576,7 +576,7 @@ export function startField(
         publish();
         return;
       }
-      sim = Simulation.replay(file.commands, file.ticks);
+      sim = Simulation.replay(file.commands, file.ticks, file);
       watchCombat = combatWatcher(PLAYER_ID);
       watchCombat(sim.world);
       previous = capture();
