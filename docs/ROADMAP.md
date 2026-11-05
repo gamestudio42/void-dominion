@@ -11,7 +11,7 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 | 4 | Conventional opponent, fog of war, replay file | Done |
 | 5 | Optional commander gateway and deterministic fallback | Done |
 | 6 | Headless arena, benchmarks, comparable seeds | Done |
-| 7 | Authoritative multiplayer | Not started |
+| 7 | Authoritative multiplayer | Planned (`docs/MULTIPLAYER.md`) |
 
 ## Milestone 0
 
@@ -41,6 +41,19 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 - The three matches together finish in under 20 seconds. That ceiling is a test, not a clock inside the simulation.
 - The same commands on the same seed return the same report.
 - `pnpm bench` times every step of the three seeds. The speed table in `docs/BENCHMARKS.md` shows a full match in about 0.3 s, roughly 550 times real time, with every step under 4 ms against the 50 ms budget. The renderer is not timed, and there is no network match.
+
+## Milestone 7 (planned)
+
+- The server runs the only `Simulation` and sends each seat a fog-filtered view. Clients send commands and draw views. There is no lockstep and no desync.
+- The order of work:
+  1. seats without Varek and replay v2;
+  2. the client view and a whole-match no-leak test;
+  3. the protocol package;
+  4. the server, with in-process tests;
+  5. the client net mode;
+  6. deploy.
+- Done when two players on different networks finish a match, no client receives a hidden entity, and the stored replay reproduces the server checksum.
+- Where the server runs is still open.
 
 ## Later milestones
 

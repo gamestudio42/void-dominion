@@ -107,3 +107,13 @@ The simulation keeps no shot or death events, and adding them would change the c
 
 The three effects are EffectCraft renders, verified as PNG sequences, then packed into one sheet each at 128 px per frame. A sprite sheet is one texture and one request, where a sequence would be 51 files. The verifier judges an animation and warns on a still, so the sheet is recorded in its own `sheet` block of the manifest with hash, grid and frame count. The view draws each effect as a sprite through meshes and above the fog, with at most 96 alive. There is no tracer between shooter and target, because the world does not say who was shot.
 
+## 024. Proposed: multiplayer is a server simulation with fog-filtered views
+
+Status: proposed, waiting for the owner's review of `docs/MULTIPLAYER.md`.
+
+Lockstep would hand each client the whole world, and the hidden enemy would sit in its memory. That breaks the fog rule of decision 016 for anyone who opens the developer tools. The server instead runs the same simulation package and sends each seat what `observe()` would show it, extended for rendering.
+
+On the measured match a view is under 2.2 KB of JSON, about 280 bytes gzipped on average. Building and serializing one takes about 34 µs. Bandwidth is therefore not the reason to choose lockstep here. Input latency is one round trip plus a tick, which an RTS at 20 Hz tolerates.
+
+The host is Node with `ws`, not Colyseus. Colyseus's schema sync would duplicate the world and its fog filtering. Where the server runs is not decided.
+
