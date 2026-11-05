@@ -7,6 +7,7 @@
   },
   "include": [
     "packages/view3d",
+    "packages/net",
     "apps/game/src",
     "apps/game/vite.config.ts",
     "vitest.config.ts",

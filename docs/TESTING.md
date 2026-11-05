@@ -30,6 +30,18 @@
   - A guest's `playerId` is dropped and replaced by its seat.
   - The command budget allows a burst of 20, then 20 a second, and does not refill when the clock goes backwards.
   - The guest audit accepts an honest host. It catches a changed checksum, a changed winner, an unreadable replay, the guest's seat given to Varek, a missing or extra order, and an order moved to another tick.
+- **Network, in memory.**
+  - The match link round-trips its secret.
+  - Sealed messages open only with their key and unaltered, and the topic does not contain the secret.
+  - View compression round-trips and refuses oversized or broken input.
+  - The handshake connects. It ignores a guest with another secret, noise and forged answers, and offers older than two minutes. A late guest still joins, and the match starts when one of two brokers is dead.
+  - Over in-memory channels, a host and a guest play a whole match with Varek on seat 1:
+    - the guest is seated, receives views and builds its explored grid;
+    - its order for the other seat's units is refused as `unknown_unit`;
+    - the audit passes.
+  - A flood past the command budget is dropped.
+  - A host that changes the world fails the audit with `checksum`.
+  - Junk from the guest is counted and never queued.
 - A seen building that dies out of sight remains a wreck in memory. A replay file of human commands restores the checksum.
 - The player command center is intact when the march is allowed.
 - `pnpm sim` compares seeds `0x5eed`, `0x51eed` and `0xa11ce`. The unattended winner, tick, ore and living units match. The checksums stay pinned, and the three matches together finish in under 20 seconds. The same commands on the same seed return the same report.
