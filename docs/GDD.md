@@ -33,7 +33,7 @@ The beat this build changes is the whole skirmish: gather ore, spend it, train s
 
 ## What this build does not do
 
-No language model is connected, and there is no network multiplayer. The five Helion units are low-poly meshes from the Blender pipeline, tinted by owner and turned toward their movement. Buildings, nodes and effects are still geometric.
+No language model is connected, and there is no network multiplayer. The five Helion units and seven buildings are low-poly meshes from the Blender pipeline, tinted by owner. Units turn toward their movement; buildings rise from the ground while under construction and flatten into a dark wreck in memory. Resource nodes, rocks and effects are still geometric.
 
 ## Factions
 

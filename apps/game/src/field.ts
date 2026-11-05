@@ -25,7 +25,7 @@ import {
 } from '@void-dominion/simulation';
 import { createField } from '@void-dominion/view3d';
 import { messagesFor, reasonText } from './locales.ts';
-import { UNIT_MODELS } from './models.ts';
+import { BUILDING_MODELS, UNIT_MODELS } from './models.ts';
 
 export interface Box {
   left: number;
@@ -97,7 +97,7 @@ export function startField(
   const home = MATCH.bases[0]!;
   const view = createField(canvas, MAP_SIZE, { x: home.cc.x + 6, z: home.cc.y + 2 });
   view.setRocks(sim.world.rocks);
-  view.setUnitModels(UNIT_MODELS);
+  view.setModels({ ...UNIT_MODELS, ...BUILDING_MODELS });
   const stepper = new FixedStepper({ dt: FIXED_DT, maxFrameTime: 0.25, maxStepsPerFrame: 8 });
   const selected = new Set<number>();
   const keys = new Set<string>();
@@ -182,6 +182,7 @@ export function startField(
       if (!seen) continue;
       draws.push({
         id: building.id,
+        kind: building.kind,
         x: building.x,
         y: building.y,
         width: def.width,
@@ -199,6 +200,7 @@ export function startField(
       const def = buildingDef(ghost.kind);
       draws.push({
         id: ghost.id,
+        kind: ghost.kind,
         x: ghost.x,
         y: ghost.y,
         width: def.width,
