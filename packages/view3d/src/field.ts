@@ -93,7 +93,8 @@ export interface FieldView {
 
 const GROUND = new Color('#1a222e');
 const PLAYER = new Color('#e0a045');
-const ENEMY = new Color('#8aa0b5');
+/** Red, so enemy panels stand apart from the grey hull, the cyan glow and the player's amber. */
+const ENEMY = new Color('#d0504a');
 const MARKER_OK = new Color('#8fd0a8');
 const MARKER_BAD = new Color('#d4766a');
 

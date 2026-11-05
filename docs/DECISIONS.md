@@ -74,5 +74,8 @@ Milestone 6 still lacks its speed table, but the units were boxes and the player
 
 Each spec in `tools/asset-pipeline/blender/specs/` owns its size through `unit_scale` (cells), so the client draws the model at scale 1 and does not resize it. The palette is shared: `hull`, `dark`, `glow` and `team`. The client clones `team` per unit and tints it by owner and health; geometry and the other materials are shared. Facing comes from the drawn movement in the view, since the simulation has no heading. A kind whose model is missing or fails to load keeps its box. `GLTFLoader` sits in its own `three-addons` chunk so the `three` chunk stays under the build warning.
 
-The enemy tint on the `team` panels is close to the hull grey. Whether to brighten it is a separate readability decision.
+
+## 018. General Varek is red
+
+The enemy tint was a blue grey (`#8aa0b5`). On the unit meshes it nearly matched the hull, and with low health it faded further; on the minimap enemy cells were close to visible ground. The enemy is now red (`#d0504a` in the view, the same family on the minimap), apart from the player's amber, the grey hull and the cyan glow. Health still darkens the tint.
 

@@ -352,12 +352,12 @@ export function startField(
     for (const building of shownBuildings()) {
       for (let y = building.y; y < building.y + building.height; y++) {
         for (let x = building.x; x < building.x + building.width; x++) {
-          paintCell(x, y, building.owner === PLAYER_ID ? 196 : 120, building.owner === PLAYER_ID ? 140 : 150, building.owner === PLAYER_ID ? 70 : 160);
+          paintCell(x, y, building.owner === PLAYER_ID ? 196 : 176, building.owner === PLAYER_ID ? 140 : 64, building.owner === PLAYER_ID ? 70 : 58);
         }
       }
     }
     for (const unit of shownUnits(lastAlpha)) {
-      paintCell(Math.floor(unit.x), Math.floor(unit.y), unit.owner === PLAYER_ID ? 240 : 170, unit.owner === PLAYER_ID ? 190 : 200, unit.owner === PLAYER_ID ? 90 : 210);
+      paintCell(Math.floor(unit.x), Math.floor(unit.y), unit.owner === PLAYER_ID ? 240 : 236, unit.owner === PLAYER_ID ? 190 : 92, unit.owner === PLAYER_ID ? 90 : 80);
     }
     ctx.putImageData(image, 0, 0);
     board.imageSmoothingEnabled = false;
