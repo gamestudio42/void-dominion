@@ -406,7 +406,8 @@ export function parseLogged(value: unknown): { tick: number; cmd: Command } | nu
   return { tick: value.tick, cmd };
 }
 
-function parseCommand(value: unknown): Command | null {
+/** Strict reader for one command. Returns null for anything the engine would not accept as a command. */
+export function parseCommand(value: unknown): Command | null {
   if (!isRecord(value) || typeof value.type !== 'string' || typeof value.playerId !== 'number') return null;
   const playerId = value.playerId;
   if (value.type === 'produce') {

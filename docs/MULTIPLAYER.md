@@ -1,6 +1,6 @@
 # Multiplayer plan (milestone 7)
 
-Status: accepted by the owner on 2026-11-05. Step 1 (seats and replay v2) is merged. Step 2 (the client view) is in review. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
+Status: accepted by the owner on 2026-11-05. Steps 1 (seats and replay v2) and 2 (the client view) are merged. Step 3 (the protocol package) is in review. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
 
 ## Goal
 
@@ -146,11 +146,25 @@ JSON messages, each carrying `v`, the protocol version. A peer with another vers
 | host → guest | `end` | winner, final tick, checksum, replay v2 |
 | both | `ping` / `pong` | timestamps for the latency readout |
 
-Rules:
+Rules, as built in `packages/protocol`:
 
-- Commands are parsed with the same `parseLogged` the replay uses. Anything else is dropped and counted.
-- The guest may send at most 20 commands a second.
-- A message larger than 64 KB closes the session.
+- `decode(raw, from)` never throws. It answers one of these errors:
+  - `too_large`, checked before parsing;
+  - `not_json`;
+  - `version`;
+  - `direction`, for a message the sending side may not send;
+  - `shape`.
+- Size limits, in characters: a guest message may be 8 KB, since commands are small. A host message may be 256 KB, since a view of 200 riflemen a side is about 28 KB.
+- **Commands.**
+  - A command body is validated by the engine's own `parseCommand`.
+  - Any `playerId` the guest writes is dropped, and `stamp(body, seat)` gives the command the guest's seat.
+- **Command rate.** `CommandBudget` allows a burst of 20 commands, then 20 a second, on the host's clock. A command past the budget is dropped, not queued.
+- **Ack tick.** An `ack` names the tick its command was applied on. That is the tick its replay entry carries.
+- **Views.** The guest validates every view's shape before drawing it: kinds, seats, numbers, and fog runs that cover the map. It trusts the host's rules, not its bytes.
+- **Audit.** `auditMatch(end, seat, acked)` is the guest's check after `end`. It fails with a reason when:
+  - the replay is unreadable, or does not list the guest as human;
+  - it does not reproduce the announced checksum and winner;
+  - its guest orders differ from the acknowledged ones, in count or tick.
 - Views are full, not deltas, at 10 Hz, and compressed with deflate. The step 2 measurement shows deltas are not needed.
 
 ### Host and guest in the client (`apps/game`)
