@@ -325,3 +325,19 @@ describe('refusals behind the fog', () => {
     expect(reason).toBe(RejectReason.unknownUnit);
   });
 });
+
+describe('replay file', () => {
+  it('rejects a file that carries an order for General Varek', () => {
+    const sim = Simulation.create();
+    const varek = engineers(sim, ENEMY_ID)[0]!.id;
+    const raw = serializeReplay([{ tick: 0, cmd: { type: 'stop', playerId: ENEMY_ID, unitIds: [varek] } }], 10);
+    expect(deserializeReplay(raw)).toBeNull();
+  });
+
+  it('ignores opponent orders handed straight to replay', () => {
+    const varek = engineers(Simulation.create(), ENEMY_ID).map((unit) => unit.id);
+    const steered = Simulation.replay([{ tick: 0, cmd: { type: 'stop', playerId: ENEMY_ID, unitIds: varek } }], 60);
+    const plain = Simulation.replay([], 60);
+    expect(steered.hashState()).toBe(plain.hashState());
+  });
+});

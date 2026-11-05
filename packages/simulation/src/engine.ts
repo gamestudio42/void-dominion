@@ -72,13 +72,14 @@ export class Simulation {
     return hashWorld(this.world);
   }
 
-  /** Play a human log forward. Opponent orders are decided again inside each step. */
+  /** Play a human log forward. Opponent orders are decided again inside each step; any in the log are ignored. */
   static replay(log: readonly LoggedCommand[], ticks: number): Simulation {
     const sim = Simulation.create();
     let index = 0;
     for (let tick = 0; tick < ticks; tick++) {
       while (index < log.length && log[index]!.tick === tick) {
-        sim.enqueue(log[index]!.cmd);
+        const { cmd } = log[index]!;
+        if (cmd.playerId === PLAYER_ID) sim.enqueue(cmd);
         index += 1;
       }
       sim.step();
@@ -105,7 +106,8 @@ export function deserializeReplay(raw: string): { ticks: number; commands: Logge
   const commands: LoggedCommand[] = [];
   for (const entry of file.commands) {
     const logged = parseLogged(entry);
-    if (!logged) return null;
+    /** A human replay carries player 1 only. A Varek order in the file would let it steer him. */
+    if (!logged || logged.cmd.playerId !== PLAYER_ID) return null;
     commands.push(logged);
   }
   return { ticks: file.ticks, commands };

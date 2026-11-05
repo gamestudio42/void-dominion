@@ -65,3 +65,5 @@ An unattended match used to lose its workers while the player was still learning
 ## 016. A refusal does not see through the fog
 
 A reason key is information. `footprint` on an unseen site, `not_owner` on a hidden unit and `not_visible` against `unknown_unit` on an attack each told the player, or a commander, what the fog was hiding. A foreign entity out of sight now answers like a missing one. A build site must be in sight whole before units and buildings on it are checked, and the client's placement preview calls the same `siteRefusal` instead of a second check. A gather needs an explored node, matching what the client already draws. General Varek's finders choose only sites he can see; the pinned arena seeds did not change.
+
+A human replay file is player 1 only. Before this, a file could carry orders for Varek and steer him. The same per-seat check belongs in the multiplayer host when it exists.

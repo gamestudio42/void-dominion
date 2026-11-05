@@ -30,7 +30,7 @@ type Command =
 
 A rejected command returns a reason key (`unknown_unit`, `not_owner`, `out_of_bounds`, `blocked`, `no_path`, `no_ore`, `no_aether`, `no_supply`, `footprint`, `no_refinery`, `not_visible`, `cannot_produce`, `not_engineer`, `own_target`) and does not change the checksum. A refusal never reveals what the fog hides: a foreign unit or building out of sight answers `unknown_unit` like a missing one, a missing attack target answers `not_visible` like a hidden one, a build site has to be in sight before its units are consulted, and a gather needs an explored node. The client previews a site with the same `siteRefusal`.
 
-After commands, one tick steers, moves, gathers and builds, refreshes vision, resolves shots and deaths, then remembers buildings. A decided match stops stepping. The human replay stores `{ ticks, commands }` for player 1 only. Varek is simulated again on load.
+After commands, one tick steers, moves, gathers and builds, refreshes vision, resolves shots and deaths, then remembers buildings. A decided match stops stepping. The human replay stores `{ ticks, commands }` for player 1 only. A file with any other player's order is unreadable, and `Simulation.replay` skips such orders. Varek is simulated again on load.
 
 ## Determinism
 
