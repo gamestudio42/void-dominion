@@ -52,4 +52,8 @@ The playable game is player against General Varek on a shared deterministic matc
 
 ## 013. The first march waits for the opening
 
-An unattended match used to lose its workers while the player was still learning to spend ore, and the army stayed hidden until it was already on the base. Varek still mines, builds and trains immediately. The attack-move waits until tick 2400. Defense is not delayed. The client shows Contact when an enemy unit is visible, so the arrival can be named. `pnpm sim` pins that seed's winner, tick and checksum. Benchmarks and the commander gateway stay out.
+An unattended match used to lose its workers while the player was still learning to spend ore, and the army stayed hidden until it was already on the base. Varek still mines, builds and trains immediately. The attack-move waits until tick 2400. Defense is not delayed. The client shows Contact when an enemy unit is visible, so the arrival can be named. `pnpm sim` pins that seed's winner, tick and checksum.
+
+## 014. A commander plan is host input between ticks
+
+`considerCommander` reads one player's visible world and may apply one plan: produce, group or defend. Those become the same commands a human can issue. `step()` does not call it. A timeout, a malformed payload or a refusal leaves General Varek in control, and the unattended seed checksum stays pinned. The client does not connect a model. A plan is not written into the human replay. Two hosts stay in lockstep when both feed the same plan on the same tick.

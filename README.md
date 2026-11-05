@@ -2,7 +2,7 @@
 
 A science-fiction real-time strategy game for the browser. You command the Helion Directorate on the Erebus Frontier: select forces, spend ore and aether, and take ground from General Varek. The same orders are available to that opponent. The match does not require a language model or a network.
 
-This build is one skirmish. Two Helion bases share a 128×128 field. Engineers mine at the start. The command card builds and trains. Fog hides the other base until you have sight of it. Destroying the enemy command center wins. A refused order names the reason and does not spend resources.
+This build is one skirmish. Two Helion bases share a 128×128 field. Engineers mine at the start. The command card builds and trains. Fog hides the other base until you have sight of it. Destroying the enemy command center wins. A refused order names the reason and does not spend resources. A host can submit one plan between ticks. This client does not. With no plan, Varek plays as before.
 
 ## Develop
 

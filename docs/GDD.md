@@ -27,11 +27,12 @@ The beat this build changes is the whole skirmish: gather ore, spend it, train s
 - Records the human's commands. Loading that file resimulates Varek; his orders are not stored.
 - Holds Varek's first march until the opening can finish a building. Shows Contact when an enemy unit is visible.
 - Pins the unattended seed: `pnpm sim` checks that the same winner, tick and checksum come back.
+- Accepts one produce, group or defend plan between ticks. The plan becomes an ordinary command and cannot see hidden units. The client does not consult a model.
 - Shows ore, aether, supply, power and the match clock. The command card stops, mines, attacks, builds and trains. WASD pans, the wheel zooms, F3 shows tick and FPS.
 
 ## What this build does not do
 
-Language-model commanders, network multiplayer, and the Mycelian Collective and Aether Ascendancy. The match runs with those absent. Meshes and effect sequences are not baked into this client; units and buildings are still geometric.
+No language model is connected, and there is no network multiplayer. Meshes and effect sequences are not baked into this client; units and buildings are still geometric.
 
 ## Factions
 

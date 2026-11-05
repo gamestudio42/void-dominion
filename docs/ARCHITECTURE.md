@@ -38,7 +38,7 @@ Same seed, same commands, same `hashState()`. Random draws go through `Rng`. Tra
 
 ## What stays out of the loop
 
-Language-model calls, HTTP and network replication do not run inside a tick. A later commander may propose a plan. The engine remains the authority and turns that plan into ordinary commands. If the model is absent, the last valid conventional policy continues. That gateway is not part of this build.
+Language-model calls, HTTP and network replication do not run inside a tick. Between ticks a host may call `considerCommander` with a produce, group or defend plan. The engine turns an accepted plan into ordinary commands and refuses hidden or foreign orders. If the source is absent, throws, or the plan is refused, General Varek's weights continue on the next tick. This client never calls the gateway. A plan is not stored in the human replay.
 
 ## Art
 

@@ -9,7 +9,7 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 | 2 | Workers, ore, aether, construction, production | Done |
 | 3 | Combat, destruction, victory and defeat | Done |
 | 4 | Conventional opponent, fog of war, replay file | Done |
-| 5 | Optional commander gateway and deterministic fallback | Not started |
+| 5 | Optional commander gateway and deterministic fallback | Done |
 | 6 | Headless arena, benchmarks, comparable seeds | One seed pinned |
 | 7 | Authoritative multiplayer | Not started |
 
@@ -27,6 +27,13 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 - Twenty units path around one blockage. A blocked or unreachable order is visible as a refusal.
 - No resource bar, no commander panel, no audio.
 
+## Milestone 5
+
+- A plan is produce, group or defend. Between ticks the engine turns it into ordinary commands.
+- The view for that player omits hidden units, unseen buildings and unexplored nodes.
+- A missing, malformed, throwing or refused plan does not change the checksum. General Varek keeps running on the next tick.
+- No model, socket or prompt is connected. The client does not call the gateway. The unattended seed is unchanged.
+
 ## Later milestones
 
-Milestones 2, 3 and 4 are the skirmish: economy, combat, fog, General Varek and a human replay file. The same match runs under Vitest, which is the headless check for this seed. Benchmarks, the commander gateway and multiplayer are not in the client. Language-model integration does not begin before milestone 5, and the match must still run with that integration disabled.
+Milestones 2, 3 and 4 are the skirmish: economy, combat, fog, General Varek and a human replay file. The same match runs under Vitest, which is the headless check for this seed. The commander gateway lives in the simulation and this client does not consult it. Benchmarks and multiplayer are not in this build.
