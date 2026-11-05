@@ -1,6 +1,6 @@
 # Multiplayer plan (milestone 7)
 
-Status: proposed. Nothing here is built yet. This document records the model, the protocol, the order of work and the questions still open before code starts.
+Status: accepted by the owner on 2026-11-05. Step 1 (seats and replay v2) is in review. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
 
 ## Goal
 
@@ -99,7 +99,9 @@ apps/game              new: host mode, guest mode, the match link
 ### Signaling (`packages/net`)
 
 - **Broker.** The public EMQX broker (`broker.emqx.io`) over secure WebSocket, through the `mqtt` package (MQTT.js) in the browser.
-  - The broker URL is configuration, not code, so a second public broker, or one hosted by the studio later, is a one-line change.
+  - Brokers are a list in configuration, not code. The list starts with EMQX and a second public broker, chosen in step 4 after checking that it serves MQTT over secure WebSocket.
+  - Both peers connect to every broker in the list and use the same topic on each, and the first valid answer wins. If one broker is down or blocked on one side, the match still starts.
+  - A broker hosted by the studio can be added to the list later.
   - The public broker is offered for testing, without a service guarantee. If it is down, no new match can start; a match already connected keeps running.
 - **The match link.** The host creates a 128-bit random secret and shares `…/void-dominion/#join=<secret>`.
   - The secret sits in the URL fragment, so it never reaches GitHub Pages or any server log.
@@ -188,16 +190,18 @@ Milestone 7 is done when:
 - the guest never receives a hidden entity;
 - the guest's replay audit matches the host's checksum.
 
-## Open questions for the owner
+## Owner's answers (2026-11-05)
 
-1. **The second broker.** Should a fallback broker be listed from the start, or only after the public EMQX broker fails us once? A studio-hosted broker is later work.
-2. **Players who cannot connect** (symmetric NAT or CGNAT on both ends). Is it acceptable for milestone 7 to tell them it will not work? A TURN relay costs money and a server, which this plan avoids.
-3. **Varek as an online seat**, for co-op or practice. The seat option makes it cheap, but it is not in the milestone unless asked.
+1. **Fallback broker: from the start.** The list holds EMQX and a second public broker, and both peers use every broker in it.
+2. **Players who cannot connect: accepted for milestone 7.**
+   - When the connection fails, the client says plainly that the two networks cannot reach each other directly.
+   - A TURN relay is reconsidered only if the step 6 field test shows this happens often.
+3. **Varek as an online seat: not in milestone 7.** The seat option already allows it, and a co-op or practice mode can come later.
 
 ## Risks
 
 - **Large armies.** The measured views come from a match with at most 23 visible entities. Step 2 measures a large army before the protocol is fixed.
-- **The public broker changes its terms or limits.** The broker URL is configuration, and only match setup depends on it.
+- **The public brokers change their terms or limits.** The list is configuration, the peers use two brokers at once, and only match setup depends on them.
 - **A slow host.**
   - A host whose tab is in the background gets throttled timers, and the match slows down for both players.
   - Host mode keeps the tab active with a visible warning. It steps from `requestAnimationFrame` only while visible, and from a worker clock when hidden. Step 5 measures which one holds 20 Hz.

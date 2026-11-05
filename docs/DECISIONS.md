@@ -107,9 +107,13 @@ The simulation keeps no shot or death events, and adding them would change the c
 
 The three effects are EffectCraft renders, verified as PNG sequences, then packed into one sheet each at 128 px per frame. A sprite sheet is one texture and one request, where a sequence would be 51 files. The verifier judges an animation and warns on a still, so the sheet is recorded in its own `sheet` block of the manifest with hash, grid and frame count. The view draws each effect as a sprite through meshes and above the fog, with at most 96 alive. There is no tracer between shooter and target, because the world does not say who was shot.
 
-## 024. Proposed: multiplayer is peer to peer, with the host's browser as the authority
+## 024. Multiplayer is peer to peer, with the host's browser as the authority
 
-Status: proposed, waiting for the owner's review of `docs/MULTIPLAYER.md`.
+Status: accepted by the owner on 2026-11-05, together with the answers in `docs/MULTIPLAYER.md`:
+
+- a fallback broker from the start;
+- milestone 7 accepts that players behind CGNAT on both ends cannot connect;
+- no Varek seat online.
 
 The match has no game server to run or pay for. The host's browser runs the only simulation and sends the guest what `observe()` would show it, extended for rendering, over a WebRTC data channel. The public EMQX MQTT broker carries only the handshake. Each handshake message is encrypted and authenticated with a key derived from a secret in the link's URL fragment. That makes a public, unauthenticated broker safe to use for setup.
 

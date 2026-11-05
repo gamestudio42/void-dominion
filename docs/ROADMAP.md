@@ -11,7 +11,7 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 | 4 | Conventional opponent, fog of war, replay file | Done |
 | 5 | Optional commander gateway and deterministic fallback | Done |
 | 6 | Headless arena, benchmarks, comparable seeds | Done |
-| 7 | Authoritative multiplayer | Planned (`docs/MULTIPLAYER.md`) |
+| 7 | Authoritative multiplayer | In progress (`docs/MULTIPLAYER.md`) |
 
 ## Milestone 0
 
@@ -42,7 +42,7 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 - The same commands on the same seed return the same report.
 - `pnpm bench` times every step of the three seeds. The speed table in `docs/BENCHMARKS.md` shows a full match in about 0.3 s, roughly 550 times real time, with every step under 4 ms against the 50 ms budget. The renderer is not timed, and there is no network match.
 
-## Milestone 7 (planned)
+## Milestone 7 (in progress)
 
 - Peer to peer with no game server: the host's browser runs the only `Simulation` and sends the guest a fog-filtered view over WebRTC. The public EMQX MQTT broker carries only the encrypted handshake.
 - The order of work:
