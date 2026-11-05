@@ -15,6 +15,7 @@ pnpm install
 pnpm dev        # http://localhost:5173
 pnpm check      # typecheck, lint and unit tests
 pnpm sim        # compare three unattended seeds
+pnpm bench      # speed table for the headless arena (docs/BENCHMARKS.md)
 pnpm build      # static build in apps/game/dist
 ```
 

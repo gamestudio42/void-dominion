@@ -95,3 +95,9 @@ Nodes and rocks follow the building meshes. A node model fits its one cell. A ro
 
 Boulders stand up to about 2.4 cells, well above the fog plane at 0.95. A boulder is shown only once its cell is explored, so the black fog never shows where unexplored rock is. The slab stays below the fog and is always drawn, as the old boxes were. Until both boulder models load, each rect stays one box.
 
+## 022. The speed table is a measurement, not a gate
+
+Milestone 6 closes with `pnpm bench`, a Node script in `tools/bench/` that times every step of the three comparable seeds. It runs on Node's own TypeScript transform, with no new dependency. It is not part of `pnpm check` or CI. Wall time on a shared or loaded machine varies too much to fail a build, and the arena test keeps its own 20 s ceiling as the one timing gate.
+
+The published table carries the machine, Node version and load average. Without that line, a number cannot be compared. The renderer is not timed here. A frame budget needs a real GPU and a browser, and that stays a separate, explicit session.
+
