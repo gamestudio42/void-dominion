@@ -27,6 +27,11 @@ export interface ClientView {
   visible: number[];
   /** Same encoding. Sent in a full view only; a renderer adds `visible` to it after that. */
   explored?: number[];
+  /**
+   * Set by a host session: entities in the previous view that have since left the world.
+   * A guest cannot tell a death from a unit walking out of sight without it.
+   */
+  dead?: number[];
 }
 
 export interface ViewUnit {

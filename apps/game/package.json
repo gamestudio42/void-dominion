@@ -11,6 +11,8 @@
   "dependencies": {
     "@void-dominion/content": "workspace:*",
     "@void-dominion/kernel": "workspace:*",
+    "@void-dominion/net": "workspace:*",
+    "@void-dominion/protocol": "workspace:*",
     "@void-dominion/simulation": "workspace:*",
     "@void-dominion/view3d": "workspace:*",
     "react": "^19.3.1",

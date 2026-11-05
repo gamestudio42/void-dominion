@@ -23,6 +23,10 @@ const EMPTY: FieldUi = {
   trains: [],
   contact: false,
   banner: null,
+  online: null,
+  latency: null,
+  peerGone: false,
+  audit: null,
 };
 
 export function App() {

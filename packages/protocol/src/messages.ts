@@ -170,6 +170,7 @@ function readView(value: unknown): ClientView | null {
   }
   if (!isRuns(value.visible)) return null;
   if (value.explored !== undefined && !isRuns(value.explored)) return null;
+  if (value.dead !== undefined && !(Array.isArray(value.dead) && value.dead.every(isCount))) return null;
   return value as unknown as ClientView;
 }
 

@@ -43,6 +43,8 @@ export class HostSession {
   private seated = false;
   private wantFull = false;
   private ended = false;
+  /** Entities in the last view sent, to tell the guest which of them died. */
+  private lastSent = new Set<number>();
 
   constructor(
     private readonly sim: Simulation,
@@ -107,7 +109,15 @@ export class HostSession {
   }
 
   private sendView(full: boolean): void {
-    const text = encode({ t: 'view', v, view: clientView(this.sim.world, this.seat, full) });
+    const view = clientView(this.sim.world, this.seat, full);
+    const { world } = this.sim;
+    const alive = new Set<number>();
+    for (const unit of world.units) alive.add(unit.id);
+    for (const building of world.buildings) alive.add(building.id);
+    const dead = [...this.lastSent].filter((id) => !alive.has(id));
+    if (dead.length > 0) view.dead = dead;
+    this.lastSent = new Set([...view.units.map((unit) => unit.id), ...view.buildings.map((building) => building.id)]);
+    const text = encode({ t: 'view', v, view });
     const channel = full ? this.channels.reliable : this.channels.views;
     void deflate(text).then((bytes) => channel.send(bytes));
   }
@@ -125,6 +135,8 @@ export class GuestSession {
   audit: Audit | null = null;
   end: EndMessage | null = null;
   refused = 0;
+  /** Round trip of the latest answered ping, in milliseconds. */
+  latency: number | null = null;
   onView: (view: ClientView) => void = () => {};
   onAck: (ack: AckMessage) => void = () => {};
   onEnd: (end: EndMessage, audit: Audit) => void = () => {};
@@ -135,6 +147,7 @@ export class GuestSession {
   constructor(
     private readonly channels: Channels,
     build = 'dev',
+    private readonly now: () => number = () => performance.now(),
   ) {
     channels.reliable.onMessage((data) => void this.receive(data));
     channels.views.onMessage((data) => void this.receive(data));
@@ -147,6 +160,16 @@ export class GuestSession {
     this.sent.set(seq, body);
     this.channels.reliable.send(encode({ t: 'cmd', v, seq, cmd: body }));
     return seq;
+  }
+
+  /** Called when the reliable channel to the host closes. */
+  onClose(handler: () => void): void {
+    this.channels.reliable.onClose(handler);
+  }
+
+  /** Ask the host for a pong; `latency` updates when it comes back. */
+  ping(nowMs: number): void {
+    this.channels.reliable.send(encode({ t: 'ping', v, at: nowMs }));
   }
 
   private async receive(data: string | Uint8Array): Promise<void> {
@@ -191,6 +214,8 @@ export class GuestSession {
       this.sent.delete(message.seq);
       this.acked.push({ tick: message.tick, cmd: stamp(body, this.seat) });
       this.onAck(message);
+    } else if (message.t === 'pong') {
+      this.latency = Math.max(0, this.now() - message.at);
     } else if (message.t === 'end') {
       this.end = message;
       this.audit = auditMatch(message, this.seat, this.acked);
