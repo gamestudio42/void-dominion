@@ -1,0 +1,128 @@
+{
+  "name": "rock",
+  "out": "assets/_staging/rock",
+  "tri_budget": 800,
+  "unit_scale": 2.0,
+  "ground": true,
+  "palette": {
+    "stone": {
+      "color": [
+        0.3,
+        0.26,
+        0.22
+      ],
+      "rough": 0.92,
+      "metal": 0.04
+    },
+    "dark": {
+      "color": [
+        0.19,
+        0.17,
+        0.15
+      ],
+      "rough": 0.95,
+      "metal": 0.02
+    }
+  },
+  "atlas": {
+    "frames": 8,
+    "size": 256,
+    "samples": 16,
+    "elevation_deg": 30,
+    "radius": 4.6
+  },
+  "parts": [
+    {
+      "name": "body",
+      "prim": "ico",
+      "mat": "stone",
+      "loc": [
+        0,
+        0,
+        0.45
+      ],
+      "rot": [
+        0,
+        0,
+        15
+      ],
+      "scale": [
+        0.92,
+        0.8,
+        0.55
+      ],
+      "params": {
+        "subdivisions": 1
+      }
+    },
+    {
+      "name": "cap",
+      "prim": "ico",
+      "mat": "stone",
+      "loc": [
+        -0.2,
+        0.12,
+        0.92
+      ],
+      "rot": [
+        10,
+        -8,
+        40
+      ],
+      "scale": [
+        0.55,
+        0.5,
+        0.34
+      ],
+      "params": {
+        "subdivisions": 1
+      }
+    },
+    {
+      "name": "side",
+      "prim": "ico",
+      "mat": "dark",
+      "loc": [
+        0.62,
+        -0.42,
+        0.26
+      ],
+      "rot": [
+        0,
+        0,
+        20
+      ],
+      "scale": [
+        0.36,
+        0.32,
+        0.28
+      ],
+      "params": {
+        "subdivisions": 1
+      }
+    },
+    {
+      "name": "toe",
+      "prim": "ico",
+      "mat": "dark",
+      "loc": [
+        -0.66,
+        -0.4,
+        0.16
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.28,
+        0.3,
+        0.18
+      ],
+      "params": {
+        "subdivisions": 1
+      }
+    }
+  ]
+}
