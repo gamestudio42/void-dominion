@@ -25,3 +25,8 @@ playwright-report/
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Machine-local agent configuration (absolute paths to local tools)
+.cursor/mcp.json
+.codex/
+.claude/
