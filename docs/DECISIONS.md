@@ -57,3 +57,7 @@ An unattended match used to lose its workers while the player was still learning
 ## 014. A commander plan is host input between ticks
 
 `considerCommander` reads one player's visible world and may apply one plan: produce, group or defend. Those become the same commands a human can issue. `step()` does not call it. A timeout, a malformed payload or a refusal leaves General Varek in control, and the unattended seed checksum stays pinned. The client does not connect a model. A plan is not written into the human replay. Two hosts stay in lockstep when both feed the same plan on the same tick.
+
+## 015. The arena compares seeds before the rules draw
+
+`runArena` plays one seed and one command list until the match ends or a step cap. The report records the winner, the tick, the checksum, both stocks of ore and the living units. Seeds `0x5eed`, `0x51eed` and `0xa11ce` share that result except the checksum, because the checksum already includes the seed and no system draws from `Rng` yet. A later draw has to update those pins. The twenty-second ceiling sits in the test. Wall time does not enter the simulation. The client is unchanged.

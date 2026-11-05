@@ -10,7 +10,7 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 | 3 | Combat, destruction, victory and defeat | Done |
 | 4 | Conventional opponent, fog of war, replay file | Done |
 | 5 | Optional commander gateway and deterministic fallback | Done |
-| 6 | Headless arena, benchmarks, comparable seeds | One seed pinned |
+| 6 | Headless arena, benchmarks, comparable seeds | Three seeds compared |
 | 7 | Authoritative multiplayer | Not started |
 
 ## Milestone 0
@@ -34,6 +34,13 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 - A missing, malformed, throwing or refused plan does not change the checksum. General Varek keeps running on the next tick.
 - No model, socket or prompt is connected. The client does not call the gateway. The unattended seed is unchanged.
 
+## Milestone 6
+
+- `runArena` plays a seed and a command list until the match ends or a step cap.
+- Seeds `0x5eed`, `0x51eed` and `0xa11ce` share the unattended winner, tick, ore and living units. The checksum changes with the seed. No rule draws from the random stream yet.
+- The three matches together finish in under 20 seconds. That ceiling is a test, not a clock inside the simulation.
+- The same commands on the same seed return the same report. There is no published speed table and no network match.
+
 ## Later milestones
 
-Milestones 2, 3 and 4 are the skirmish: economy, combat, fog, General Varek and a human replay file. The same match runs under Vitest, which is the headless check for this seed. The commander gateway lives in the simulation and this client does not consult it. Benchmarks and multiplayer are not in this build.
+Milestones 2, 3 and 4 are the skirmish: economy, combat, fog, General Varek and a human replay file. The commander gateway lives in the simulation and this client does not consult it. The headless arena compares three seeds. Multiplayer is not in this build.

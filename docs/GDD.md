@@ -28,6 +28,7 @@ The beat this build changes is the whole skirmish: gather ore, spend it, train s
 - Holds Varek's first march until the opening can finish a building. Shows Contact when an enemy unit is visible.
 - Pins the unattended seed: `pnpm sim` checks that the same winner, tick and checksum come back.
 - Accepts one produce, group or defend plan between ticks. The plan becomes an ordinary command and cannot see hidden units. The client does not consult a model.
+- Compares three unattended seeds headless. They end on the same tick. The checksum changes with the seed, because no rule draws from the random stream yet.
 - Shows ore, aether, supply, power and the match clock. The command card stops, mines, attacks, builds and trains. WASD pans, the wheel zooms, F3 shows tick and FPS.
 
 ## What this build does not do

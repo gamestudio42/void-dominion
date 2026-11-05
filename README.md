@@ -12,7 +12,7 @@ Requires Node.js 22 and pnpm 10.
 pnpm install
 pnpm dev        # http://localhost:5173
 pnpm check      # typecheck, lint and unit tests
-pnpm sim        # unattended seed: winner, tick and checksum
+pnpm sim        # compare three unattended seeds
 pnpm build      # static build in apps/game/dist
 ```
 

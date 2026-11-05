@@ -32,8 +32,8 @@ export class Simulation {
     this.world = world;
   }
 
-  static create(): Simulation {
-    const sim = new Simulation(createWorld());
+  static create(seed: number = MATCH.seed): Simulation {
+    const sim = new Simulation(createWorld(seed));
     updateVision(sim.world);
     refreshMemory(sim.world);
     return sim;
@@ -109,4 +109,48 @@ export function deserializeReplay(raw: string): { ticks: number; commands: Logge
     commands.push(logged);
   }
   return { ticks: file.ticks, commands };
+}
+
+export interface ArenaReport {
+  seed: number;
+  winner: number;
+  tick: number;
+  hash: number;
+  steps: number;
+  ore: [number, number];
+  units: [number, number];
+}
+
+/** Run until the match ends or the step cap. The same seed and commands return the same report. */
+export function runArena(seed: number = MATCH.seed, log: readonly LoggedCommand[] = [], cap = 8000): ArenaReport {
+  const sim = Simulation.create(seed);
+  let index = 0;
+  let steps = 0;
+  while (sim.world.winner === 0 && steps < cap) {
+    while (index < log.length && log[index]!.tick === sim.world.tick) {
+      sim.enqueue(log[index]!.cmd);
+      index += 1;
+    }
+    sim.step();
+    steps += 1;
+  }
+  const ore: [number, number] = [0, 0];
+  const units: [number, number] = [0, 0];
+  for (const player of sim.world.players) {
+    const seat = player.id - 1;
+    if (seat === 0 || seat === 1) ore[seat] = player.ore;
+  }
+  for (const unit of sim.world.units) {
+    const seat = unit.owner - 1;
+    if (seat === 0 || seat === 1) units[seat] += 1;
+  }
+  return {
+    seed: sim.world.seed,
+    winner: sim.world.winner,
+    tick: sim.world.tick,
+    hash: sim.hashState(),
+    steps,
+    ore,
+    units,
+  };
 }

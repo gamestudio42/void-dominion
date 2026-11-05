@@ -1,5 +1,5 @@
-export { Simulation, deserializeReplay, serializeReplay } from './engine.ts';
-export type { LoggedCommand } from './engine.ts';
+export { Simulation, deserializeReplay, runArena, serializeReplay } from './engine.ts';
+export type { ArenaReport, LoggedCommand } from './engine.ts';
 export { applyCommand, RejectReason } from './commands.ts';
 export type { Command, RejectReason as RejectReasonName } from './commands.ts';
 export { findPath, gatherSlots } from './path.ts';

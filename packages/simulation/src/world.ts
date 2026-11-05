@@ -196,11 +196,11 @@ function makeBuilding(world: World, owner: number, kind: BuildingKind, x: number
   };
 }
 
-export function createWorld(): World {
+export function createWorld(seed: number = MATCH.seed): World {
   const explored = [new Uint8Array(MAP_SIZE * MAP_SIZE), new Uint8Array(MAP_SIZE * MAP_SIZE)] as [Uint8Array, Uint8Array];
   const visible = [new Uint8Array(MAP_SIZE * MAP_SIZE), new Uint8Array(MAP_SIZE * MAP_SIZE)] as [Uint8Array, Uint8Array];
   const world: World = {
-    seed: MATCH.seed,
+    seed: seed >>> 0,
     tick: 0,
     nextId: 1,
     winner: 0,

@@ -1,8 +1,10 @@
-import { BUILDINGS, ENEMY_ID, MATCH, PLAYER_ID } from '@void-dominion/content';
+import { ENEMY_ID, MATCH, PLAYER_ID, BUILDINGS } from '@void-dominion/content';
 import { describe, expect, it } from 'vitest';
-import { Simulation } from '../src/index.ts';
+import { runArena, Simulation, type LoggedCommand } from '../src/index.ts';
 
 const KEEP_AWAY = 60;
+const SEEDS = [MATCH.seed, 0x51eed, 0xa11ce] as const;
+const OPENING_TICKS = 120;
 
 function playerCenter(): { x: number; y: number } {
   const base = MATCH.bases[0]!;
@@ -26,14 +28,35 @@ describe('seed arena', () => {
     }
   });
 
-  it('finishes the unattended seed on a known tick and checksum', () => {
-    const sim = Simulation.create();
-    let guard = 0;
-    while (sim.world.winner === 0 && guard < 8000) {
-      sim.step();
-      guard += 1;
+  it('compares unattended seeds and finishes them within twenty seconds', () => {
+    const started = Date.now();
+    const reports = SEEDS.map((seed) => runArena(seed));
+    expect(Date.now() - started).toBeLessThan(20_000);
+    expect(reports[0]).toMatchObject({
+      seed: MATCH.seed >>> 0,
+      winner: ENEMY_ID,
+      tick: 3333,
+      hash: 1794058122,
+      steps: 3333,
+    });
+    for (const report of reports) {
+      expect(report.winner).toBe(reports[0]!.winner);
+      expect(report.tick).toBe(reports[0]!.tick);
+      expect(report.steps).toBe(reports[0]!.steps);
+      expect(report.ore).toEqual(reports[0]!.ore);
+      expect(report.units).toEqual(reports[0]!.units);
     }
-    expect(sim.world.winner).toBe(ENEMY_ID);
-    expect({ tick: sim.world.tick, hash: sim.hashState() }).toEqual({ tick: 3333, hash: 1794058122 });
+    expect(reports.map((report) => report.hash)).toEqual([1794058122, 2673108699, 1865163346]);
+  });
+
+  it('tells a commanded opening apart from the unattended one', () => {
+    const unitIds = Simulation.create().world.units.filter((unit) => unit.owner === PLAYER_ID).map((unit) => unit.id);
+    const log: LoggedCommand[] = [{ tick: 0, cmd: { type: 'move', playerId: PLAYER_ID, unitIds, to: { x: 30, y: 90 } } }];
+    const moved = runArena(MATCH.seed, log, OPENING_TICKS);
+    const stayed = runArena(MATCH.seed, [], OPENING_TICKS);
+    expect(moved.winner).toBe(0);
+    expect(moved.tick).toBe(OPENING_TICKS);
+    expect(moved).toEqual(runArena(MATCH.seed, log, OPENING_TICKS));
+    expect(moved.hash).not.toBe(stayed.hash);
   });
 });
