@@ -5,6 +5,7 @@ import { runArena, Simulation, type LoggedCommand } from '../src/index.ts';
 const KEEP_AWAY = 60;
 const SEEDS = [MATCH.seed, 0x51eed, 0xa11ce] as const;
 const OPENING_TICKS = 120;
+const CEILING_MS = 20_000;
 
 function playerCenter(): { x: number; y: number } {
   const base = MATCH.bases[0]!;
@@ -28,10 +29,11 @@ describe('seed arena', () => {
     }
   });
 
+  /** The runner's timeout is the same ceiling, so a busy machine fails on it and not on Vitest's 5 s default. */
   it('compares unattended seeds and finishes them within twenty seconds', () => {
     const started = Date.now();
     const reports = SEEDS.map((seed) => runArena(seed));
-    expect(Date.now() - started).toBeLessThan(20_000);
+    expect(Date.now() - started).toBeLessThan(CEILING_MS);
     expect(reports[0]).toMatchObject({
       seed: MATCH.seed >>> 0,
       winner: ENEMY_ID,
@@ -47,7 +49,7 @@ describe('seed arena', () => {
       expect(report.units).toEqual(reports[0]!.units);
     }
     expect(reports.map((report) => report.hash)).toEqual([1794058122, 2673108699, 1865163346]);
-  });
+  }, CEILING_MS);
 
   it('tells a commanded opening apart from the unattended one', () => {
     const unitIds = Simulation.create().world.units.filter((unit) => unit.owner === PLAYER_ID).map((unit) => unit.id);
