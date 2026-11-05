@@ -79,3 +79,7 @@ Each spec in `tools/asset-pipeline/blender/specs/` owns its size through `unit_s
 
 The enemy tint was a blue grey (`#8aa0b5`). On the unit meshes it nearly matched the hull, and with low health it faded further; on the minimap enemy cells were close to visible ground. The enemy is now red (`#d0504a` in the view, the same family on the minimap), apart from the player's amber, the grey hull and the cyan glow. Health still darkens the tint.
 
+## 019. CI publishes the game to GitHub Pages
+
+Replaces 008. The skirmish is playable, so the repository now uses the studio workflows from Vazante. `pages.yml` ("CI and Pages") runs `pnpm check` and `pnpm build` on every push and pull request, publishes `apps/game/dist` from `main` to the `gh-pages` branch, and publishes a preview under `/pr-preview/pr-<number>/` for a pull request from this repository. `pages-preview-fork.yml` publishes a fork's already built preview without checking out the fork. Vazante's `snap.yml` is not copied: this game has no desktop shell or snap.
+
