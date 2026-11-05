@@ -1,6 +1,6 @@
 # Multiplayer plan (milestone 7)
 
-Status: accepted by the owner on 2026-11-05. Steps 1 (seats and replay v2) and 2 (the client view) are merged. Step 3 (the protocol package) is in review. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
+Status: accepted by the owner on 2026-11-05. Steps 1 to 3 (seats and replay v2, the client view, the protocol package) are merged. Step 4 (signaling and session) is in review. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
 
 ## Goal
 
@@ -108,7 +108,8 @@ apps/game              new: host mode, guest mode, the match link
 ### Signaling (`packages/net`)
 
 - **Broker.** The public EMQX broker (`broker.emqx.io`) over secure WebSocket, through the `mqtt` package (MQTT.js) in the browser.
-  - Brokers are a list in configuration, not code. The list starts with EMQX and a second public broker, chosen in step 4 after checking that it serves MQTT over secure WebSocket.
+  - Brokers are a list in configuration, not code: `PUBLIC_BROKERS` in `packages/net/src/broker.ts`.
+  - The list is `wss://broker.emqx.io:8084/mqtt` and `wss://broker.hivemq.com:8884/mqtt`. On 2026-11-05 both carried a probe message in about 180 ms once connected. `test.mosquitto.org:8081` refused the same probe.
   - Both peers connect to every broker in the list and use the same topic on each, and the first valid answer wins. If one broker is down or blocked on one side, the match still starts.
   - A broker hosted by the studio can be added to the list later.
   - The public broker is offered for testing, without a service guarantee. If it is down, no new match can start; a match already connected keeps running.
@@ -121,6 +122,9 @@ apps/game              new: host mode, guest mode, the match link
 - **Handshake.** Non-trickle: each side waits for ICE gathering, then sends one offer or answer.
   - The host republishes its offer every few seconds until an answer arrives, so the guest can open the link late.
   - Messages are not retained on the broker.
+  - The guest answers each repeat of the chosen offer again, since QoS 0 may drop a message, and ignores offers from any other host session.
+  - An offer older than two minutes is ignored, so a recorded offer cannot be replayed into a later join.
+  - Measured on 2026-11-05 from this machine, with in-memory peers and only the broker round trip being real: EMQX alone connected in 1.5 s, HiveMQ alone in 4.6 s (its first offer was lost, so the 3 s repeat carried it), and both together in 3.4 s.
 - **NAT traversal.**
   - STUN only, through a public STUN server listed in configuration.
   - There is no TURN relay: two players behind symmetric NAT or carrier-grade NAT cannot connect. That is common on mobile networks and on several Brazilian providers. The client says so plainly instead of hanging.
@@ -196,10 +200,20 @@ Each step ends with tests, and the client steps end with a browser session, as t
    - A whole-match test: no view leaks a hidden entity.
    - A stress scenario with large armies added to `pnpm bench`.
 3. **Protocol package.** Types, version check and parsing, with tests for malformed, oversized and foreign-seat messages.
-4. **Signaling and session.**
-   - `packages/net` with an in-memory broker and an in-memory transport for tests.
-   - Encryption round trip, and a wrong secret that cannot join.
-   - A full host and guest session in Vitest without a network.
+4. **Signaling and session** (in review).
+   - `packages/net` contains:
+     - the sealed handshake (`hostMatch`, `joinMatch`);
+     - the brokers: MQTT, fan-out and in-memory;
+     - the peers: WebRTC and in-memory;
+     - view compression;
+     - `HostSession` and `GuestSession`.
+   - Tests cover:
+     - sealing, where a wrong key or altered byte opens nothing;
+     - a guest with another secret, noise and forged answers, a late guest, a stale offer, and one dead broker of two;
+     - a whole match between a host and a guest over in-memory channels, ending in a passing audit;
+     - a command flood;
+     - a host that changed the world, which fails the audit.
+   - The WebRTC peer is not exercised until step 5, because Node has no WebRTC.
 5. **Host and guest modes.**
    - Two browser windows on one machine through the real broker.
    - The guest audits the replay at the end.

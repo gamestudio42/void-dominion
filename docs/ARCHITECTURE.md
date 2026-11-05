@@ -34,7 +34,17 @@ After commands, one tick steers, moves, gathers and builds, refreshes vision, re
 
 ## Determinism
 
-Same seed, same commands, same `hashState()`. Random draws go through `Rng`. No match rule draws from it yet, so two seeds currently share the unattended result and differ in the checksum. `runArena(seed, commands, cap)` is the headless report. Replay files record the seed. A version 1 file replays on `MATCH.seed`. `clientView(world, seat, full)` builds what one seat may know, for a multiplayer guest. It never includes anything that seat's fog hides. Transcendental `Math` functions are forbidden in the deterministic packages. Fixed-point arithmetic is not used yet; revisit only if checksums diverge across engines.
+Same seed, same commands, same `hashState()`. Random draws go through `Rng`. No match rule draws from it yet, so two seeds currently share the unattended result and differ in the checksum. `runArena(seed, commands, cap)` is the headless report. Replay files record the seed. A version 1 file replays on `MATCH.seed`. `clientView(world, seat, full)` builds what one seat may know, for a multiplayer guest. It never includes anything that seat's fog hides. `Simulation.enqueue` returns a number, and `results` holds each command's reason after the step that applied it, so a host can acknowledge every guest command.
+
+`packages/protocol` defines the multiplayer messages and validates them. It does no I/O.
+
+`packages/net` carries a match between two browsers:
+- the sealed handshake over public MQTT brokers;
+- WebRTC data channels;
+- view compression;
+- the host and guest sessions.
+
+The plan is in `docs/MULTIPLAYER.md`. Transcendental `Math` functions are forbidden in the deterministic packages. Fixed-point arithmetic is not used yet; revisit only if checksums diverge across engines.
 
 ## What stays out of the loop
 

@@ -53,6 +53,8 @@ export class Simulation {
   private seq = 0;
   /** Reason from the latest human command, or null when that command was accepted. */
   lastRejection: RejectReason | null = null;
+  /** Each command applied by the latest step, by the number `enqueue` returned: its reason, or null. */
+  readonly results = new Map<number, RejectReason | null>();
 
   private constructor(world: World, seats: Seats) {
     this.world = world;
@@ -66,11 +68,13 @@ export class Simulation {
     return sim;
   }
 
-  enqueue(cmd: Command): void {
+  /** Queue a command for the next step. Returns its number in `results` once that step runs. */
+  enqueue(cmd: Command): number {
     const copy = cloneCommand(cmd);
     if (humanSeat(this.seats, copy.playerId)) this.log.push({ tick: this.world.tick, cmd: copy });
     this.queue.push({ seq: this.seq, tick: this.world.tick, cmd: copy });
     this.seq += 1;
+    return this.seq - 1;
   }
 
   step(): void {
@@ -79,9 +83,11 @@ export class Simulation {
       return;
     }
     this.queue.sort((a, b) => a.seq - b.seq);
+    this.results.clear();
     for (const envelope of this.queue) {
       const reason = applyCommand(this.world, envelope.cmd);
       this.lastRejection = reason;
+      this.results.set(envelope.seq, reason);
     }
     this.queue.length = 0;
     if (this.world.tick % MATCH.ai.period === 0) {
