@@ -1,6 +1,6 @@
 # Multiplayer plan (milestone 7)
 
-Status: accepted by the owner on 2026-11-05. Step 1 (seats and replay v2) is in review. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
+Status: accepted by the owner on 2026-11-05. Step 1 (seats and replay v2) is merged. Step 2 (the client view) is in review. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
 
 ## Goal
 
@@ -51,16 +51,20 @@ The host is a player, not a neutral server:
 
 ### Measured view size
 
-Measured on 2026-11-05 on the unattended seed `0x5eed`, both seats, one view every second tick:
+Measured with `pnpm bench:view` on 2026-11-05. The full table is in `docs/BENCHMARKS.md`. Each line is one view per seat every second tick, as the host sends them.
 
-- **View size:**
-  - JSON: mean 901 bytes, p95 1661 bytes, max 2165 bytes;
-  - gzip: mean 279 bytes, max 543 bytes.
-- **Cost:** `observe` plus `JSON.stringify` takes 34 µs on average and 62 µs at p95.
-- **Scale:** at most 23 entities were visible at once.
+| Scenario | Max entities in a view | JSON mean | JSON max | Compressed mean | At 10 Hz, raw | At 10 Hz, compressed |
+| --- | --: | --: | --: | --: | --: | --: |
+| Unattended skirmish | 23 | 1.7 KB | 3.7 KB | 0.5 KB | 17 KB/s | 5 KB/s |
+| 100 riflemen a side, fighting | 145 | 15 KB | 17 KB | 1.1 KB | 151 KB/s | 11 KB/s |
+| 200 riflemen a side, fighting | 245 | 28 KB | 29 KB | 1.5 KB | 271 KB/s | 15 KB/s |
 
-At 10 views a second, the host's upload is about 9 KB/s raw. Any home connection carries that.
-
+- **Compression is required.** A WebRTC data channel does not compress, unlike a WebSocket with `permessage-deflate`.
+  - Raw JSON for a large army would cost the host over 2 Mbit/s of upload.
+  - The views are very repetitive, so deflate takes them down by a factor of 10 to 18.
+  - The host therefore sends each view through `CompressionStream('deflate-raw')`, built into current browsers, and the guest inflates it.
+  - Deltas between views stay unnecessary at this size.
+- **Cost.** Under a load average of 9 to 12 on this machine, building a view took 0.2 to 0.7 ms, and compressing it with Node's zlib 0.1 to 0.5 ms. The browser's compressor is not measured yet; step 5 measures it.
 The host's browser also pays for:
 
 - one step of about 90 µs per tick (`docs/BENCHMARKS.md`);
@@ -91,10 +95,15 @@ apps/game              new: host mode, guest mode, the match link
    - visible foreign units and buildings with hp, plus remembered ghosts;
    - explored nodes with their amounts;
    - stock, supply and power for the seat;
-   - fog as a change list, run-length encoded. The first view, and the one after a reconnect, carry the full grid, about 2 KB;
+   - the visible grid as run lengths, in every view;
+   - the explored grid in the same encoding, only in a full view: the first one, and the one after a reconnect. The guest adds each visible grid to it;
    - cooldowns of visible units, so the effect watcher (decision 023) still reads shots.
 
-   Neither the enemy stock nor its queue is sent. A test walks a whole match and asserts that no view contains an entity outside the seat's sight or memory.
+   Neither the enemy stock nor its queue is sent, and node amounts are sent only while the node is in sight.
+
+   Built as `clientView(world, seat, full)` in `packages/simulation/src/view.ts`. Two tests guard it:
+   - one walks a whole match and checks every view of both seats against the fog;
+   - the other changes only hidden state and expects the same view.
 
 ### Signaling (`packages/net`)
 
@@ -142,7 +151,7 @@ Rules:
 - Commands are parsed with the same `parseLogged` the replay uses. Anything else is dropped and counted.
 - The guest may send at most 20 commands a second.
 - A message larger than 64 KB closes the session.
-- Views are full, not deltas, at 10 Hz. Deltas come only if the large-army measurement in step 2 asks for them.
+- Views are full, not deltas, at 10 Hz, and compressed with deflate. The step 2 measurement shows deltas are not needed.
 
 ### Host and guest in the client (`apps/game`)
 
@@ -200,7 +209,7 @@ Milestone 7 is done when:
 
 ## Risks
 
-- **Large armies.** The measured views come from a match with at most 23 visible entities. Step 2 measures a large army before the protocol is fixed.
+- **Large armies.** 200 riflemen a side make a 28 KB view, which compresses to 1.5 KB. Compression is part of the protocol, so a browser that lacks `CompressionStream` cannot play online.
 - **The public brokers change their terms or limits.** The list is configuration, the peers use two brokers at once, and only match setup depends on them.
 - **A slow host.**
   - A host whose tab is in the background gets throttled timers, and the match slows down for both players.
