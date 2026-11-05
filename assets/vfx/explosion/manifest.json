@@ -1,0 +1,84 @@
+{
+  "asset": "explosion",
+  "tool": {
+    "name": "effectcraft",
+    "version": null
+  },
+  "exports": [
+    {
+      "asset": "explosion",
+      "source": "tools/asset-pipeline/vfx/explosion.build.json",
+      "export": {
+        "path": "assets/_staging/explosion/frames",
+        "kind": "sequence",
+        "codec": "png",
+        "pix_fmt": "rgba",
+        "width": 256,
+        "height": 256,
+        "fps": 30.0,
+        "frames": 29,
+        "duration_s": 0.9667,
+        "bytes": 892095,
+        "sha256": "dir:98b3772a0f0398362157fa739f2d3f3a8c24c1cca6e5958b922859aff8b42ae5"
+      },
+      "alpha": {
+        "frames": 29,
+        "max_alpha": 255,
+        "visible_frames": 27,
+        "peak_frame": 24,
+        "peak_time_s": 0.8,
+        "peak_coverage_pct": 45.6711,
+        "last_frame_max_alpha": 0,
+        "last_frame_coverage_pct": 0.0,
+        "dead_after_s": 0.9,
+        "coverage_pct_by_frame": [
+          0.919,
+          5.443,
+          11.732,
+          17.123,
+          25.934,
+          26.886,
+          28.282,
+          30.225,
+          33.244,
+          36.591,
+          38.376,
+          38.977,
+          33.826,
+          34.908,
+          35.847,
+          36.719,
+          37.584,
+          37.279,
+          34.807,
+          36.847,
+          38.914,
+          41.133,
+          43.019,
+          44.618,
+          45.671,
+          45.375,
+          38.438,
+          0.0,
+          0.0
+        ]
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "source": "tools/asset-pipeline/vfx/explosion.build.json",
+  "generated_at": "2026-11-05T13:09:47+00:00",
+  "sheet": {
+    "path": "assets/vfx/explosion/sheet.png",
+    "packed_from": "frames, scaled to 128 px (lanczos) and tiled by ffmpeg with a transparent fill",
+    "cell": 128,
+    "columns": 6,
+    "rows": 5,
+    "frames": 29,
+    "fps": 30,
+    "bytes": 407875,
+    "sha256": "af9e439b5b26eda4c398ff6541779cb3f607434b7ccaff9c7bc037f58371b95f"
+  }
+}

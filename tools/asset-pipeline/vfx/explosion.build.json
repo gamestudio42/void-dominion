@@ -1,0 +1,670 @@
+[
+ {
+  "command": "comp.new",
+  "params": {
+   "name": "explosion",
+   "width": 256,
+   "height": 256,
+   "frameRate": 30,
+   "duration": 0.97
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "ellipse",
+   "name": "smoke",
+   "size": [
+    140,
+    140
+   ],
+   "fill": "#3a3330"
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Turbulent Displace",
+   "layers": [
+    "smoke"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "smoke",
+   "path": "effects/#1/amount",
+   "value": 45
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "smoke",
+   "path": "effects/#1/size",
+   "value": 40
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "smoke",
+   "path": "effects/#1/evolution",
+   "time": 0,
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "smoke",
+   "path": "effects/#1/evolution",
+   "time": 1.0,
+   "value": 120
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Gaussian Blur",
+   "layers": [
+    "smoke"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "smoke",
+   "path": "effects/#2/blurriness",
+   "value": 10
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "smoke",
+   "path": "transform/scale",
+   "time": 0,
+   "value": [
+    40,
+    40,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "smoke",
+   "path": "transform/scale",
+   "time": 0.9,
+   "value": [
+    145,
+    145,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "smoke",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "smoke",
+   "path": "transform/opacity",
+   "time": 0.25,
+   "value": 70
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "smoke",
+   "path": "transform/opacity",
+   "time": 0.9,
+   "value": 0
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "ellipse",
+   "name": "fireball",
+   "size": [
+    120,
+    120
+   ],
+   "fill": "#ff6a1f"
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Turbulent Displace",
+   "layers": [
+    "fireball"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "fireball",
+   "path": "effects/#1/amount",
+   "value": 55
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "fireball",
+   "path": "effects/#1/size",
+   "value": 30
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "fireball",
+   "path": "effects/#1/evolution",
+   "time": 0,
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "fireball",
+   "path": "effects/#1/evolution",
+   "time": 1.0,
+   "value": 200
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Gaussian Blur",
+   "layers": [
+    "fireball"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "fireball",
+   "path": "effects/#2/blurriness",
+   "value": 5
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "fireball",
+   "path": "transform/scale",
+   "time": 0,
+   "value": [
+    15,
+    15,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "fireball",
+   "path": "transform/scale",
+   "time": 0.12,
+   "value": [
+    100,
+    100,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "fireball",
+   "path": "transform/scale",
+   "time": 0.55,
+   "value": [
+    125,
+    125,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "fireball",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "fireball",
+   "path": "transform/opacity",
+   "time": 0.15,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "fireball",
+   "path": "transform/opacity",
+   "time": 0.6,
+   "value": 0
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "ellipse",
+   "name": "core",
+   "size": [
+    70,
+    70
+   ],
+   "fill": "#ffd77a"
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Turbulent Displace",
+   "layers": [
+    "core"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "core",
+   "path": "effects/#1/amount",
+   "value": 40
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "core",
+   "path": "effects/#1/size",
+   "value": 25
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "core",
+   "path": "effects/#1/evolution",
+   "time": 0,
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "core",
+   "path": "effects/#1/evolution",
+   "time": 1.0,
+   "value": 200
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Gaussian Blur",
+   "layers": [
+    "core"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "core",
+   "path": "effects/#2/blurriness",
+   "value": 4
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "core",
+   "path": "transform/scale",
+   "time": 0,
+   "value": [
+    30,
+    30,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "core",
+   "path": "transform/scale",
+   "time": 0.08,
+   "value": [
+    110,
+    110,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "core",
+   "path": "transform/scale",
+   "time": 0.35,
+   "value": [
+    55,
+    55,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "core",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "core",
+   "path": "transform/opacity",
+   "time": 0.35,
+   "value": 0
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "ellipse",
+   "name": "ring",
+   "size": [
+    220,
+    220
+   ],
+   "fill": null,
+   "stroke": "#ffa53a",
+   "strokeWidth": 5
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Gaussian Blur",
+   "layers": [
+    "ring"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "ring",
+   "path": "effects/#1/blurriness",
+   "value": 2.5
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "ring",
+   "path": "transform/scale",
+   "time": 0,
+   "value": [
+    10,
+    10,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "ring",
+   "path": "transform/scale",
+   "time": 0.4,
+   "value": [
+    110,
+    110,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "ring",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 90
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "ring",
+   "path": "transform/opacity",
+   "time": 0.4,
+   "value": 0
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "none",
+   "name": "debris"
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "CC Particle World",
+   "layers": [
+    "debris"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/particle/particleType",
+   "value": 2
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/particle/transferMode",
+   "value": 2
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/particle/maxOpacity",
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/particle/birthSize",
+   "value": 0.08
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/particle/deathSize",
+   "value": 0.005
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/particle/sizeVariation",
+   "value": 45
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/particle/birthColor",
+   "value": [
+    1.0,
+    0.75,
+    0.35,
+    1.0
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/particle/deathColor",
+   "value": [
+    0.8,
+    0.2,
+    0.05,
+    0.0
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/longevity",
+   "value": 0.6
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/physics/animation",
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/physics/velocity",
+   "value": 2.2
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/physics/gravity",
+   "value": 0.9
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/producer/radiusX",
+   "value": 0.05
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/producer/radiusY",
+   "value": 0.05
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/extras/randomSeed",
+   "value": 4242
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/birthRate",
+   "time": 0,
+   "value": 140
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "debris",
+   "path": "effects/#1/birthRate",
+   "time": 0.08,
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "debris",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "debris",
+   "path": "transform/opacity",
+   "time": 0.7,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "debris",
+   "path": "transform/opacity",
+   "time": 0.9,
+   "value": 0
+  }
+ }
+]

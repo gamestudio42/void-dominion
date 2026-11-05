@@ -1,0 +1,69 @@
+{
+  "asset": "impact_hit",
+  "tool": {
+    "name": "effectcraft",
+    "version": null
+  },
+  "exports": [
+    {
+      "asset": "impact_hit",
+      "source": "tools/asset-pipeline/vfx/impact_hit.build.json",
+      "export": {
+        "path": "assets/_staging/impact_hit/frames",
+        "kind": "sequence",
+        "codec": "png",
+        "pix_fmt": "rgba",
+        "width": 192,
+        "height": 192,
+        "fps": 30.0,
+        "frames": 14,
+        "duration_s": 0.4667,
+        "bytes": 66625,
+        "sha256": "dir:06508b66ed3bba4866e6d2b2b06c4f0514abe87b9ea75edeb43e3e09e0f9e854"
+      },
+      "alpha": {
+        "frames": 14,
+        "max_alpha": 255,
+        "visible_frames": 12,
+        "peak_frame": 6,
+        "peak_time_s": 0.2,
+        "peak_coverage_pct": 6.9417,
+        "last_frame_max_alpha": 0,
+        "last_frame_coverage_pct": 0.0,
+        "dead_after_s": 0.4,
+        "coverage_pct_by_frame": [
+          0.239,
+          1.625,
+          2.791,
+          4.118,
+          5.404,
+          6.578,
+          6.942,
+          0.936,
+          0.591,
+          0.323,
+          0.106,
+          0.005,
+          0.0,
+          0.0
+        ]
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "source": "tools/asset-pipeline/vfx/impact_hit.build.json",
+  "generated_at": "2026-11-05T13:09:45+00:00",
+  "sheet": {
+    "path": "assets/vfx/impact_hit/sheet.png",
+    "packed_from": "frames, scaled to 128 px (lanczos) and tiled by ffmpeg with a transparent fill",
+    "cell": 128,
+    "columns": 4,
+    "rows": 4,
+    "frames": 14,
+    "fps": 30,
+    "bytes": 47932,
+    "sha256": "f6257eb75c1764580af9ca89b644f97f72396513a2fafa727c65ef7216485ef9"
+  }
+}

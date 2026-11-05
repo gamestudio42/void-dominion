@@ -101,3 +101,9 @@ Milestone 6 closes with `pnpm bench`, a Node script in `tools/bench/` that times
 
 The published table carries the machine, Node version and load average. Without that line, a number cannot be compared. The renderer is not timed here. A frame budget needs a real GPU and a browser, and that stays a separate, explicit session.
 
+## 023. Combat effects are read from the world, never written to it
+
+The simulation keeps no shot or death events, and adding them would change the checksum for a purely visual need. The client reads combat out of two consecutive states instead. A shot is a cooldown that just reset to the weapon's cooldown. A hit is lost hp. A death is an entity that left the world. `combatWatcher` in `apps/game/src/effects.ts` runs after every step, and only cells the player sees produce an effect, so the fog does not leak a fight. A killing shot shows as an explosion, not a hit, because the target is gone on that tick.
+
+The three effects are EffectCraft renders, verified as PNG sequences, then packed into one sheet each at 128 px per frame. A sprite sheet is one texture and one request, where a sequence would be 51 files. The verifier judges an animation and warns on a still, so the sheet is recorded in its own `sheet` block of the manifest with hash, grid and frame count. The view draws each effect as a sprite through meshes and above the fog, with at most 96 alive. There is no tracer between shooter and target, because the world does not say who was shot.
+

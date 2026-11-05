@@ -24,6 +24,7 @@ import {
   type Command,
 } from '@void-dominion/simulation';
 import { createField } from '@void-dominion/view3d';
+import { combatWatcher, EFFECT_SHEETS } from './effects.ts';
 import { messagesFor, reasonText } from './locales.ts';
 import { BUILDING_MODELS, TERRAIN_MODELS, UNIT_MODELS } from './models.ts';
 
@@ -98,6 +99,9 @@ export function startField(
   const view = createField(canvas, MAP_SIZE, { x: home.cc.x + 6, z: home.cc.y + 2 });
   view.setRocks(sim.world.rocks);
   view.setModels({ ...UNIT_MODELS, ...BUILDING_MODELS, ...TERRAIN_MODELS });
+  view.setEffectSheets(EFFECT_SHEETS);
+  let watchCombat = combatWatcher(PLAYER_ID);
+  watchCombat(sim.world);
   const stepper = new FixedStepper({ dt: FIXED_DT, maxFrameTime: 0.25, maxStepsPerFrame: 8 });
   const selected = new Set<number>();
   const keys = new Set<string>();
@@ -573,6 +577,8 @@ export function startField(
         return;
       }
       sim = Simulation.replay(file.commands, file.ticks);
+      watchCombat = combatWatcher(PLAYER_ID);
+      watchCombat(sim.world);
       previous = capture();
       current = capture();
       selected.clear();
@@ -704,7 +710,10 @@ export function startField(
     const stepped = stepper.advance(elapsed);
     if (stepped.steps > 0) {
       previous = current;
-      for (let i = 0; i < stepped.steps; i++) sim.step();
+      for (let i = 0; i < stepped.steps; i++) {
+        sim.step();
+        for (const effect of watchCombat(sim.world)) view.addEffect(effect.kind, effect.x, effect.y, effect.height, effect.size);
+      }
       current = capture();
       if (pendingOrder) {
         pendingOrder = false;
