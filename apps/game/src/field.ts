@@ -25,7 +25,7 @@ import {
 } from '@void-dominion/simulation';
 import { createField } from '@void-dominion/view3d';
 import { messagesFor, reasonText } from './locales.ts';
-import { BUILDING_MODELS, UNIT_MODELS } from './models.ts';
+import { BUILDING_MODELS, TERRAIN_MODELS, UNIT_MODELS } from './models.ts';
 
 export interface Box {
   left: number;
@@ -97,7 +97,7 @@ export function startField(
   const home = MATCH.bases[0]!;
   const view = createField(canvas, MAP_SIZE, { x: home.cc.x + 6, z: home.cc.y + 2 });
   view.setRocks(sim.world.rocks);
-  view.setModels({ ...UNIT_MODELS, ...BUILDING_MODELS });
+  view.setModels({ ...UNIT_MODELS, ...BUILDING_MODELS, ...TERRAIN_MODELS });
   const stepper = new FixedStepper({ dt: FIXED_DT, maxFrameTime: 0.25, maxStepsPerFrame: 8 });
   const selected = new Set<number>();
   const keys = new Set<string>();

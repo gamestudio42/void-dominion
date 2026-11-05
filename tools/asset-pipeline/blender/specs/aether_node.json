@@ -1,0 +1,192 @@
+{
+  "name": "aether_node",
+  "out": "assets/_staging/aether_node",
+  "tri_budget": 800,
+  "unit_scale": 1.15,
+  "ground": true,
+  "palette": {
+    "stone": {
+      "color": [
+        0.3,
+        0.26,
+        0.22
+      ],
+      "rough": 0.92,
+      "metal": 0.04
+    },
+    "dark": {
+      "color": [
+        0.19,
+        0.17,
+        0.15
+      ],
+      "rough": 0.95,
+      "metal": 0.02
+    },
+    "glow": {
+      "color": [
+        0.37,
+        0.82,
+        0.8
+      ],
+      "rough": 0.25,
+      "metal": 0.1,
+      "emissive": 0.9
+    }
+  },
+  "atlas": {
+    "frames": 8,
+    "size": 256,
+    "samples": 16,
+    "elevation_deg": 30,
+    "radius": 3.0
+  },
+  "parts": [
+    {
+      "name": "base",
+      "prim": "ico",
+      "mat": "dark",
+      "loc": [
+        0,
+        0,
+        0.08
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.44,
+        0.4,
+        0.16
+      ],
+      "params": {
+        "subdivisions": 1
+      }
+    },
+    {
+      "name": "chunk",
+      "prim": "ico",
+      "mat": "stone",
+      "loc": [
+        0.26,
+        0.22,
+        0.1
+      ],
+      "rot": [
+        0,
+        0,
+        30
+      ],
+      "scale": [
+        0.16,
+        0.14,
+        0.12
+      ],
+      "params": {
+        "subdivisions": 1
+      }
+    },
+    {
+      "name": "spire",
+      "prim": "cone",
+      "mat": "glow",
+      "loc": [
+        0,
+        0,
+        0.62
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.12,
+        0.12,
+        1.05
+      ],
+      "params": {
+        "vertices": 5,
+        "radius1": 1.0,
+        "radius2": 0.0
+      }
+    },
+    {
+      "name": "spire_b",
+      "prim": "cone",
+      "mat": "glow",
+      "loc": [
+        0.17,
+        -0.1,
+        0.42
+      ],
+      "rot": [
+        14,
+        18,
+        0
+      ],
+      "scale": [
+        0.08,
+        0.08,
+        0.66
+      ],
+      "params": {
+        "vertices": 5,
+        "radius1": 1.0,
+        "radius2": 0.0
+      }
+    },
+    {
+      "name": "spire_c",
+      "prim": "cone",
+      "mat": "glow",
+      "loc": [
+        -0.17,
+        0.06,
+        0.38
+      ],
+      "rot": [
+        -12,
+        -20,
+        40
+      ],
+      "scale": [
+        0.08,
+        0.08,
+        0.58
+      ],
+      "params": {
+        "vertices": 5,
+        "radius1": 1.0,
+        "radius2": 0.0
+      }
+    },
+    {
+      "name": "spire_d",
+      "prim": "cone",
+      "mat": "glow",
+      "loc": [
+        0.04,
+        0.2,
+        0.3
+      ],
+      "rot": [
+        -22,
+        6,
+        0
+      ],
+      "scale": [
+        0.06,
+        0.06,
+        0.42
+      ],
+      "params": {
+        "vertices": 5,
+        "radius1": 1.0,
+        "radius2": 0.0
+      }
+    }
+  ]
+}

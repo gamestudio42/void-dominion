@@ -1,0 +1,85 @@
+{
+  "asset": "rock",
+  "tool": {
+    "name": "blender",
+    "version": "Blender 5.2.2 LTS"
+  },
+  "exports": [
+    {
+      "asset": "rock",
+      "export": {
+        "path": "assets/models/rock/rock.glb",
+        "kind": "glb",
+        "codec": "gltf",
+        "bytes": 10320,
+        "sha256": "f4511a3d4e86ce0962a27eb1b43a4c192c17b5d8761342b1498f773edd700a75",
+        "bin_chunk_bytes": 8160
+      },
+      "mesh": {
+        "generator": "Khronos glTF Blender I/O v5.2.40",
+        "version": "2.0",
+        "triangles": 80,
+        "vertices": 240,
+        "primitives": 2,
+        "meshes": 1,
+        "meshNodes": [
+          "body"
+        ],
+        "nodes": 1,
+        "materials": [
+          {
+            "name": "stone",
+            "baseColor": [
+              0.3,
+              0.26,
+              0.22,
+              1
+            ],
+            "metallic": 0.03999999910593033,
+            "roughness": 0.9200000166893005,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "dark",
+            "baseColor": [
+              0.19,
+              0.17,
+              0.15,
+              1
+            ],
+            "metallic": 0.019999999552965164,
+            "roughness": 0.949999988079071,
+            "emissive": null,
+            "hasTexture": false
+          }
+        ],
+        "images": 0,
+        "textures": 0,
+        "animations": 0,
+        "skins": 0,
+        "bbox": {
+          "min": [
+            -1,
+            0.0,
+            -0.789
+          ],
+          "max": [
+            1,
+            1.4747,
+            0.789
+          ],
+          "dims": [
+            2,
+            1.4747,
+            1.578
+          ]
+        }
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "generated_at": "2026-11-05T12:51:50+00:00"
+}

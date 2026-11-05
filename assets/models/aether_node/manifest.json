@@ -1,0 +1,102 @@
+{
+  "asset": "aether_node",
+  "tool": {
+    "name": "blender",
+    "version": "Blender 5.2.2 LTS"
+  },
+  "exports": [
+    {
+      "asset": "aether_node",
+      "export": {
+        "path": "assets/models/aether_node/aether_node.glb",
+        "kind": "glb",
+        "codec": "gltf",
+        "bytes": 10016,
+        "sha256": "6eb86b2066c31347b8f60677516fd187d3306828b2dffaa3bb885b501e9d0ca6",
+        "bin_chunk_bytes": 6832
+      },
+      "mesh": {
+        "generator": "Khronos glTF Blender I/O v5.2.40",
+        "version": "2.0",
+        "triangles": 72,
+        "vertices": 200,
+        "primitives": 3,
+        "meshes": 1,
+        "meshNodes": [
+          "base"
+        ],
+        "nodes": 1,
+        "materials": [
+          {
+            "name": "dark",
+            "baseColor": [
+              0.19,
+              0.17,
+              0.15,
+              1
+            ],
+            "metallic": 0.019999999552965164,
+            "roughness": 0.949999988079071,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "stone",
+            "baseColor": [
+              0.3,
+              0.26,
+              0.22,
+              1
+            ],
+            "metallic": 0.03999999910593033,
+            "roughness": 0.9200000166893005,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "glow",
+            "baseColor": [
+              0.37,
+              0.82,
+              0.8,
+              1
+            ],
+            "metallic": 0.10000000149011612,
+            "roughness": 0.25,
+            "emissive": [
+              0.3329999954700469,
+              0.737999974012375,
+              0.7199999916553494
+            ],
+            "hasTexture": false
+          }
+        ],
+        "images": 0,
+        "textures": 0,
+        "animations": 0,
+        "skins": 0,
+        "bbox": {
+          "min": [
+            -0.3711,
+            0.0,
+            -0.3218
+          ],
+          "max": [
+            0.3711,
+            1.15,
+            0.3218
+          ],
+          "dims": [
+            0.7422,
+            1.15,
+            0.6435
+          ]
+        }
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "generated_at": "2026-11-05T12:54:37+00:00"
+}

@@ -5,7 +5,7 @@ import { BUILDING_KINDS, UNIT_KINDS, buildingDef } from '@void-dominion/content'
 import { Box3, Mesh, type MeshStandardMaterial } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { describe, expect, it } from 'vitest';
-import { BUILDING_MODELS, UNIT_MODELS } from '../../../apps/game/src/models.ts';
+import { BUILDING_MODELS, TERRAIN_MODELS, UNIT_MODELS } from '../../../apps/game/src/models.ts';
 
 /** Building specs fill this share of the footprint, as the boxes did. */
 const FOOTPRINT_MARGIN = 0.92;
@@ -61,6 +61,31 @@ describe('building models', () => {
       expect(bounds.max.z - bounds.min.z).toBeCloseTo(def.height * FOOTPRINT_MARGIN, 2);
       expect(bounds.min.x + bounds.max.x).toBeCloseTo(0, 2);
       expect(bounds.min.z + bounds.max.z).toBeCloseTo(0, 2);
+    });
+  }
+});
+
+describe('terrain models', () => {
+  it('ships a node model for both resources and two boulders', () => {
+    expect(Object.keys(TERRAIN_MODELS).sort()).toEqual(['aether_node', 'ore_node', 'rock', 'rock_spire']);
+  });
+
+  for (const kind of ['ore_node', 'aether_node']) {
+    it(`keeps ${kind} inside its one cell, standing on the ground`, async () => {
+      const { names, bounds } = await load(TERRAIN_MODELS[kind]!);
+      expect(names).not.toContain('team');
+      expect(bounds.min.y).toBeCloseTo(0, 3);
+      expect(bounds.max.x - bounds.min.x).toBeLessThanOrEqual(1.0001);
+      expect(bounds.max.z - bounds.min.z).toBeLessThanOrEqual(1.0001);
+    });
+  }
+
+  for (const kind of ['rock', 'rock_spire']) {
+    it(`sizes ${kind} to about two cells, standing on the ground`, async () => {
+      const { names, bounds } = await load(TERRAIN_MODELS[kind]!);
+      expect(names).not.toContain('team');
+      expect(bounds.min.y).toBeCloseTo(0, 3);
+      expect(Math.max(bounds.max.x - bounds.min.x, bounds.max.z - bounds.min.z)).toBeLessThanOrEqual(2.0001);
     });
   }
 });

@@ -23,3 +23,11 @@ export const BUILDING_MODELS: Readonly<Record<string, string>> = {
   vehicle_factory: model('vehicle_factory'),
   defense_turret: model('defense_turret'),
 };
+
+/** Resource nodes, keyed `<node kind>_node`, and the boulders that tile impassable rock. */
+export const TERRAIN_MODELS: Readonly<Record<string, string>> = {
+  ore_node: model('ore_node'),
+  aether_node: model('aether_node'),
+  rock: model('rock'),
+  rock_spire: model('rock_spire'),
+};

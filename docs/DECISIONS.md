@@ -89,3 +89,9 @@ The seven buildings follow the unit meshes. Each spec is drawn in cells: the bas
 
 The client loads units and buildings through one `setModels` call. A building under construction is the model scaled in height by its progress, from 15% to full. A remembered wreck is the model at a quarter height with one shared dark material. The placement preview stays a box. Turrets do not turn: the view has no target to aim at.
 
+## 021. Rock ridges are tiled boulders, hidden until explored
+
+Nodes and rocks follow the building meshes. A node model fits its one cell. A rock rect from the match is not one model stretched to 10 by 24 cells: the view tiles it with two boulder models about two cells apart, over a low slab so the ridge reads as one wall. Position, turn, size and the spire share come from a hash of the boulder's place in the rect, so the ridge looks the same on every load. That hash lives in the view and never touches the simulation.
+
+Boulders stand up to about 2.4 cells, well above the fog plane at 0.95. A boulder is shown only once its cell is explored, so the black fog never shows where unexplored rock is. The slab stays below the fog and is always drawn, as the old boxes were. Until both boulder models load, each rect stays one box.
+

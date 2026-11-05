@@ -1,0 +1,215 @@
+{
+  "name": "ore_node",
+  "out": "assets/_staging/ore_node",
+  "tri_budget": 800,
+  "unit_scale": 1.0,
+  "ground": true,
+  "palette": {
+    "stone": {
+      "color": [
+        0.3,
+        0.26,
+        0.22
+      ],
+      "rough": 0.92,
+      "metal": 0.04
+    },
+    "dark": {
+      "color": [
+        0.19,
+        0.17,
+        0.15
+      ],
+      "rough": 0.95,
+      "metal": 0.02
+    },
+    "ore": {
+      "color": [
+        0.86,
+        0.52,
+        0.2
+      ],
+      "rough": 0.35,
+      "metal": 0.3,
+      "emissive": 0.6
+    }
+  },
+  "atlas": {
+    "frames": 8,
+    "size": 256,
+    "samples": 16,
+    "elevation_deg": 30,
+    "radius": 2.6
+  },
+  "parts": [
+    {
+      "name": "mound",
+      "prim": "ico",
+      "mat": "stone",
+      "loc": [
+        0,
+        0,
+        0.12
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.46,
+        0.42,
+        0.22
+      ],
+      "params": {
+        "subdivisions": 1
+      }
+    },
+    {
+      "name": "rubble_a",
+      "prim": "ico",
+      "mat": "dark",
+      "loc": [
+        0.3,
+        -0.25,
+        0.08
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.16,
+        0.14,
+        0.11
+      ],
+      "params": {
+        "subdivisions": 1
+      }
+    },
+    {
+      "name": "rubble_b",
+      "prim": "ico",
+      "mat": "dark",
+      "loc": [
+        -0.32,
+        0.2,
+        0.07
+      ],
+      "rot": [
+        0,
+        0,
+        40
+      ],
+      "scale": [
+        0.13,
+        0.15,
+        0.1
+      ],
+      "params": {
+        "subdivisions": 1
+      }
+    },
+    {
+      "name": "shard_a",
+      "prim": "cone",
+      "mat": "ore",
+      "loc": [
+        0.05,
+        0.02,
+        0.36
+      ],
+      "rot": [
+        8,
+        -6,
+        0
+      ],
+      "scale": [
+        0.195,
+        0.195,
+        0.525
+      ],
+      "params": {
+        "vertices": 5,
+        "radius1": 1.0,
+        "radius2": 0.0
+      }
+    },
+    {
+      "name": "shard_b",
+      "prim": "cone",
+      "mat": "ore",
+      "loc": [
+        -0.18,
+        -0.12,
+        0.28
+      ],
+      "rot": [
+        -18,
+        -24,
+        30
+      ],
+      "scale": [
+        0.15,
+        0.15,
+        0.375
+      ],
+      "params": {
+        "vertices": 5,
+        "radius1": 1.0,
+        "radius2": 0.0
+      }
+    },
+    {
+      "name": "shard_c",
+      "prim": "cone",
+      "mat": "ore",
+      "loc": [
+        0.2,
+        0.14,
+        0.27
+      ],
+      "rot": [
+        20,
+        22,
+        10
+      ],
+      "scale": [
+        0.135,
+        0.135,
+        0.35
+      ],
+      "params": {
+        "vertices": 5,
+        "radius1": 1.0,
+        "radius2": 0.0
+      }
+    },
+    {
+      "name": "shard_d",
+      "prim": "cone",
+      "mat": "ore",
+      "loc": [
+        -0.08,
+        0.26,
+        0.22
+      ],
+      "rot": [
+        30,
+        -10,
+        0
+      ],
+      "scale": [
+        0.105,
+        0.105,
+        0.25
+      ],
+      "params": {
+        "vertices": 5,
+        "radius1": 1.0,
+        "radius2": 0.0
+      }
+    }
+  ]
+}

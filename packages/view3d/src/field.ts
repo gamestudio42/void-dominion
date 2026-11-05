@@ -164,8 +164,11 @@ export function createField(
   const loader = new GLTFLoader();
   let disposed = false;
   const structures = new Map<number, Body>();
-  const nodeMeshes = new Map<number, Mesh>();
-  const rockMeshes: Mesh[] = [];
+  const nodeMeshes = new Map<number, { root: Object3D; box: boolean }>();
+  /** Boulders keep the cell they stand on, so unexplored rock never pokes through the black fog. */
+  const rockMeshes: { root: Object3D; cell: number }[] = [];
+  let rockRects: DrawRock[] = [];
+  const rockMaterial = new MeshStandardMaterial({ color: '#4a4036', roughness: 0.9, metalness: 0.04 });
 
   const markerGeometry = new RingGeometry(0.35, 0.55, 4);
   markerGeometry.rotateX(-Math.PI / 2);
@@ -306,10 +309,81 @@ export function createField(
     body.wrecked = true;
   }
 
+  function nodeBox(kind: DrawNode['kind']): Mesh {
+    return new Mesh(
+      kind === 'ore' ? oreGeometry : aetherGeometry,
+      new MeshStandardMaterial({
+        color: kind === 'ore' ? '#d08a45' : '#5ec4c0',
+        emissive: kind === 'ore' ? '#6a3a12' : '#1a4a48',
+        emissiveIntensity: 0.35,
+        roughness: 0.45,
+      }),
+    );
+  }
+
+  /** A model clone shares the template's geometry and materials, so only a box owns its material. */
+  function dropNode(shown: { root: Object3D; box: boolean }): void {
+    scene.remove(shown.root);
+    if (shown.box) ((shown.root as Mesh).material as MeshStandardMaterial).dispose();
+  }
+
   function dropBody(body: Body): void {
     scene.remove(body.root, body.ring);
     body.tint?.dispose();
     (body.ring.material as MeshStandardMaterial).dispose();
+  }
+
+  /** Small integer hash, so a boulder's look depends only on where it stands. */
+  function scatter(x: number, z: number, salt: number): number {
+    let h = (x * 374761393 + z * 668265263 + salt * 2246822519) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  }
+
+  function clearRocks(): void {
+    for (const rock of rockMeshes) {
+      scene.remove(rock.root);
+      if (rock.root instanceof Mesh && rock.root.material === rockMaterial) rock.root.geometry.dispose();
+    }
+    rockMeshes.length = 0;
+  }
+
+  /** Tile each rock rect with boulders about two cells apart, or keep one box per rect until both models load. */
+  function placeRocks(): void {
+    clearRocks();
+    const boulder = models.get('rock');
+    const spire = models.get('rock_spire');
+    for (const rect of rockRects) {
+      if (!boulder || !spire) {
+        const mesh = new Mesh(new BoxGeometry(rect.width, 0.7, rect.height), rockMaterial);
+        mesh.position.set(rect.x + rect.width / 2, 0.35, rect.y + rect.height / 2);
+        scene.add(mesh);
+        rockMeshes.push({ root: mesh, cell: -1 });
+        continue;
+      }
+      /** A low slab under the boulders, so the ridge reads as one wall and not loose stones. */
+      const slab = new Mesh(new BoxGeometry(rect.width, 0.18, rect.height), rockMaterial);
+      slab.position.set(rect.x + rect.width / 2, 0.09, rect.y + rect.height / 2);
+      scene.add(slab);
+      rockMeshes.push({ root: slab, cell: -1 });
+      const columns = Math.max(1, Math.round(rect.width / 2));
+      const rows = Math.max(1, Math.round(rect.height / 2));
+      const stepX = rect.width / columns;
+      const stepZ = rect.height / rows;
+      for (let column = 0; column < columns; column++) {
+        for (let row = 0; row < rows; row++) {
+          const x = rect.x + stepX * (column + 0.5 + (scatter(column, row, 1) - 0.5) * 0.4);
+          const z = rect.y + stepZ * (row + 0.5 + (scatter(column, row, 2) - 0.5) * 0.4);
+          const root = (scatter(column, row, 3) < 0.22 ? spire : boulder).clone(true);
+          const size = 0.9 + scatter(column, row, 4) * 0.25;
+          root.scale.set(size, 0.75 + scatter(column, row, 5) * 0.45, size);
+          root.rotation.y = scatter(column, row, 6) * Math.PI * 2;
+          root.position.set(x, 0, z);
+          scene.add(root);
+          rockMeshes.push({ root, cell: Math.floor(z) * mapSize + Math.floor(x) });
+        }
+      }
+    }
   }
 
   placeCamera();
@@ -371,6 +445,7 @@ export function createField(
               return;
             }
             models.set(kind, gltf.scene);
+            if (kind === 'rock' || kind === 'rock_spire') placeRocks();
           },
           undefined,
           (error) => console.warn(`model ${kind} failed to load; keeping the box`, error),
@@ -423,45 +498,29 @@ export function createField(
       const seen = new Set<number>();
       for (const node of nodes) {
         seen.add(node.id);
-        let mesh = nodeMeshes.get(node.id);
-        if (!mesh) {
-          mesh = new Mesh(
-            node.kind === 'ore' ? oreGeometry : aetherGeometry,
-            new MeshStandardMaterial({
-              color: node.kind === 'ore' ? '#d08a45' : '#5ec4c0',
-              emissive: node.kind === 'ore' ? '#6a3a12' : '#1a4a48',
-              emissiveIntensity: 0.35,
-              roughness: 0.45,
-            }),
-          );
-          scene.add(mesh);
-          nodeMeshes.set(node.id, mesh);
+        const model = models.get(`${node.kind}_node`);
+        let shown = nodeMeshes.get(node.id);
+        if (shown && shown.box && model) {
+          dropNode(shown);
+          shown = undefined;
         }
-        mesh.position.set(node.x + 0.5, node.kind === 'ore' ? 0.28 : 0.45, node.y + 0.5);
+        if (!shown) {
+          shown = model ? { root: model.clone(true), box: false } : { root: nodeBox(node.kind), box: true };
+          scene.add(shown.root);
+          nodeMeshes.set(node.id, shown);
+        }
+        if (shown.box) shown.root.position.set(node.x + 0.5, node.kind === 'ore' ? 0.28 : 0.45, node.y + 0.5);
+        else shown.root.position.set(node.x + 0.5, 0, node.y + 0.5);
       }
-      for (const [id, mesh] of nodeMeshes) {
+      for (const [id, shown] of nodeMeshes) {
         if (seen.has(id)) continue;
-        scene.remove(mesh);
-        (mesh.material as MeshStandardMaterial).dispose();
+        dropNode(shown);
         nodeMeshes.delete(id);
       }
     },
     setRocks(rocks) {
-      for (const mesh of rockMeshes) {
-        scene.remove(mesh);
-        mesh.geometry.dispose();
-        (mesh.material as MeshStandardMaterial).dispose();
-      }
-      rockMeshes.length = 0;
-      for (const rock of rocks) {
-        const mesh = new Mesh(
-          new BoxGeometry(rock.width, 0.7, rock.height),
-          new MeshStandardMaterial({ color: '#4a4036', roughness: 0.9, metalness: 0.04 }),
-        );
-        mesh.position.set(rock.x + rock.width / 2, 0.35, rock.y + rock.height / 2);
-        scene.add(mesh);
-        rockMeshes.push(mesh);
-      }
+      rockRects = rocks.map((rock) => ({ ...rock }));
+      placeRocks();
     },
     setFog(explored, visible) {
       const cells = mapSize * mapSize;
@@ -485,6 +544,7 @@ export function createField(
         }
       }
       fogTexture.needsUpdate = true;
+      for (const rock of rockMeshes) rock.root.visible = rock.cell < 0 || explored[rock.cell] !== 0;
     },
     setGhost(next) {
       if (!next) {
@@ -554,6 +614,10 @@ export function createField(
       bodies.clear();
       for (const body of structures.values()) dropBody(body);
       structures.clear();
+      for (const shown of nodeMeshes.values()) dropNode(shown);
+      nodeMeshes.clear();
+      clearRocks();
+      rockMaterial.dispose();
       for (const model of models.values()) disposeTree(model);
       models.clear();
       wreckMaterial.dispose();
