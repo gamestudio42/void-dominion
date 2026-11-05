@@ -67,3 +67,12 @@ An unattended match used to lose its workers while the player was still learning
 A reason key is information. `footprint` on an unseen site, `not_owner` on a hidden unit and `not_visible` against `unknown_unit` on an attack each told the player, or a commander, what the fog was hiding. A foreign entity out of sight now answers like a missing one. A build site must be in sight whole before units and buildings on it are checked, and the client's placement preview calls the same `siteRefusal` instead of a second check. A gather needs an explored node, matching what the client already draws. General Varek's finders choose only sites he can see; the pinned arena seeds did not change.
 
 A human replay file is player 1 only. Before this, a file could carry orders for Varek and steer him. The same per-seat check belongs in the multiplayer host when it exists.
+
+## 017. Unit meshes before the arena benchmarks
+
+Milestone 6 still lacks its speed table, but the units were boxes and the player could not tell a rifleman from a rocketeer except by size. The five unit meshes go in now, before that table, because they touch only the view and do not change a rule or a checksum. Buildings, nodes and effects stay geometric.
+
+Each spec in `tools/asset-pipeline/blender/specs/` owns its size through `unit_scale` (cells), so the client draws the model at scale 1 and does not resize it. The palette is shared: `hull`, `dark`, `glow` and `team`. The client clones `team` per unit and tints it by owner and health; geometry and the other materials are shared. Facing comes from the drawn movement in the view, since the simulation has no heading. A kind whose model is missing or fails to load keeps its box. `GLTFLoader` sits in its own `three-addons` chunk so the `three` chunk stays under the build warning.
+
+The enemy tint on the `team` panels is close to the hull grey. Whether to brighten it is a separate readability decision.
+

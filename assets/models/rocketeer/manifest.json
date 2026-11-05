@@ -1,0 +1,115 @@
+{
+  "asset": "rocketeer",
+  "tool": {
+    "name": "blender",
+    "version": "Blender 5.2.2 LTS"
+  },
+  "exports": [
+    {
+      "asset": "rocketeer",
+      "export": {
+        "path": "assets/models/rocketeer/rocketeer.glb",
+        "kind": "glb",
+        "codec": "gltf",
+        "bytes": 31920,
+        "sha256": "99dd11b040ba8426c768389540b504477fdb7beda6f98a518266eab9b4b903fa",
+        "bin_chunk_bytes": 27672
+      },
+      "mesh": {
+        "generator": "Khronos glTF Blender I/O v5.2.40",
+        "version": "2.0",
+        "triangles": 388,
+        "vertices": 792,
+        "primitives": 4,
+        "meshes": 1,
+        "meshNodes": [
+          "leg"
+        ],
+        "nodes": 1,
+        "materials": [
+          {
+            "name": "dark",
+            "baseColor": [
+              0.13,
+              0.14,
+              0.16,
+              1
+            ],
+            "metallic": 0.30000001192092896,
+            "roughness": 0.75,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "hull",
+            "baseColor": [
+              0.55,
+              0.57,
+              0.6,
+              1
+            ],
+            "metallic": 0.550000011920929,
+            "roughness": 0.5,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "team",
+            "baseColor": [
+              0.85,
+              0.55,
+              0.2,
+              1
+            ],
+            "metallic": 0.20000000298023224,
+            "roughness": 0.44999998807907104,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "glow",
+            "baseColor": [
+              0.35,
+              0.85,
+              0.95,
+              1
+            ],
+            "metallic": 0,
+            "roughness": 0.30000001192092896,
+            "emissive": [
+              0.3684210509804807,
+              0.8947368784294238,
+              1
+            ],
+            "hasTexture": false
+          }
+        ],
+        "images": 0,
+        "textures": 0,
+        "animations": 0,
+        "skins": 0,
+        "bbox": {
+          "min": [
+            -0.1905,
+            -0.0,
+            -0.224
+          ],
+          "max": [
+            0.1905,
+            0.8,
+            0.224
+          ],
+          "dims": [
+            0.381,
+            0.8,
+            0.448
+          ]
+        }
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "generated_at": "2026-11-05T06:08:08+00:00"
+}

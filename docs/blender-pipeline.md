@@ -23,7 +23,8 @@ tools/asset-pipeline/blender/
   generate_lowpoly.py            spec → mesh → .glb (+ optional atlas)
   verify_glb.py                  reads the .glb itself, writes/merges manifest
   bake_mesh.sh                   generate → verify → review strip + GIF
-  examples/scout_ship.json       starting spec for this game
+  examples/scout_ship.json       pipeline fixture, not a game unit
+  specs/<kind>.json              shipped Void Dominion units
 
 assets/_staging/<asset>/         machine-local, gitignored
   <asset>.glb                     delivery artifact

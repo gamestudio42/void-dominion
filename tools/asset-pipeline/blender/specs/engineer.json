@@ -1,0 +1,204 @@
+{
+  "name": "engineer",
+  "out": "assets/_staging/engineer",
+  "tri_budget": 700,
+  "unit_scale": 0.6,
+  "ground": true,
+  "palette": {
+    "hull": {
+      "color": [
+        0.55,
+        0.57,
+        0.6
+      ],
+      "rough": 0.5,
+      "metal": 0.55
+    },
+    "dark": {
+      "color": [
+        0.13,
+        0.14,
+        0.16
+      ],
+      "rough": 0.75,
+      "metal": 0.3
+    },
+    "team": {
+      "color": [
+        0.85,
+        0.55,
+        0.2
+      ],
+      "rough": 0.45,
+      "metal": 0.2
+    },
+    "glow": {
+      "color": [
+        0.35,
+        0.85,
+        0.95
+      ],
+      "rough": 0.3,
+      "emissive": 2.0
+    }
+  },
+  "atlas": {
+    "frames": 8,
+    "size": 256,
+    "samples": 16,
+    "elevation_deg": 28,
+    "radius": 2.16
+  },
+  "parts": [
+    {
+      "name": "chassis",
+      "prim": "cube",
+      "mat": "dark",
+      "loc": [
+        0,
+        0,
+        0.2
+      ],
+      "scale": [
+        0.6,
+        0.8,
+        0.22
+      ],
+      "bevel": 0.03
+    },
+    {
+      "name": "track",
+      "prim": "cube",
+      "mat": "dark",
+      "loc": [
+        0.36,
+        0,
+        0.13
+      ],
+      "scale": [
+        0.16,
+        0.9,
+        0.26
+      ],
+      "mirror": true,
+      "bevel": 0.04
+    },
+    {
+      "name": "cab",
+      "prim": "cube",
+      "mat": "hull",
+      "loc": [
+        0,
+        -0.1,
+        0.42
+      ],
+      "scale": [
+        0.46,
+        0.42,
+        0.26
+      ],
+      "bevel": 0.04
+    },
+    {
+      "name": "roof",
+      "prim": "cube",
+      "mat": "team",
+      "loc": [
+        0,
+        -0.1,
+        0.57
+      ],
+      "scale": [
+        0.48,
+        0.44,
+        0.04
+      ]
+    },
+    {
+      "name": "visor",
+      "prim": "cube",
+      "mat": "glow",
+      "loc": [
+        0,
+        0.12,
+        0.45
+      ],
+      "scale": [
+        0.36,
+        0.04,
+        0.08
+      ]
+    },
+    {
+      "name": "arm_base",
+      "prim": "cylinder",
+      "mat": "hull",
+      "loc": [
+        0.16,
+        0.24,
+        0.4
+      ],
+      "scale": [
+        0.07,
+        0.07,
+        0.12
+      ],
+      "params": {
+        "vertices": 8
+      }
+    },
+    {
+      "name": "arm",
+      "prim": "cube",
+      "mat": "hull",
+      "loc": [
+        0.16,
+        0.42,
+        0.5
+      ],
+      "scale": [
+        0.07,
+        0.4,
+        0.07
+      ],
+      "rot": [
+        -25,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "claw",
+      "prim": "cube",
+      "mat": "team",
+      "loc": [
+        0.16,
+        0.62,
+        0.44
+      ],
+      "scale": [
+        0.16,
+        0.08,
+        0.12
+      ]
+    },
+    {
+      "name": "tank",
+      "prim": "cylinder",
+      "mat": "team",
+      "loc": [
+        -0.16,
+        -0.3,
+        0.52
+      ],
+      "scale": [
+        0.09,
+        0.09,
+        0.26
+      ],
+      "params": {
+        "vertices": 8
+      }
+    }
+  ]
+}

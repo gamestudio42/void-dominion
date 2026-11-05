@@ -1,0 +1,115 @@
+{
+  "asset": "assault_walker",
+  "tool": {
+    "name": "blender",
+    "version": "Blender 5.2.2 LTS"
+  },
+  "exports": [
+    {
+      "asset": "assault_walker",
+      "export": {
+        "path": "assets/models/assault_walker/assault_walker.glb",
+        "kind": "glb",
+        "codec": "gltf",
+        "bytes": 44760,
+        "sha256": "1d60a1e54c2b7b0fe6d64d2c94a4750b1025d3bd2df977b7b6888a53fb116f49",
+        "bin_chunk_bytes": 40512
+      },
+      "mesh": {
+        "generator": "Khronos glTF Blender I/O v5.2.40",
+        "version": "2.0",
+        "triangles": 544,
+        "vertices": 1164,
+        "primitives": 4,
+        "meshes": 1,
+        "meshNodes": [
+          "foot"
+        ],
+        "nodes": 1,
+        "materials": [
+          {
+            "name": "dark",
+            "baseColor": [
+              0.13,
+              0.14,
+              0.16,
+              1
+            ],
+            "metallic": 0.30000001192092896,
+            "roughness": 0.75,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "hull",
+            "baseColor": [
+              0.55,
+              0.57,
+              0.6,
+              1
+            ],
+            "metallic": 0.550000011920929,
+            "roughness": 0.5,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "team",
+            "baseColor": [
+              0.85,
+              0.55,
+              0.2,
+              1
+            ],
+            "metallic": 0.20000000298023224,
+            "roughness": 0.44999998807907104,
+            "emissive": null,
+            "hasTexture": false
+          },
+          {
+            "name": "glow",
+            "baseColor": [
+              0.35,
+              0.85,
+              0.95,
+              1
+            ],
+            "metallic": 0,
+            "roughness": 0.30000001192092896,
+            "emissive": [
+              0.3684210509804807,
+              0.8947368784294238,
+              1
+            ],
+            "hasTexture": false
+          }
+        ],
+        "images": 0,
+        "textures": 0,
+        "animations": 0,
+        "skins": 0,
+        "bbox": {
+          "min": [
+            -0.4084,
+            -0.0,
+            -0.3621
+          ],
+          "max": [
+            0.4084,
+            1.1,
+            0.3621
+          ],
+          "dims": [
+            0.8168,
+            1.1,
+            0.7243
+          ]
+        }
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "generated_at": "2026-11-05T06:08:17+00:00"
+}

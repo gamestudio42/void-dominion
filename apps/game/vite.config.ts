@@ -9,6 +9,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('/node_modules/three/examples/')) return 'three-addons';
           if (id.includes('/node_modules/three/')) return 'three';
           if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react';
           return undefined;

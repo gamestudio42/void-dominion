@@ -9,6 +9,7 @@ import {
   MeshStandardMaterial,
   NearestFilter,
   NoColorSpace,
+  Object3D,
   OrthographicCamera,
   Plane,
   PlaneGeometry,
@@ -21,6 +22,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export interface DrawUnit {
   id: number;
@@ -73,6 +75,8 @@ export interface FieldView {
   resize(): void;
   render(): void;
   setUnits(units: DrawUnit[]): void;
+  /** Load one GLB per unit kind. A kind keeps its box until its model arrives, or for good if it fails. */
+  setUnitModels(urls: Readonly<Record<string, string>>): void;
   setBuildings(buildings: DrawBuilding[]): void;
   setNodes(nodes: DrawNode[]): void;
   setRocks(rocks: DrawRock[]): void;
@@ -93,6 +97,20 @@ const ENEMY = new Color('#8aa0b5');
 const MARKER_OK = new Color('#8fd0a8');
 const MARKER_BAD = new Color('#d4766a');
 
+/** Material name in each unit GLB that takes the owner colour. Set by the Blender spec palette. */
+const TEAM_MATERIAL = 'team';
+
+interface UnitBody {
+  root: Object3D;
+  ring: Mesh;
+  /** Owner-tinted material: the box material, or this unit's copy of the model's team material. */
+  tint: MeshStandardMaterial | null;
+  box: boolean;
+  lastX: number;
+  lastZ: number;
+}
+
+/** Fallback box sizes while a unit model is missing. */
 const UNIT_SCALE: Record<string, [number, number, number]> = {
   engineer: [0.55, 0.48, 0.55],
   rifleman: [0.38, 0.72, 0.38],
@@ -135,7 +153,10 @@ export function createField(
   const oreGeometry = new BoxGeometry(0.7, 0.55, 0.7);
   const aetherGeometry = new BoxGeometry(0.45, 0.9, 0.45);
 
-  const bodies = new Map<number, { mesh: Mesh; ring: Mesh }>();
+  const bodies = new Map<number, UnitBody>();
+  const unitModels = new Map<string, Object3D>();
+  const loader = new GLTFLoader();
+  let disposed = false;
   const structures = new Map<number, { mesh: Mesh; ring: Mesh }>();
   const nodeMeshes = new Map<number, Mesh>();
   const rockMeshes: Mesh[] = [];
@@ -243,6 +264,40 @@ export function createField(
     material.emissive.set(selected ? '#6a4a16' : '#000000');
   }
 
+  function disposeTree(root: Object3D): void {
+    root.traverse((child) => {
+      if (!(child instanceof Mesh)) return;
+      child.geometry.dispose();
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const material of materials) material.dispose();
+    });
+  }
+
+  function makeUnitBody(kind: string, x: number, z: number): UnitBody {
+    const ring = new Mesh(ringGeometry, new MeshStandardMaterial({ color: '#f4e7c8', emissive: '#f4e7c8', emissiveIntensity: 0.4 }));
+    const template = unitModels.get(kind);
+    if (!template) {
+      const material = new MeshStandardMaterial({ roughness: 0.55, metalness: 0.08 });
+      return { root: new Mesh(unitGeometry, material), ring, tint: material, box: true, lastX: x, lastZ: z };
+    }
+    /** Geometry and the other materials stay shared with the template; only the team colour is per unit. */
+    const root = template.clone(true);
+    let tint: MeshStandardMaterial | null = null;
+    root.traverse((child) => {
+      if (!(child instanceof Mesh) || !(child.material instanceof MeshStandardMaterial)) return;
+      if (child.material.name !== TEAM_MATERIAL) return;
+      tint ??= child.material.clone();
+      child.material = tint;
+    });
+    return { root, ring, tint, box: false, lastX: x, lastZ: z };
+  }
+
+  function dropUnitBody(body: UnitBody): void {
+    scene.remove(body.root, body.ring);
+    body.tint?.dispose();
+    (body.ring.material as MeshStandardMaterial).dispose();
+  }
+
   placeCamera();
   frameCamera();
 
@@ -258,28 +313,54 @@ export function createField(
       for (const unit of units) {
         seen.add(unit.id);
         let body = bodies.get(unit.id);
+        if (body && body.box && unitModels.has(unit.kind)) {
+          dropUnitBody(body);
+          body = undefined;
+        }
         if (!body) {
-          const mesh = new Mesh(unitGeometry, new MeshStandardMaterial({ roughness: 0.55, metalness: 0.08 }));
-          const ring = new Mesh(ringGeometry, new MeshStandardMaterial({ color: '#f4e7c8', emissive: '#f4e7c8', emissiveIntensity: 0.4 }));
-          scene.add(mesh, ring);
-          body = { mesh, ring };
+          body = makeUnitBody(unit.kind, unit.x, unit.y);
+          scene.add(body.root, body.ring);
           bodies.set(unit.id, body);
         }
-        const scale = UNIT_SCALE[unit.kind] ?? UNIT_SCALE.engineer!;
-        const fraction = unit.maxHp > 0 ? unit.hp / unit.maxHp : 1;
-        const height = scale[1] * (0.45 + 0.55 * fraction);
-        body.mesh.scale.set(scale[0], height, scale[2]);
-        body.mesh.position.set(unit.x, height / 2, unit.y);
+        if (body.box) {
+          const scale = UNIT_SCALE[unit.kind] ?? UNIT_SCALE.engineer!;
+          const fraction = unit.maxHp > 0 ? unit.hp / unit.maxHp : 1;
+          const height = scale[1] * (0.45 + 0.55 * fraction);
+          body.root.scale.set(scale[0], height, scale[2]);
+          body.root.position.set(unit.x, height / 2, unit.y);
+        } else {
+          body.root.position.set(unit.x, 0, unit.y);
+          /** Face the way the unit moved. Models look down -Z, as the Blender export contract fixes. */
+          const dx = unit.x - body.lastX;
+          const dz = unit.y - body.lastZ;
+          if (dx * dx + dz * dz > 1e-6) body.root.rotation.y = Math.atan2(-dx, -dz);
+        }
+        body.lastX = unit.x;
+        body.lastZ = unit.y;
         body.ring.position.set(unit.x, 0.08, unit.y);
         body.ring.visible = unit.selected;
-        paintOwner(body.mesh.material as MeshStandardMaterial, unit.owner, unit.selected, unit.hp, unit.maxHp);
+        if (body.tint) paintOwner(body.tint, unit.owner, unit.selected, unit.hp, unit.maxHp);
       }
       for (const [id, body] of bodies) {
         if (seen.has(id)) continue;
-        scene.remove(body.mesh, body.ring);
-        (body.mesh.material as MeshStandardMaterial).dispose();
-        (body.ring.material as MeshStandardMaterial).dispose();
+        dropUnitBody(body);
         bodies.delete(id);
+      }
+    },
+    setUnitModels(urls) {
+      for (const [kind, url] of Object.entries(urls)) {
+        loader.load(
+          url,
+          (gltf) => {
+            if (disposed) {
+              disposeTree(gltf.scene);
+              return;
+            }
+            unitModels.set(kind, gltf.scene);
+          },
+          undefined,
+          (error) => console.warn(`unit model ${kind} failed to load; keeping the box`, error),
+        );
       }
     },
     setBuildings(buildings) {
@@ -446,6 +527,11 @@ export function createField(
       };
     },
     dispose() {
+      disposed = true;
+      for (const body of bodies.values()) dropUnitBody(body);
+      bodies.clear();
+      for (const model of unitModels.values()) disposeTree(model);
+      unitModels.clear();
       renderer.dispose();
       unitGeometry.dispose();
       buildingGeometry.dispose();
