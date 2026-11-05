@@ -35,8 +35,15 @@ assets/_staging/<asset>/                  machine-local, gitignored
   frames/f_00000.png …                    delivery artifact (RGBA sequence)
   manifest.json                           what was verified, with sha256
 assets/vfx/<asset>/                       shipped copy, committed
-  frames/ …  manifest.json
+  sheet.png  manifest.json                frames packed at 128 px; `sheet` block in the manifest
+tools/asset-pipeline/vfx/<asset>.build.json   the recipe, committed
 ```
+
+The web client loads one sheet per effect, not a sequence. Pack the verified
+frames with `ffmpeg ... -vf "scale=128:128:flags=lanczos,tile=CxR:color=0x00000000"`
+and record the grid, frame count, bytes and sha256 in the manifest's `sheet`
+block. Do not run `verify_export.sh` on the sheet: it reads a still as an
+animation and warns about frame 0 and the last frame.
 
 Rules:
 

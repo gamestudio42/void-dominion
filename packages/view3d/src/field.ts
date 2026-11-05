@@ -18,6 +18,11 @@ import {
   RingGeometry,
   Scene,
   ShaderMaterial,
+  SRGBColorSpace,
+  Sprite,
+  SpriteMaterial,
+  Texture,
+  TextureLoader,
   Vector2,
   Vector3,
   WebGLRenderer,
@@ -64,6 +69,15 @@ export interface DrawRock {
   height: number;
 }
 
+/** A sprite sheet of square cells, read left to right, then top to bottom. */
+export interface EffectSheet {
+  url: string;
+  columns: number;
+  rows: number;
+  frames: number;
+  fps: number;
+}
+
 export interface DrawGhost {
   x: number;
   y: number;
@@ -78,6 +92,10 @@ export interface FieldView {
   setUnits(units: DrawUnit[]): void;
   /** Load one GLB per unit or building kind. A kind keeps its box until its model arrives, or for good if it fails. */
   setModels(urls: Readonly<Record<string, string>>): void;
+  /** Load one sheet per effect kind. An effect whose sheet has not loaded is skipped. */
+  setEffectSheets(sheets: Readonly<Record<string, EffectSheet>>): void;
+  /** Play an effect once at a cell position, `height` above the ground and `size` cells wide. */
+  addEffect(kind: string, x: number, z: number, height: number, size: number): void;
   setBuildings(buildings: DrawBuilding[]): void;
   setNodes(nodes: DrawNode[]): void;
   setRocks(rocks: DrawRock[]): void;
@@ -168,6 +186,12 @@ export function createField(
   /** Boulders keep the cell they stand on, so unexplored rock never pokes through the black fog. */
   const rockMeshes: { root: Object3D; cell: number }[] = [];
   let rockRects: DrawRock[] = [];
+
+  /** Sprites draw after the fog and through the meshes, so a hit inside a building still shows. */
+  const EFFECT_LIMIT = 96;
+  const sheets = new Map<string, { sheet: EffectSheet; texture: Texture }>();
+  const effects: { sprite: Sprite; sheet: EffectSheet; born: number }[] = [];
+  const textureLoader = new TextureLoader();
   const rockMaterial = new MeshStandardMaterial({ color: '#4a4036', roughness: 0.9, metalness: 0.04 });
 
   const markerGeometry = new RingGeometry(0.35, 0.55, 4);
@@ -327,6 +351,18 @@ export function createField(
     if (shown.box) ((shown.root as Mesh).material as MeshStandardMaterial).dispose();
   }
 
+  function showFrame(map: Texture, sheet: EffectSheet, frame: number): void {
+    const column = frame % sheet.columns;
+    const row = Math.floor(frame / sheet.columns);
+    map.offset.set(column / sheet.columns, 1 - (row + 1) / sheet.rows);
+  }
+
+  function dropEffect(effect: { sprite: Sprite }): void {
+    scene.remove(effect.sprite);
+    effect.sprite.material.map?.dispose();
+    effect.sprite.material.dispose();
+  }
+
   function dropBody(body: Body): void {
     scene.remove(body.root, body.ring);
     body.tint?.dispose();
@@ -394,7 +430,50 @@ export function createField(
       frameCamera();
     },
     render() {
+      const now = performance.now();
+      for (let index = effects.length - 1; index >= 0; index--) {
+        const effect = effects[index]!;
+        const frame = Math.floor(((now - effect.born) / 1000) * effect.sheet.fps);
+        if (frame >= effect.sheet.frames) {
+          dropEffect(effect);
+          effects.splice(index, 1);
+          continue;
+        }
+        showFrame(effect.sprite.material.map!, effect.sheet, frame);
+      }
       renderer.render(scene, camera);
+    },
+    setEffectSheets(next) {
+      for (const [kind, sheet] of Object.entries(next)) {
+        textureLoader.load(
+          sheet.url,
+          (texture) => {
+            if (disposed) {
+              texture.dispose();
+              return;
+            }
+            texture.colorSpace = SRGBColorSpace;
+            texture.repeat.set(1 / sheet.columns, 1 / sheet.rows);
+            sheets.set(kind, { sheet, texture });
+          },
+          undefined,
+          (error) => console.warn(`effect ${kind} failed to load; it will not play`, error),
+        );
+      }
+    },
+    addEffect(kind, x, z, height, size) {
+      const loaded = sheets.get(kind);
+      if (!loaded) return;
+      if (effects.length >= EFFECT_LIMIT) dropEffect(effects.shift()!);
+      /** A clone shares the image with the sheet; only its frame offset is its own. */
+      const map = loaded.texture.clone();
+      showFrame(map, loaded.sheet, 0);
+      const sprite = new Sprite(new SpriteMaterial({ map, transparent: true, depthTest: false, depthWrite: false }));
+      sprite.renderOrder = 3;
+      sprite.scale.set(size, size, 1);
+      sprite.position.set(x, height, z);
+      scene.add(sprite);
+      effects.push({ sprite, sheet: loaded.sheet, born: performance.now() });
     },
     setUnits(units) {
       const seen = new Set<number>();
@@ -618,6 +697,10 @@ export function createField(
       nodeMeshes.clear();
       clearRocks();
       rockMaterial.dispose();
+      for (const effect of effects) dropEffect(effect);
+      effects.length = 0;
+      for (const { texture } of sheets.values()) texture.dispose();
+      sheets.clear();
       for (const model of models.values()) disposeTree(model);
       models.clear();
       wreckMaterial.dispose();

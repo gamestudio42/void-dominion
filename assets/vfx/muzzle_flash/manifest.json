@@ -1,0 +1,63 @@
+{
+  "asset": "muzzle_flash",
+  "tool": {
+    "name": "effectcraft",
+    "version": null
+  },
+  "exports": [
+    {
+      "asset": "muzzle_flash",
+      "source": "tools/asset-pipeline/vfx/muzzle_flash.build.json",
+      "export": {
+        "path": "assets/_staging/muzzle_flash/frames",
+        "kind": "sequence",
+        "codec": "png",
+        "pix_fmt": "rgba",
+        "width": 128,
+        "height": 128,
+        "fps": 30.0,
+        "frames": 8,
+        "duration_s": 0.2667,
+        "bytes": 24488,
+        "sha256": "dir:656a28646a1f12d478d4ee8f93227779eb1c1c770da1ff727ae93fe34032cc5d"
+      },
+      "alpha": {
+        "frames": 8,
+        "max_alpha": 255,
+        "visible_frames": 6,
+        "peak_frame": 1,
+        "peak_time_s": 0.0333,
+        "peak_coverage_pct": 20.1294,
+        "last_frame_max_alpha": 0,
+        "last_frame_coverage_pct": 0.0,
+        "dead_after_s": 0.2,
+        "coverage_pct_by_frame": [
+          2.637,
+          20.129,
+          16.205,
+          12.463,
+          9.161,
+          6.262,
+          0.0,
+          0.0
+        ]
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "source": "tools/asset-pipeline/vfx/muzzle_flash.build.json",
+  "generated_at": "2026-11-05T13:09:44+00:00",
+  "sheet": {
+    "path": "assets/vfx/muzzle_flash/sheet.png",
+    "packed_from": "frames, scaled to 128 px (lanczos) and tiled by ffmpeg with a transparent fill",
+    "cell": 128,
+    "columns": 4,
+    "rows": 2,
+    "frames": 8,
+    "fps": 30,
+    "bytes": 19080,
+    "sha256": "6bf28aacbbdceb3a099de39c7a57631818dc557d833f9127f8dfddfd8d7eefef"
+  }
+}
