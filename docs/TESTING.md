@@ -20,6 +20,16 @@
     - the visible grid decodes to the world's.
   - Changing only what the player cannot see leaves the player's view identical.
   - Fog runs round-trip, and runs that do not cover the map are refused.
+- **Protocol.**
+  - Every message round-trips.
+  - These are refused without throwing:
+    - another version;
+    - a message from the wrong side;
+    - malformed or oversized input;
+    - a view that would not draw.
+  - A guest's `playerId` is dropped and replaced by its seat.
+  - The command budget allows a burst of 20, then 20 a second, and does not refill when the clock goes backwards.
+  - The guest audit accepts an honest host. It catches a changed checksum, a changed winner, an unreadable replay, the guest's seat given to Varek, a missing or extra order, and an order moved to another tick.
 - A seen building that dies out of sight remains a wreck in memory. A replay file of human commands restores the checksum.
 - The player command center is intact when the march is allowed.
 - `pnpm sim` compares seeds `0x5eed`, `0x51eed` and `0xa11ce`. The unattended winner, tick, ore and living units match. The checksums stay pinned, and the three matches together finish in under 20 seconds. The same commands on the same seed return the same report.

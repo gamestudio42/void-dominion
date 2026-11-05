@@ -47,8 +47,8 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 - Peer to peer with no game server: the host's browser runs the only `Simulation` and sends the guest a fog-filtered view over WebRTC. The public EMQX MQTT broker carries only the encrypted handshake.
 - The order of work:
   1. seats without Varek and replay v2 (done);
-  2. the client view and a whole-match no-leak test (in review);
-  3. the protocol package;
+  2. the client view and a whole-match no-leak test (done);
+  3. the protocol package (in review);
   4. signaling and session, tested in memory;
   5. host and guest modes;
   6. a field test across networks.
