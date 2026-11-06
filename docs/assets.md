@@ -8,6 +8,8 @@ The boot screen and the placement preview are drawn by code. Colour is a materia
 
 | Asset | Path | Source | License |
 | --- | --- | --- | --- |
+| README screenshots: menu, field, contact | `docs/screenshots/<name>.jpg` | Captured from the browser build by a headless Chrome session driven over the DevTools protocol. No imported art. | Original, same as the code: AGPL-3.0-or-later |
+| README play button | `docs/screenshots/play.svg` | Drawn by hand in SVG with the client palette. | Original, same as the code: AGPL-3.0-or-later |
 | Unit meshes: engineer, rifleman, rocketeer, scout_rover, assault_walker | `assets/models/<kind>/` | Generated from `tools/asset-pipeline/blender/specs/<kind>.json` by `bake_mesh.sh` (Blender 5.2.2). Primitives only, no imported art. | Original, same as the code: AGPL-3.0-or-later |
 | Building meshes: command_center, ore_extractor, aether_refinery, power_generator, barracks, vehicle_factory, defense_turret | `assets/models/<kind>/` | Same pipeline and specs folder. Each spec is drawn in cells at 92% of the footprint in `packages/content`. | Original, same as the code: AGPL-3.0-or-later |
 | Terrain meshes: ore_node, aether_node, rock, rock_spire | `assets/models/<kind>/` | Same pipeline and specs folder. Nodes fit one cell; the two boulders are two cells across and tile the rock rects. | Original, same as the code: AGPL-3.0-or-later |
