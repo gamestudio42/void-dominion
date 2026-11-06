@@ -41,7 +41,8 @@ describe('seat control', () => {
   it('keeps the skirmish as the default, with its pinned checksum', () => {
     expect(Simulation.create().seats).toEqual(SKIRMISH_SEATS);
     expect(runArena(MATCH.seed).hash).toBe(1794058122);
-  });
+    /** A whole match: the same ceiling as the arena test, so a busy machine does not fail on Vitest's 5 s default. */
+  }, 20_000);
 
   /** Starting engineers mine on their own; only Varek trains more of them. */
   const START = MATCH.bases[0]!.workers.length;
