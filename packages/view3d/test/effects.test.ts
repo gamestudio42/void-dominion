@@ -51,7 +51,8 @@ describe('effect sheets', () => {
 
 describe('combat watcher', () => {
   it('turns a visible fight into flashes, hits and a death', () => {
-    const effects = watch(skirmish(), 200);
+    const combat = new Set(['muzzle_flash', 'impact_hit', 'explosion']);
+    const effects = watch(skirmish(), 200).filter((effect) => combat.has(effect.kind));
     const kinds = new Set(effects.map((effect) => effect.kind));
     expect(kinds).toEqual(new Set(['muzzle_flash', 'impact_hit', 'explosion']));
     /** Every shot lands: a hit, or a death when the target leaves the world on that tick. */
@@ -77,6 +78,46 @@ describe('combat watcher', () => {
     expect(watcher(sim.world)).toEqual([]);
     sim.world.units.push(makeUnit(sim.world, PLAYER_ID, 'rifleman', worker.x + 1, worker.y));
     expect(watcher(sim.world).map((effect) => effect.kind)).toEqual(['build_complete']);
+  });
+
+  it('pulses where the viewer delivers ore, once per block every few ticks', () => {
+    const sim = Simulation.create();
+    const watcher = combatWatcher(PLAYER_ID);
+    watcher(sim.world);
+    const pulses: { tick: number; x: number; y: number }[] = [];
+    let deliveries = 0;
+    for (let tick = 0; tick < 400; tick++) {
+      const carrying = new Set(sim.world.units.filter((unit) => unit.owner === PLAYER_ID && unit.carryOre > 0).map((unit) => unit.id));
+      sim.step();
+      deliveries += sim.world.units.filter((unit) => carrying.has(unit.id) && unit.carryOre === 0).length;
+      for (const effect of watcher(sim.world)) {
+        if (effect.kind === 'ore_delivered') pulses.push({ tick: sim.world.tick, x: effect.x, y: effect.y });
+      }
+    }
+    expect(deliveries).toBeGreaterThan(0);
+    expect(pulses.length).toBeGreaterThan(0);
+    expect(pulses.length).toBeLessThanOrEqual(deliveries);
+    const block = (pulse: { x: number; y: number }) => `${Math.floor(pulse.x / 3)},${Math.floor(pulse.y / 3)}`;
+    for (const [index, pulse] of pulses.entries()) {
+      const earlier = pulses.slice(0, index).filter((other) => block(other) === block(pulse));
+      for (const other of earlier) expect(pulse.tick - other.tick).toBeGreaterThanOrEqual(10);
+    }
+  });
+
+  it('does not pulse for ore another player delivers in sight', () => {
+    const sim = Simulation.create();
+    const worker = sim.world.units.find((unit) => unit.owner === PLAYER_ID)!;
+    const rival = makeUnit(sim.world, ENEMY_ID, 'engineer', worker.x + 1, worker.y);
+    rival.carryOre = 5;
+    sim.world.units.push(rival);
+    const watcher = combatWatcher(PLAYER_ID);
+    watcher(sim.world);
+    rival.carryOre = 0;
+    expect(watcher(sim.world).filter((effect) => effect.kind === 'ore_delivered')).toEqual([]);
+    worker.carryOre = 5;
+    watcher(sim.world);
+    worker.carryOre = 0;
+    expect(watcher(sim.world).map((effect) => effect.kind)).toEqual(['ore_delivered']);
   });
 
   it('does not mark an enemy unit that comes into sight', () => {

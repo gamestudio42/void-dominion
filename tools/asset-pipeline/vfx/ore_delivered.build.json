@@ -1,0 +1,409 @@
+[
+ {
+  "command": "comp.new",
+  "params": {
+   "name": "ore_delivered",
+   "width": 128,
+   "height": 128,
+   "frameRate": 30,
+   "duration": 0.4
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "ellipse",
+   "name": "flash",
+   "size": [
+    40,
+    16
+   ],
+   "fill": "#fff0c2"
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "flash",
+   "path": "transform/position",
+   "value": [
+    64.0,
+    84,
+    0
+   ]
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Gaussian Blur",
+   "layers": [
+    "flash"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "flash",
+   "path": "effects/#1/blurriness",
+   "value": 4
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "flash",
+   "path": "transform/scale",
+   "time": 0,
+   "value": [
+    50,
+    50,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "flash",
+   "path": "transform/scale",
+   "time": 0.08,
+   "value": [
+    110,
+    110,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "flash",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 90
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "flash",
+   "path": "transform/opacity",
+   "time": 0.2,
+   "value": 0
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "ellipse",
+   "name": "ring",
+   "size": [
+    96,
+    36
+   ],
+   "fill": null,
+   "stroke": "#ffbf3f",
+   "strokeWidth": 4
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "ring",
+   "path": "transform/position",
+   "value": [
+    64.0,
+    84,
+    0
+   ]
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Gaussian Blur",
+   "layers": [
+    "ring"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "ring",
+   "path": "effects/#1/blurriness",
+   "value": 1.5
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "ring",
+   "path": "transform/scale",
+   "time": 0,
+   "value": [
+    20,
+    20,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "ring",
+   "path": "transform/scale",
+   "time": 0.3,
+   "value": [
+    100,
+    100,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "ring",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 90
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "ring",
+   "path": "transform/opacity",
+   "time": 0.1,
+   "value": 90
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "ring",
+   "path": "transform/opacity",
+   "time": 0.3,
+   "value": 0
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "none",
+   "name": "motes"
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "CC Particle World",
+   "layers": [
+    "motes"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/particleType",
+   "value": 2
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/transferMode",
+   "value": 2
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/maxOpacity",
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/birthSize",
+   "value": 0.14
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/deathSize",
+   "value": 0.03
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/sizeVariation",
+   "value": 40
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/birthColor",
+   "value": [
+    1.0,
+    0.9,
+    0.55,
+    1.0
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/deathColor",
+   "value": [
+    1.0,
+    0.6,
+    0.1,
+    0.0
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/longevity",
+   "value": 0.3
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/physics/animation",
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/physics/velocity",
+   "value": 0.2
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/physics/gravity",
+   "value": 7.0
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/physics/gravityVector/gravityY",
+   "value": -1
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/producer/producerY",
+   "value": 0.15
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/producer/radiusX",
+   "value": 0.15
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/producer/radiusY",
+   "value": 0.02
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/extras/randomSeed",
+   "value": 7331
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/birthRate",
+   "time": 0,
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/birthRate",
+   "time": 0.03,
+   "value": 12
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/birthRate",
+   "time": 0.1,
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "transform/opacity",
+   "time": 0.28,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "transform/opacity",
+   "time": 0.36,
+   "value": 0
+  }
+ }
+]
