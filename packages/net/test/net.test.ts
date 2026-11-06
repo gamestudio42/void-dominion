@@ -219,6 +219,32 @@ describe('host and guest sessions', () => {
     expect(guest.audit).toEqual({ ok: false, reason: 'checksum' });
   }, 30_000);
 
+  /** React mounts a field twice in development: the first host session is torn down after the guest's first hello. */
+  it('seats a guest whose first hello reached a host session that closed', async () => {
+    const { host: hostChannels, guest: guestChannels } = await connect();
+    const sim = Simulation.create(0x5eed, ['human', 'human']);
+    const stale = new HostSession(sim, ENEMY_ID, hostChannels);
+    const guest = new GuestSession(guestChannels, 'test');
+    await settle();
+    stale.close();
+    const live = new HostSession(sim, ENEMY_ID, hostChannels);
+    for (let round = 0; round < 40 && !guest.explored; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      sim.step();
+      live.afterStep();
+      await settle();
+    }
+    expect(guest.seat).toBe(ENEMY_ID);
+    expect(guest.explored).not.toBeNull();
+    guest.command({ type: 'stop', unitIds: [1] });
+    await settle();
+    sim.step();
+    stale.afterStep();
+    live.afterStep();
+    expect(sim.log).toHaveLength(1);
+    guestChannels.reliable.close();
+  });
+
   it('counts junk from the guest without acting on it', async () => {
     const { host: hostChannels, guest: guestChannels } = await connect();
     const sim = Simulation.create(0x5eed, ['human', 'human']);

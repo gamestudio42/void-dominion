@@ -19,6 +19,7 @@ import { deflate, inflate } from './compress.ts';
 import type { Channels } from './peer.ts';
 
 const v = PROTOCOL_VERSION;
+const HELLO_MS = 1000;
 const CELLS = MAP_SIZE * MAP_SIZE;
 
 interface Pending {
@@ -45,6 +46,7 @@ export class HostSession {
   private ended = false;
   /** Entities in the last view sent, to tell the guest which of them died. */
   private lastSent = new Set<number>();
+  private readonly detach: () => void;
 
   constructor(
     private readonly sim: Simulation,
@@ -52,10 +54,15 @@ export class HostSession {
     private readonly channels: Channels,
     private readonly now: () => number = Date.now,
   ) {
-    channels.reliable.onMessage((data) => {
+    this.detach = channels.reliable.onMessage((data) => {
       if (typeof data === 'string') this.receive(data);
       else this.refused += 1;
     });
+  }
+
+  /** Stop listening. A field that is torn down must not keep queueing the guest's commands. */
+  close(): void {
+    this.detach();
   }
 
   /** Call after every `sim.step()`. */
@@ -142,6 +149,8 @@ export class GuestSession {
   onEnd: (end: EndMessage, audit: Audit) => void = () => {};
   private seq = 0;
   private readonly sent = new Map<number, CommandBody>();
+  /** `hello` repeats until a full view arrives: an early one can reach a host session that is torn down before it streams. */
+  private hello: ReturnType<typeof setInterval> | null = null;
   private readonly acked: AckedOrder[] = [];
 
   constructor(
@@ -151,7 +160,15 @@ export class GuestSession {
   ) {
     channels.reliable.onMessage((data) => void this.receive(data));
     channels.views.onMessage((data) => void this.receive(data));
-    channels.reliable.send(encode({ t: 'hello', v, build }));
+    const hello = encode({ t: 'hello', v, build });
+    channels.reliable.send(hello);
+    this.hello = setInterval(() => channels.reliable.send(hello), HELLO_MS);
+    channels.reliable.onClose(() => this.stopHello());
+  }
+
+  private stopHello(): void {
+    if (this.hello !== null) clearInterval(this.hello);
+    this.hello = null;
   }
 
   /** Send an order. The marker can show at once; the ack says whether it held. */
@@ -196,7 +213,11 @@ export class GuestSession {
         this.refused += 1;
         return;
       }
-      if (view.explored) this.explored = decodeRuns(view.explored, CELLS);
+      if (view.explored) {
+        this.explored = decodeRuns(view.explored, CELLS);
+        /** A full view means a live host session has seated this guest, so `hello` can stop. */
+        this.stopHello();
+      }
       /** A view on the unordered channel can arrive after a newer one. */
       if (this.view && view.tick < this.view.tick) return;
       if (this.explored) {

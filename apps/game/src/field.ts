@@ -356,8 +356,10 @@ export function startField(
   }
 
   function paint(alpha: number): void {
-    view.setUnits(shownUnits(alpha));
-    view.setBuildings(shownBuildings());
+    /** The view paints seat 1 amber and seat 2 red; each window sees itself in amber. */
+    const tint = <T extends { owner: number }>(draw: T): T => (me === PLAYER_ID ? draw : { ...draw, owner: draw.owner === me ? PLAYER_ID : ENEMY_ID });
+    view.setUnits(shownUnits(alpha).map(tint));
+    view.setBuildings(shownBuildings().map(tint));
     view.setNodes(shownNodes());
     const explored = world.explored[me - 1]!;
     const visible = world.visible[me - 1]!;
@@ -839,6 +841,7 @@ export function startField(
     window.removeEventListener('keydown', keyDown);
     window.removeEventListener('keyup', keyUp);
     window.removeEventListener('resize', view.resize);
+    host?.close();
     view.dispose();
   };
 }

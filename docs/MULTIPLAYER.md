@@ -1,6 +1,6 @@
 # Multiplayer plan (milestone 7)
 
-Status: accepted by the owner on 2026-11-05. Steps 1 to 3 (seats and replay v2, the client view, the protocol package) are merged. Step 4 (signaling and session) is in review. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
+Status: accepted by the owner on 2026-11-05. Steps 1 to 4 are merged: seats and replay v2, the client view, the protocol package, and signaling and session. Step 5 (host and guest modes) is in review. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
 
 ## Goal
 
@@ -214,9 +214,28 @@ Each step ends with tests, and the client steps end with a browser session, as t
      - a command flood;
      - a host that changed the world, which fails the audit.
    - The WebRTC peer is not exercised until step 5, because Node has no WebRTC.
-5. **Host and guest modes.**
-   - Two browser windows on one machine through the real broker.
-   - The guest audits the replay at the end.
+5. **Host and guest modes** (in review).
+   - The title screen offers the skirmish against Varek or hosting a match, which shows the link to copy. Opening a `#join=` link joins at once and then drops the fragment.
+   - **Host.** The field runs both seats and serves the guest through `HostSession`.
+   - **Guest.** The guest runs no simulation. It draws the host's views through a mirror world (`apps/game/src/mirror.ts`), so the field code reads the same fields in every mode.
+   - **Order feedback.** An order's marker and refusal come from the step's `results` or the host's ack, never the shared `world.marker`.
+   - **Colour.** Each window sees itself in amber.
+   - **Guest HUD.** The guest shows its ping. On both sides, a banner says when the other player disconnects, and the host stops stepping then.
+   - **Two headless Chrome windows on one machine, through the public brokers and WebRTC (2026-11-06):**
+     - both reached the field 10 to 14 s after the guest opened the link: up to 3 s of ICE gathering on each side, plus up to 3 s for the host's next offer;
+     - the clocks matched, and the guest's ping was 6 to 18 ms;
+     - the guest selected its four engineers and ordered Stop, and its ore held at 242 over 5 s while the host's kept rising;
+     - after the host's window closed, the guest showed the disconnect banner in 5 to 6.5 s.
+   - **Found in that session and fixed:**
+     - ICE gathering can stall on STUN, so it is capped at 3 s;
+     - data channel messages that arrive before a listener are kept;
+     - the guest repeats `hello` until a full view arrives, because React mounts the field twice in development and the first host session closes after seating it;
+     - shots are read as a rising cooldown, so the guest's two-tick views still show them;
+     - views name the entities that died, so a unit walking out of sight does not explode on the guest's screen.
+   - **Not in this step:**
+     - the guest cannot reconnect;
+     - an absent guest does not forfeit, because a forfeit is not a rule the simulation knows. The host only pauses;
+     - a whole match has not been played online, so the end and the guest audit have not run in a browser. They are covered in Vitest.
 6. **Field test.**
    - Two machines on different networks, one of them on a mobile connection.
    - Record connection success, latency and bandwidth in `docs/BENCHMARKS.md`.
