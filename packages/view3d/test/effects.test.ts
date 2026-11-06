@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { ENEMY_ID, PLAYER_ID } from '@void-dominion/content';
-import { makeUnit, Simulation } from '@void-dominion/simulation';
+import { buildingDef, ENEMY_ID, PLAYER_ID } from '@void-dominion/content';
+import { makeBuilding, makeUnit, Simulation } from '@void-dominion/simulation';
 import { describe, expect, it } from 'vitest';
 import { combatWatcher, EFFECT_SHEETS, type CombatEffect } from '../../../apps/game/src/effects.ts';
 
@@ -61,6 +61,31 @@ describe('combat watcher', () => {
 
   it('shows nothing the viewer cannot see', () => {
     expect(watch(skirmish(), 200, true)).toEqual([]);
+  });
+
+  it('marks a finished building and a new unit of the viewer with build_complete', () => {
+    const sim = Simulation.create();
+    const worker = sim.world.units.find((unit) => unit.owner === PLAYER_ID)!;
+    const site = makeBuilding(sim.world, PLAYER_ID, 'ore_extractor', Math.floor(worker.x) + 2, Math.floor(worker.y), false);
+    sim.world.buildings.push(site);
+    const watcher = combatWatcher(PLAYER_ID);
+    expect(watcher(sim.world)).toEqual([]);
+    site.progress = buildingDef('ore_extractor').buildTicks;
+    const finished = watcher(sim.world);
+    expect(finished.map((effect) => effect.kind)).toEqual(['build_complete']);
+    expect(finished[0]).toMatchObject({ x: site.x + 1, y: site.y + 1 });
+    expect(watcher(sim.world)).toEqual([]);
+    sim.world.units.push(makeUnit(sim.world, PLAYER_ID, 'rifleman', worker.x + 1, worker.y));
+    expect(watcher(sim.world).map((effect) => effect.kind)).toEqual(['build_complete']);
+  });
+
+  it('does not mark an enemy unit that comes into sight', () => {
+    const sim = Simulation.create();
+    const watcher = combatWatcher(PLAYER_ID);
+    watcher(sim.world);
+    const worker = sim.world.units.find((unit) => unit.owner === PLAYER_ID)!;
+    sim.world.units.push(makeUnit(sim.world, ENEMY_ID, 'rifleman', worker.x + 1, worker.y));
+    expect(watcher(sim.world)).toEqual([]);
   });
 
   it('reads the world without changing it', () => {

@@ -1,0 +1,79 @@
+{
+  "asset": "build_complete",
+  "tool": {
+    "name": "effectcraft",
+    "version": "0.21.1"
+  },
+  "exports": [
+    {
+      "asset": "build_complete",
+      "source": "tools/asset-pipeline/vfx/build_complete.build.json",
+      "export": {
+        "path": "assets/_staging/build_complete/frames",
+        "kind": "sequence",
+        "codec": "png",
+        "pix_fmt": "rgba",
+        "width": 256,
+        "height": 256,
+        "fps": 30.0,
+        "frames": 24,
+        "duration_s": 0.8,
+        "bytes": 406692,
+        "sha256": "dir:add83deca02a17f967ea24d6f99a8be5d56e03b35daaeedbafb3c70b54f898aa"
+      },
+      "alpha": {
+        "frames": 24,
+        "max_alpha": 255,
+        "visible_frames": 22,
+        "peak_frame": 4,
+        "peak_time_s": 0.1333,
+        "peak_coverage_pct": 30.8441,
+        "last_frame_max_alpha": 0,
+        "last_frame_coverage_pct": 0.0,
+        "dead_after_s": 0.7333,
+        "coverage_pct_by_frame": [
+          1.454,
+          7.098,
+          14.423,
+          23.434,
+          30.844,
+          29.427,
+          28.571,
+          27.629,
+          26.274,
+          24.124,
+          22.754,
+          21.573,
+          19.91,
+          12.63,
+          10.114,
+          5.658,
+          0.287,
+          0.143,
+          0.063,
+          0.017,
+          0.006,
+          0.002,
+          0.0,
+          0.0
+        ]
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "source": "tools/asset-pipeline/vfx/build_complete.build.json",
+  "generated_at": "2026-11-06T11:31:26+00:00",
+  "sheet": {
+    "path": "assets/vfx/build_complete/sheet.png",
+    "packed_from": "frames, scaled to 128 px (lanczos) and tiled by ffmpeg with a transparent fill",
+    "cell": 128,
+    "columns": 6,
+    "rows": 4,
+    "frames": 24,
+    "fps": 30,
+    "bytes": 198965,
+    "sha256": "f1aae0694775bdce719e06dfddc8a3885ee6eb5a4037411bede14293ce20dbda"
+  }
+}
