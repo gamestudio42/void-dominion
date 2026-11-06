@@ -1,0 +1,67 @@
+{
+  "asset": "ore_delivered",
+  "tool": {
+    "name": "effectcraft",
+    "version": "0.21.1"
+  },
+  "exports": [
+    {
+      "asset": "ore_delivered",
+      "source": "tools/asset-pipeline/vfx/ore_delivered.build.json",
+      "export": {
+        "path": "assets/_staging/ore_delivered/frames",
+        "kind": "sequence",
+        "codec": "png",
+        "pix_fmt": "rgba",
+        "width": 128,
+        "height": 128,
+        "fps": 30.0,
+        "frames": 12,
+        "duration_s": 0.4,
+        "bytes": 35872,
+        "sha256": "dir:d6994558889d7d5b00faa36724cbe69ab10bbc53db6431f2867df164f3631543"
+      },
+      "alpha": {
+        "frames": 12,
+        "max_alpha": 255,
+        "visible_frames": 11,
+        "peak_frame": 5,
+        "peak_time_s": 0.1667,
+        "peak_coverage_pct": 8.4961,
+        "last_frame_max_alpha": 0,
+        "last_frame_coverage_pct": 0.0,
+        "dead_after_s": 0.3667,
+        "coverage_pct_by_frame": [
+          1.416,
+          3.326,
+          6.079,
+          5.878,
+          6.818,
+          8.496,
+          5.615,
+          6.372,
+          6.812,
+          0.61,
+          0.317,
+          0.0
+        ]
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "source": "tools/asset-pipeline/vfx/ore_delivered.build.json",
+  "generated_at": "2026-11-06T16:08:45+00:00",
+  "sheet": {
+    "path": "assets/vfx/ore_delivered/sheet.png",
+    "packed_from": "frames at 128 px (lanczos, no resize) tiled by ffmpeg with a transparent fill",
+    "cell": 128,
+    "columns": 4,
+    "rows": 3,
+    "frames": 12,
+    "fps": 30,
+    "bytes": 26563,
+    "sha256": "8e796021b453ec41b065a00b2387a84e90796af3d4e14b21ed46377838e2a9b5"
+  }
+}
