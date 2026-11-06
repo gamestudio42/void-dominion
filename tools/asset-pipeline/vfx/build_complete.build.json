@@ -1,0 +1,674 @@
+[
+ {
+  "command": "comp.new",
+  "params": {
+   "name": "build_complete",
+   "width": 256,
+   "height": 256,
+   "frameRate": 30,
+   "duration": 0.8
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "rect",
+   "name": "beam",
+   "size": [
+    30,
+    150
+   ],
+   "fill": "#c9fff0"
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "beam",
+   "path": "contents/group/transform/position",
+   "value": [
+    0,
+    -75
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "beam",
+   "path": "contents/group/contents/rect/roundness",
+   "value": 15
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "beam",
+   "path": "transform/position",
+   "value": [
+    128.0,
+    184,
+    0
+   ]
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Gaussian Blur",
+   "layers": [
+    "beam"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "beam",
+   "path": "effects/#1/blurriness",
+   "value": 9
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "beam",
+   "path": "transform/scale",
+   "time": 0,
+   "value": [
+    100,
+    5,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "beam",
+   "path": "transform/scale",
+   "time": 0.12,
+   "value": [
+    100,
+    100,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "beam",
+   "path": "transform/scale",
+   "time": 0.5,
+   "value": [
+    10,
+    115,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "beam",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "beam",
+   "path": "transform/opacity",
+   "time": 0.18,
+   "value": 90
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "beam",
+   "path": "transform/opacity",
+   "time": 0.5,
+   "value": 0
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "rect",
+   "name": "glow",
+   "size": [
+    70,
+    170
+   ],
+   "fill": "#5fe8c4"
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "glow",
+   "path": "contents/group/contents/rect/roundness",
+   "value": 35
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "glow",
+   "path": "contents/group/transform/position",
+   "value": [
+    0,
+    -85
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "glow",
+   "path": "transform/position",
+   "value": [
+    128,
+    184,
+    0
+   ]
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Gaussian Blur",
+   "layers": [
+    "glow"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "glow",
+   "path": "effects/#1/blurriness",
+   "value": 22
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "glow",
+   "path": "transform/scale",
+   "time": 0,
+   "value": [
+    60,
+    5,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "glow",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 60
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "glow",
+   "path": "transform/scale",
+   "time": 0.14,
+   "value": [
+    100,
+    100,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "glow",
+   "path": "transform/opacity",
+   "time": 0.14,
+   "value": 45
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "glow",
+   "path": "transform/scale",
+   "time": 0.55,
+   "value": [
+    40,
+    110,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "glow",
+   "path": "transform/opacity",
+   "time": 0.55,
+   "value": 0
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "ellipse",
+   "name": "halo",
+   "size": [
+    210,
+    80
+   ],
+   "fill": null,
+   "stroke": "#5fe8c4",
+   "strokeWidth": 6
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "halo",
+   "path": "transform/position",
+   "value": [
+    128.0,
+    184,
+    0
+   ]
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Gaussian Blur",
+   "layers": [
+    "halo"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "halo",
+   "path": "effects/#1/blurriness",
+   "value": 2.5
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "halo",
+   "path": "transform/scale",
+   "time": 0,
+   "value": [
+    15,
+    15,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "halo",
+   "path": "transform/scale",
+   "time": 0.45,
+   "value": [
+    105,
+    105,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "halo",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "halo",
+   "path": "transform/opacity",
+   "time": 0.2,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "halo",
+   "path": "transform/opacity",
+   "time": 0.45,
+   "value": 0
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "ellipse",
+   "name": "flash",
+   "size": [
+    90,
+    40
+   ],
+   "fill": "#eafff8"
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "flash",
+   "path": "transform/position",
+   "value": [
+    128.0,
+    184,
+    0
+   ]
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "Gaussian Blur",
+   "layers": [
+    "flash"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "flash",
+   "path": "effects/#1/blurriness",
+   "value": 8
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "flash",
+   "path": "transform/scale",
+   "time": 0,
+   "value": [
+    40,
+    40,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "flash",
+   "path": "transform/scale",
+   "time": 0.1,
+   "value": [
+    110,
+    110,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "flash",
+   "path": "transform/scale",
+   "time": 0.3,
+   "value": [
+    70,
+    70,
+    100
+   ]
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "flash",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "flash",
+   "path": "transform/opacity",
+   "time": 0.3,
+   "value": 0
+  }
+ },
+ {
+  "command": "layer.newShape",
+  "params": {
+   "kind": "none",
+   "name": "motes"
+  }
+ },
+ {
+  "command": "effect.apply",
+  "params": {
+   "effect": "CC Particle World",
+   "layers": [
+    "motes"
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/particleType",
+   "value": 2
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/transferMode",
+   "value": 2
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/maxOpacity",
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/birthSize",
+   "value": 0.05
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/deathSize",
+   "value": 0.005
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/sizeVariation",
+   "value": 50
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/birthColor",
+   "value": [
+    0.85,
+    1.0,
+    0.95,
+    1.0
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/particle/deathColor",
+   "value": [
+    0.2,
+    0.85,
+    0.7,
+    0.0
+   ]
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/longevity",
+   "value": 0.45
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/physics/animation",
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/physics/velocity",
+   "value": 0.25
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/physics/gravity",
+   "value": 4.0
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/physics/gravityVector/gravityY",
+   "value": -1
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/producer/producerY",
+   "value": 0.2
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/producer/radiusX",
+   "value": 0.25
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/producer/radiusY",
+   "value": 0.02
+  }
+ },
+ {
+  "command": "prop.set",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/extras/randomSeed",
+   "value": 5150
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/birthRate",
+   "time": 0,
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/birthRate",
+   "time": 0.04,
+   "value": 45
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "effects/#1/birthRate",
+   "time": 0.22,
+   "value": 0
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "transform/opacity",
+   "time": 0,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "transform/opacity",
+   "time": 0.55,
+   "value": 100
+  }
+ },
+ {
+  "command": "prop.addKey",
+  "params": {
+   "layer": "motes",
+   "path": "transform/opacity",
+   "time": 0.72,
+   "value": 0
+  }
+ }
+]
