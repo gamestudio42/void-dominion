@@ -40,13 +40,15 @@ interface Seen {
 
 /**
  * Reads combat out of two consecutive world states, for one viewer. The
- * simulation keeps no shot events, so a shot is a cooldown reset, a hit is lost
- * hp, and a death is an entity that left the world. Only cells the viewer sees
+ * simulation keeps no shot events, so a shot is a cooldown that went up (it only
+ * rises when a weapon fires, so this holds across a guest's two-tick views), a hit
+ * is lost hp, and a death is an entity that left the world. Only cells the viewer sees
  * produce an effect. Nothing here writes to the world.
  */
-export function combatWatcher(viewer: number): (world: World) => CombatEffect[] {
+export function combatWatcher(viewer: number): (world: World, dead?: ReadonlySet<number>) => CombatEffect[] {
   let last = new Map<number, Seen>();
-  return (world) => {
+  /** `dead`, when given, names the entities that died: a guest's world loses a unit that walks out of sight too. */
+  return (world, dead) => {
     const next = new Map<number, Seen>();
     const effects: CombatEffect[] = [];
     const sees = (x: number, y: number) => canSee(world, viewer, Math.floor(x), Math.floor(y));
@@ -56,7 +58,7 @@ export function combatWatcher(viewer: number): (world: World) => CombatEffect[] 
       next.set(unit.id, now);
       const before = last.get(unit.id);
       if (!before || !sees(unit.x, unit.y)) continue;
-      if (def.damage > 0 && unit.cooldown === def.cooldown && before.cooldown !== def.cooldown) {
+      if (def.damage > 0 && unit.cooldown > before.cooldown) {
         effects.push({ kind: 'muzzle_flash', x: unit.x, y: unit.y, height: 0.55, size: 1.0 });
       }
       if (unit.hp < before.hp) effects.push({ kind: 'impact_hit', x: unit.x, y: unit.y, height: 0.45, size: 1.6 });
@@ -69,13 +71,13 @@ export function combatWatcher(viewer: number): (world: World) => CombatEffect[] 
       next.set(building.id, now);
       const before = last.get(building.id);
       if (!before || !sees(x, y)) continue;
-      if (def.damage > 0 && building.cooldown === def.cooldown && before.cooldown !== def.cooldown) {
+      if (def.damage > 0 && building.cooldown > before.cooldown) {
         effects.push({ kind: 'muzzle_flash', x, y, height: 1.3, size: 1.3 });
       }
       if (building.hp < before.hp) effects.push({ kind: 'impact_hit', x, y, height: 0.9, size: 2.2 });
     }
     for (const [id, gone] of last) {
-      if (next.has(id) || !sees(gone.x, gone.y)) continue;
+      if (next.has(id) || !sees(gone.x, gone.y) || (dead && !dead.has(id))) continue;
       const span = gone.width > 0 ? Math.max(gone.width, gone.height) * 1.3 : 2.2;
       effects.push({ kind: 'explosion', x: gone.x, y: gone.y, height: gone.width > 0 ? 0.9 : 0.5, size: span });
     }

@@ -33,7 +33,7 @@ The beat this build changes is the whole skirmish: gather ore, spend it, train s
 
 ## What this build does not do
 
-No language model is connected, and there is no network multiplayer. The five Helion units and seven buildings are low-poly meshes from the Blender pipeline, tinted by owner. Units turn toward their movement; buildings rise from the ground while under construction and flatten into a dark wreck in memory. Resource nodes and the rock ridges use meshes from the same pipeline. Shots, hits and deaths play EffectCraft sprite sheets: a muzzle flash, a spark burst and an explosion, only where the player can see.
+No language model is connected. Two people can play each other online: one hosts and shares a link, and the host's browser runs the match (`docs/MULTIPLAYER.md`). The five Helion units and seven buildings are low-poly meshes from the Blender pipeline, tinted by owner. Units turn toward their movement; buildings rise from the ground while under construction and flatten into a dark wreck in memory. Resource nodes and the rock ridges use meshes from the same pipeline. Shots, hits and deaths play EffectCraft sprite sheets: a muzzle flash, a spark burst and an explosion, only where the player can see.
 
 ## Factions
 

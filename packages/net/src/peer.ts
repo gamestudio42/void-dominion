@@ -1,7 +1,8 @@
 /** One direction-agnostic pipe between host and guest. */
 export interface Channel {
   send(data: string | Uint8Array): void;
-  onMessage(handler: (data: string | Uint8Array) => void): void;
+  /** Returns a function that stops this handler. */
+  onMessage(handler: (data: string | Uint8Array) => void): () => void;
   onClose(handler: () => void): void;
   close(): void;
 }
@@ -51,7 +52,7 @@ export function rtcPeer(stun: readonly string[] = STUN_SERVERS): Peer {
       pending.set(channel.label, channel);
       const reliable = pending.get('reliable');
       const views = pending.get('views');
-      if (reliable && views) settle({ reliable: wrap(reliable), views: wrap(views) });
+      if (reliable && views) settle({ reliable: wrap(reliable, connection), views: wrap(views, connection) });
     });
   };
   return {
@@ -79,19 +80,37 @@ export function rtcPeer(stun: readonly string[] = STUN_SERVERS): Peer {
   };
 }
 
+/** Gathering can stall on an unreachable STUN server; after this the candidates found so far go out. */
+const GATHER_MS = 3000;
+
 function gathered(connection: RTCPeerConnection): Promise<void> {
   if (connection.iceGatheringState === 'complete') return Promise.resolve();
   return new Promise((resolve) => {
-    const check = () => {
-      if (connection.iceGatheringState !== 'complete') return;
+    const done = () => {
+      clearTimeout(timer);
       connection.removeEventListener('icegatheringstatechange', check);
       resolve();
     };
+    const check = () => {
+      if (connection.iceGatheringState === 'complete') done();
+    };
+    const timer = setTimeout(done, GATHER_MS);
     connection.addEventListener('icegatheringstatechange', check);
   });
 }
 
-function wrap(channel: RTCDataChannel): Channel {
+/**
+ * Messages that arrive before anyone listens are kept, not dropped: the guest's `hello`
+ * can land while the host is still building its field.
+ */
+function wrap(channel: RTCDataChannel, connection: RTCPeerConnection): Channel {
+  const handlers: ((data: string | Uint8Array) => void)[] = [];
+  const backlog: (string | Uint8Array)[] = [];
+  channel.addEventListener('message', (event) => {
+    const data = typeof event.data === 'string' ? event.data : new Uint8Array(event.data as ArrayBuffer);
+    if (handlers.length === 0) backlog.push(data);
+    for (const handler of handlers) handler(data);
+  });
   return {
     send(data) {
       if (channel.readyState !== 'open') return;
@@ -99,12 +118,26 @@ function wrap(channel: RTCDataChannel): Channel {
       else channel.send(new Uint8Array(data));
     },
     onMessage(handler) {
-      channel.addEventListener('message', (event) =>
-        handler(typeof event.data === 'string' ? event.data : new Uint8Array(event.data as ArrayBuffer)),
-      );
+      handlers.push(handler);
+      for (const data of backlog.splice(0)) handler(data);
+      return () => {
+        const at = handlers.indexOf(handler);
+        if (at >= 0) handlers.splice(at, 1);
+      };
     },
+    /** A closed tab can take tens of seconds to close its channel; the connection reports it within seconds. */
     onClose(handler) {
-      channel.addEventListener('close', handler);
+      let fired = false;
+      const once = () => {
+        if (fired) return;
+        fired = true;
+        handler();
+      };
+      channel.addEventListener('close', once);
+      connection.addEventListener('connectionstatechange', () => {
+        const state = connection.connectionState;
+        if (state === 'disconnected' || state === 'failed' || state === 'closed') once();
+      });
     },
     close() {
       channel.close();
@@ -185,6 +218,10 @@ function memoryChannel(): MemoryChannel {
     onMessage(handler) {
       handlers.push(handler);
       for (const data of backlog.splice(0)) handler(data);
+      return () => {
+        const at = handlers.indexOf(handler);
+        if (at >= 0) handlers.splice(at, 1);
+      };
     },
     onClose(handler) {
       closers.push(handler);

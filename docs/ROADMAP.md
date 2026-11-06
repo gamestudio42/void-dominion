@@ -49,8 +49,8 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
   1. seats without Varek and replay v2 (done);
   2. the client view and a whole-match no-leak test (done);
   3. the protocol package (done);
-  4. signaling and session, tested in memory (in review);
-  5. host and guest modes;
+  4. signaling and session, tested in memory (done);
+  5. host and guest modes (in review);
   6. a field test across networks.
 - Done when:
   - two players on different networks finish a match;

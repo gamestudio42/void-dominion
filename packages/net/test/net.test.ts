@@ -190,7 +190,12 @@ describe('host and guest sessions', () => {
       sim.step();
       host.afterStep();
     }
-    await settle(10);
+    /** Views are compressed and inflated asynchronously; wait for the last ones and the end, as a real guest would. */
+    for (let round = 0; round < 100; round++) {
+      const caughtUp = guest.view !== null && guest.view.tick >= sim.world.tick - 2;
+      if (caughtUp && (sim.world.winner === 0 || guest.end !== null)) break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
     return { sim, host, guest, acks };
   }
 
@@ -198,7 +203,7 @@ describe('host and guest sessions', () => {
     const { sim, host, guest, acks } = await play();
     expect(guest.seat).toBe(ENEMY_ID);
     expect(guest.view?.seat).toBe(ENEMY_ID);
-    expect(guest.view!.tick).toBeGreaterThan(sim.world.tick - 4);
+    expect(guest.view!.tick).toBeGreaterThanOrEqual(sim.world.tick - 2);
     expect(guest.explored!.some((cell) => cell === 1)).toBe(true);
     /** The second order names player 1's units, which the guest cannot see: refused like a missing unit. */
     expect(acks).toEqual([null, 'unknown_unit']);
@@ -218,6 +223,32 @@ describe('host and guest sessions', () => {
     const { guest } = await play({ tamperAt: 500 });
     expect(guest.audit).toEqual({ ok: false, reason: 'checksum' });
   }, 30_000);
+
+  /** React mounts a field twice in development: the first host session is torn down after the guest's first hello. */
+  it('seats a guest whose first hello reached a host session that closed', async () => {
+    const { host: hostChannels, guest: guestChannels } = await connect();
+    const sim = Simulation.create(0x5eed, ['human', 'human']);
+    const stale = new HostSession(sim, ENEMY_ID, hostChannels);
+    const guest = new GuestSession(guestChannels, 'test');
+    await settle();
+    stale.close();
+    const live = new HostSession(sim, ENEMY_ID, hostChannels);
+    for (let round = 0; round < 40 && !guest.explored; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      sim.step();
+      live.afterStep();
+      await settle();
+    }
+    expect(guest.seat).toBe(ENEMY_ID);
+    expect(guest.explored).not.toBeNull();
+    guest.command({ type: 'stop', unitIds: [1] });
+    await settle();
+    sim.step();
+    stale.afterStep();
+    live.afterStep();
+    expect(sim.log).toHaveLength(1);
+    guestChannels.reliable.close();
+  });
 
   it('counts junk from the guest without acting on it', async () => {
     const { host: hostChannels, guest: guestChannels } = await connect();

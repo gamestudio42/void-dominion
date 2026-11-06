@@ -53,6 +53,12 @@ importers:
       '@void-dominion/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
+      '@void-dominion/net':
+        specifier: workspace:*
+        version: link:../../packages/net
+      '@void-dominion/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
       '@void-dominion/simulation':
         specifier: workspace:*
         version: link:../../packages/simulation

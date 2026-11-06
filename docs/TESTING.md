@@ -42,6 +42,7 @@
   - A flood past the command budget is dropped.
   - A host that changes the world fails the audit with `checksum`.
   - Junk from the guest is counted and never queued.
+  - A guest whose first `hello` reached a host session that then closed is still seated by the next one, and only the live session queues its orders.
 - A seen building that dies out of sight remains a wreck in memory. A replay file of human commands restores the checksum.
 - The player command center is intact when the march is allowed.
 - `pnpm sim` compares seeds `0x5eed`, `0x51eed` and `0xa11ce`. The unattended winner, tick, ore and living units match. The checksums stay pinned, and the three matches together finish in under 20 seconds. The same commands on the same seed return the same report.
@@ -50,6 +51,15 @@
 ## What a browser session must show
 
 When the skirmish is in the client: ore increasing, a refused build or train with a readable reason, and the enemy base hidden at the start. Contact stays off until an enemy unit is actually visible. Record what happened separately from why you think it happened. An agent session is not a player playtest.
+
+For an online match, a session needs two windows: one hosts, the other opens the link. It must show:
+- both in the field with the same clock;
+- each side in amber on its own screen;
+- the guest's ping;
+- an order from the guest that takes effect on the host;
+- the disconnect banner when one window closes.
+
+Milestone 7 step 5 recorded such a session in headless Chrome (`docs/MULTIPLAYER.md`). A session on two machines is step 6.
 
 ## Not in this stage
 

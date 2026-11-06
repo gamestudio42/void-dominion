@@ -1,5 +1,6 @@
 import {
   BUILDINGS,
+  ENEMY_ID,
   MAP_SIZE,
   MATCH,
   PLAYER_ID,
@@ -9,6 +10,8 @@ import {
   type UnitKind,
 } from '@void-dominion/content';
 import { FIXED_DT, FixedStepper } from '@void-dominion/kernel';
+import { HostSession, type Channels, type GuestSession } from '@void-dominion/net';
+import type { CommandBody } from '@void-dominion/protocol';
 import {
   Simulation,
   canSee,
@@ -22,10 +25,12 @@ import {
   supplyCap,
   supplyUsed,
   type Command,
+  type World,
 } from '@void-dominion/simulation';
 import { createField } from '@void-dominion/view3d';
 import { combatWatcher, EFFECT_SHEETS } from './effects.ts';
 import { messagesFor, reasonText } from './locales.ts';
+import { createMirror } from './mirror.ts';
 import { BUILDING_MODELS, TERRAIN_MODELS, UNIT_MODELS } from './models.ts';
 
 export interface Box {
@@ -63,7 +68,21 @@ export interface FieldUi {
   trains: TrainChoice[];
   contact: boolean;
   banner: 'victory' | 'defeat' | 'draw' | null;
+  /** Which side of an online match this window plays, or null offline. */
+  online: 'host' | 'guest' | null;
+  /** The guest's round trip to the host, in milliseconds. */
+  latency: number | null;
+  /** The other player's connection closed. */
+  peerGone: boolean;
+  /** The guest's check of the host's replay, once the match ended. */
+  audit: 'ok' | 'failed' | null;
 }
+
+/**
+ * Offline, this window runs the match against Varek. As host it runs the match for both
+ * seats and serves the guest. As guest it runs no simulation and draws the host's views.
+ */
+export type FieldMode = { kind: 'offline' } | { kind: 'host'; channels: Channels } | { kind: 'guest'; session: GuestSession };
 
 export interface FieldActions {
   stop(): void;
@@ -84,6 +103,9 @@ interface Point {
 
 const DRAG_SLOP = 5;
 const PICK_RADIUS = 28;
+/** A host sends a view every second tick. */
+const VIEW_MS = 2000 * FIXED_DT;
+const PING_MS = 2000;
 
 /** Runs the match and the view. Selection and the command card stay here; they are not rules. */
 export function startField(
@@ -92,16 +114,24 @@ export function startField(
   onUi: (ui: FieldUi) => void,
   language: string,
   actions: { current: FieldActions | null },
+  fieldMode: FieldMode = { kind: 'offline' },
 ): () => void {
   const messages = messagesFor(language);
-  let sim = Simulation.create();
-  const home = MATCH.bases[0]!;
+  const guest = fieldMode.kind === 'guest' ? fieldMode.session : null;
+  /** The seat this window plays. */
+  const me = guest ? guest.seat : PLAYER_ID;
+  let sim: Simulation | null = guest ? null : Simulation.create(MATCH.seed, fieldMode.kind === 'host' ? ['human', 'human'] : undefined);
+  const mirror = guest ? createMirror(guest.seed, me) : null;
+  if (mirror && guest?.view) mirror.apply(guest.view, guest.explored);
+  let world: World = sim ? sim.world : mirror!.world;
+  const host = sim && fieldMode.kind === 'host' ? new HostSession(sim, ENEMY_ID, fieldMode.channels) : null;
+  const home = MATCH.bases[me - 1]!;
   const view = createField(canvas, MAP_SIZE, { x: home.cc.x + 6, z: home.cc.y + 2 });
-  view.setRocks(sim.world.rocks);
+  view.setRocks(world.rocks);
   view.setModels({ ...UNIT_MODELS, ...BUILDING_MODELS, ...TERRAIN_MODELS });
   view.setEffectSheets(EFFECT_SHEETS);
-  let watchCombat = combatWatcher(PLAYER_ID);
-  watchCombat(sim.world);
+  let watchCombat = combatWatcher(me);
+  watchCombat(world);
   const stepper = new FixedStepper({ dt: FIXED_DT, maxFrameTime: 0.25, maxStepsPerFrame: 8 });
   const selected = new Set<number>();
   const keys = new Set<string>();
@@ -110,9 +140,15 @@ export function startField(
   blot.height = MAP_SIZE;
   let previous = capture();
   let current = capture();
-  let refusedAt: Point | null = null;
-  let pendingOrder = false;
+  /** The latest order: its ticket while unanswered, then the reason it was refused, or null. */
+  let pendingTicket: number | null = null;
+  let pendingMark: Point | null = null;
+  let lastReason: string | null = null;
+  let marker: { cell: Point; accepted: boolean } | null = null;
   let hideRejection = false;
+  let peerGone = false;
+  let viewAt = performance.now();
+  let pingAt = 0;
   let note: string | null = null;
   let debug = false;
   let box: Box | null = null;
@@ -131,7 +167,7 @@ export function startField(
 
   function capture(): Map<number, Point> {
     const positions = new Map<number, Point>();
-    for (const unit of sim.world.units) positions.set(unit.id, { x: unit.x, y: unit.y });
+    for (const unit of world.units) positions.set(unit.id, { x: unit.x, y: unit.y });
     return positions;
   }
 
@@ -140,28 +176,38 @@ export function startField(
   }
 
   function engineerIds(): number[] {
-    return selectedIds().filter((id) => sim.world.units.find((unit) => unit.id === id)?.kind === 'engineer');
+    return selectedIds().filter((id) => world.units.find((unit) => unit.id === id)?.kind === 'engineer');
   }
 
   function playing(): boolean {
-    return sim.world.winner === 0;
+    return world.winner === 0;
   }
 
   function issue(cmd: Command, mark: Point | null): void {
-    if (!playing()) return;
-    pendingOrder = true;
+    if (!playing() || peerGone) return;
     hideRejection = false;
     note = null;
-    refusedAt = mark;
-    sim.enqueue(cmd);
+    pendingMark = mark;
+    if (guest) {
+      const { playerId: _seat, ...body } = cmd;
+      pendingTicket = guest.command(body as CommandBody);
+    } else pendingTicket = sim!.enqueue(cmd);
+  }
+
+  /** The verdict on the latest order: from the step's results here, or from the host's ack. */
+  function settle(ticket: number, reason: string | null): void {
+    if (ticket !== pendingTicket) return;
+    pendingTicket = null;
+    lastReason = reason;
+    marker = pendingMark ? { cell: pendingMark, accepted: reason === null } : null;
   }
 
   function shownUnits(alpha: number) {
     const draws = [];
-    for (const unit of sim.world.units) {
+    for (const unit of world.units) {
       const cellX = Math.floor(unit.x);
       const cellY = Math.floor(unit.y);
-      if (unit.owner !== PLAYER_ID && !canSee(sim.world, PLAYER_ID, cellX, cellY)) continue;
+      if (unit.owner !== me && !canSee(world, me, cellX, cellY)) continue;
       const from = previous.get(unit.id) ?? unit;
       const to = current.get(unit.id) ?? unit;
       draws.push({
@@ -180,9 +226,9 @@ export function startField(
 
   function shownBuildings() {
     const draws = [];
-    for (const building of sim.world.buildings) {
+    for (const building of world.buildings) {
       const def = buildingDef(building.kind);
-      const seen = building.owner === PLAYER_ID || canSeeFootprint(sim.world, PLAYER_ID, building.x, building.y, def.width, def.height);
+      const seen = building.owner === me || canSeeFootprint(world, me, building.x, building.y, def.width, def.height);
       if (!seen) continue;
       draws.push({
         id: building.id,
@@ -199,8 +245,8 @@ export function startField(
         maxHp: def.hp,
       });
     }
-    for (const ghost of sim.world.memory[PLAYER_ID - 1] ?? []) {
-      if (ghost.owner === PLAYER_ID || draws.some((draw) => draw.id === ghost.id)) continue;
+    for (const ghost of world.memory[me - 1] ?? []) {
+      if (ghost.owner === me || draws.some((draw) => draw.id === ghost.id)) continue;
       const def = buildingDef(ghost.kind);
       draws.push({
         id: ghost.id,
@@ -221,22 +267,22 @@ export function startField(
   }
 
   function shownNodes() {
-    const explored = sim.world.explored[PLAYER_ID - 1]!;
-    return sim.world.nodes
+    const explored = world.explored[me - 1]!;
+    return world.nodes
       .filter((node) => node.amount > 0 && explored[node.y * MAP_SIZE + node.x] === 1)
       .map((node) => ({ id: node.id, x: node.x, y: node.y, kind: node.kind }));
   }
 
   function banner(): FieldUi['banner'] {
-    if (sim.world.winner === 0) return null;
-    if (sim.world.winner === PLAYER_ID) return 'victory';
-    if (sim.world.winner < 0) return 'draw';
+    if (world.winner === 0) return null;
+    if (world.winner === me) return 'victory';
+    if (world.winner < 0) return 'draw';
     return 'defeat';
   }
 
   function selectionLabel(): string {
     if (selectedBuilding !== null) {
-      const building = sim.world.buildings.find((entry) => entry.id === selectedBuilding);
+      const building = world.buildings.find((entry) => entry.id === selectedBuilding);
       if (!building) return '';
       const name = messages.buildingName(building.kind);
       const def = buildingDef(building.kind);
@@ -249,8 +295,8 @@ export function startField(
 
   function trainChoices(): TrainChoice[] {
     if (selectedBuilding === null) return [];
-    const building = sim.world.buildings.find((entry) => entry.id === selectedBuilding);
-    if (!building || building.owner !== PLAYER_ID) return [];
+    const building = world.buildings.find((entry) => entry.id === selectedBuilding);
+    if (!building || building.owner !== me) return [];
     const def = buildingDef(building.kind);
     if (building.progress < def.buildTicks) return [];
     return def.produces.map((kind) => ({ kind, ore: unitDef(kind).ore, aether: unitDef(kind).aether }));
@@ -264,36 +310,40 @@ export function startField(
   }
 
   function enemyVisible(): boolean {
-    for (const unit of sim.world.units) {
-      if (unit.owner === PLAYER_ID) continue;
-      if (canSee(sim.world, PLAYER_ID, Math.floor(unit.x), Math.floor(unit.y))) return true;
+    for (const unit of world.units) {
+      if (unit.owner === me) continue;
+      if (canSee(world, me, Math.floor(unit.x), Math.floor(unit.y))) return true;
     }
     return false;
   }
 
   function publish(): void {
-    const stock = sim.world.players.find((entry) => entry.id === PLAYER_ID);
+    const stock = world.players.find((entry) => entry.id === me);
     const trains = trainChoices();
     const next: FieldUi = {
       selectedLabel: selectionLabel(),
-      rejection: note ?? (pendingOrder || hideRejection ? null : reasonText(messages, sim.lastRejection)),
+      rejection: note ?? (pendingTicket !== null || hideRejection ? null : reasonText(messages, lastReason)),
       debug,
-      tick: sim.world.tick,
+      tick: world.tick,
       fps,
       box,
       ore: stock?.ore ?? 0,
       aether: stock?.aether ?? 0,
-      supplyUsed: supplyUsed(sim.world, PLAYER_ID),
-      supplyCap: supplyCap(sim.world, PLAYER_ID),
-      powerGive: powerGive(sim.world, PLAYER_ID),
-      powerTake: powerTake(sim.world, PLAYER_ID),
-      clock: clock(sim.world.tick),
+      supplyUsed: supplyUsed(world, me),
+      supplyCap: supplyCap(world, me),
+      powerGive: powerGive(world, me),
+      powerTake: powerTake(world, me),
+      clock: clock(world.tick),
       mode,
       buildKind,
       buildOpen,
       trains,
       contact: enemyVisible(),
       banner: banner(),
+      online: fieldMode.kind === 'offline' ? null : fieldMode.kind,
+      latency: guest?.latency === null || !guest ? null : Math.round(guest.latency),
+      peerGone,
+      audit: guest?.audit ? (guest.audit.ok ? 'ok' : 'failed') : null,
     };
     const key = JSON.stringify(next);
     if (key === lastUi) return;
@@ -302,24 +352,25 @@ export function startField(
   }
 
   function siteOk(kind: BuildingKind, at: Point): boolean {
-    return siteRefusal(sim.world, PLAYER_ID, kind, at) === null;
+    return siteRefusal(world, me, kind, at) === null;
   }
 
   function paint(alpha: number): void {
-    view.setUnits(shownUnits(alpha));
-    view.setBuildings(shownBuildings());
+    /** The view paints seat 1 amber and seat 2 red; each window sees itself in amber. */
+    const tint = <T extends { owner: number }>(draw: T): T => (me === PLAYER_ID ? draw : { ...draw, owner: draw.owner === me ? PLAYER_ID : ENEMY_ID });
+    view.setUnits(shownUnits(alpha).map(tint));
+    view.setBuildings(shownBuildings().map(tint));
     view.setNodes(shownNodes());
-    const explored = sim.world.explored[PLAYER_ID - 1]!;
-    const visible = sim.world.visible[PLAYER_ID - 1]!;
+    const explored = world.explored[me - 1]!;
+    const visible = world.visible[me - 1]!;
     view.setFog(explored, visible);
     if (mode === 'build' && buildKind && hover) {
       const def = BUILDINGS[buildKind];
       view.setGhost({ x: hover.x, y: hover.y, width: def.width, height: def.height, ok: siteOk(buildKind, hover) });
     } else view.setGhost(null);
-    const accepted = !pendingOrder && sim.lastRejection === null && sim.world.marker !== null;
-    const marker = accepted ? sim.world.marker : pendingOrder ? null : refusedAt;
-    const raised = marker !== null && !isWalkable(sim.world.blocked, marker.x, marker.y);
-    view.setMarker(marker, accepted, raised);
+    const cell = pendingTicket === null && marker ? marker.cell : null;
+    const raised = cell !== null && !isWalkable(world.blocked, cell.x, cell.y);
+    view.setMarker(cell, marker?.accepted ?? false, raised);
     view.render();
     drawMinimap();
   }
@@ -329,8 +380,8 @@ export function startField(
     const board = minimap.getContext('2d');
     if (!ctx || !board) return;
     const image = ctx.createImageData(MAP_SIZE, MAP_SIZE);
-    const explored = sim.world.explored[PLAYER_ID - 1]!;
-    const visible = sim.world.visible[PLAYER_ID - 1]!;
+    const explored = world.explored[me - 1]!;
+    const visible = world.visible[me - 1]!;
     for (let index = 0; index < MAP_SIZE * MAP_SIZE; index++) {
       const offset = index * 4;
       const seen = visible[index] === 1;
@@ -347,7 +398,7 @@ export function startField(
       image.data[offset + 1] = green;
       image.data[offset + 2] = blue;
     };
-    for (const rock of sim.world.rocks) {
+    for (const rock of world.rocks) {
       for (let y = rock.y; y < rock.y + rock.height; y++) {
         for (let x = rock.x; x < rock.x + rock.width; x++) {
           if (explored[y * MAP_SIZE + x] !== 1) continue;
@@ -358,12 +409,12 @@ export function startField(
     for (const building of shownBuildings()) {
       for (let y = building.y; y < building.y + building.height; y++) {
         for (let x = building.x; x < building.x + building.width; x++) {
-          paintCell(x, y, building.owner === PLAYER_ID ? 196 : 176, building.owner === PLAYER_ID ? 140 : 64, building.owner === PLAYER_ID ? 70 : 58);
+          paintCell(x, y, building.owner === me ? 196 : 176, building.owner === me ? 140 : 64, building.owner === me ? 70 : 58);
         }
       }
     }
     for (const unit of shownUnits(lastAlpha)) {
-      paintCell(Math.floor(unit.x), Math.floor(unit.y), unit.owner === PLAYER_ID ? 240 : 236, unit.owner === PLAYER_ID ? 190 : 92, unit.owner === PLAYER_ID ? 90 : 80);
+      paintCell(Math.floor(unit.x), Math.floor(unit.y), unit.owner === me ? 240 : 236, unit.owner === me ? 190 : 92, unit.owner === me ? 90 : 80);
     }
     ctx.putImageData(image, 0, 0);
     board.imageSmoothingEnabled = false;
@@ -374,7 +425,7 @@ export function startField(
   function unitsIn(rect: Box, alpha: number): number[] {
     const ids: number[] = [];
     for (const unit of shownUnits(alpha)) {
-      if (unit.owner !== PLAYER_ID) continue;
+      if (unit.owner !== me) continue;
       const screen = view.project(unit.x, unit.y, 0.35);
       if (screen.x >= rect.left && screen.x <= rect.left + rect.width && screen.y >= rect.top && screen.y <= rect.top + rect.height) {
         ids.push(unit.id);
@@ -413,20 +464,20 @@ export function startField(
     if (ground) {
       const x = Math.floor(ground.x);
       const y = Math.floor(ground.y);
-      for (const building of sim.world.buildings) {
-        if ((building.owner === PLAYER_ID) !== own) continue;
+      for (const building of world.buildings) {
+        if ((building.owner === me) !== own) continue;
         const def = buildingDef(building.kind);
         if (x < building.x || y < building.y || x >= building.x + def.width || y >= building.y + def.height) continue;
-        if (!own && !canSeeFootprint(sim.world, PLAYER_ID, building.x, building.y, def.width, def.height)) continue;
+        if (!own && !canSeeFootprint(world, me, building.x, building.y, def.width, def.height)) continue;
         return building.id;
       }
     }
     let best: number | null = null;
     let bestDistance = 72;
-    for (const building of sim.world.buildings) {
-      if ((building.owner === PLAYER_ID) !== own) continue;
+    for (const building of world.buildings) {
+      if ((building.owner === me) !== own) continue;
       const def = buildingDef(building.kind);
-      if (!own && !canSeeFootprint(sim.world, PLAYER_ID, building.x, building.y, def.width, def.height)) continue;
+      if (!own && !canSeeFootprint(world, me, building.x, building.y, def.width, def.height)) continue;
       const screen = view.project(building.x + def.width / 2, building.y + def.height / 2, 0.7);
       const dx = screen.x - clientX;
       const dy = screen.y - clientY;
@@ -459,32 +510,32 @@ export function startField(
     const ids = selectedIds();
     if (ids.length === 0 || !playing()) return;
     const enemy = pick(clientX, clientY, lastAlpha, null);
-    const enemyUnit = enemy === null ? null : sim.world.units.find((unit) => unit.id === enemy && unit.owner !== PLAYER_ID);
+    const enemyUnit = enemy === null ? null : world.units.find((unit) => unit.id === enemy && unit.owner !== me);
     if (enemyUnit) {
-      issue({ type: 'attack', playerId: PLAYER_ID, unitIds: ids, targetId: enemyUnit.id }, { x: Math.floor(enemyUnit.x), y: Math.floor(enemyUnit.y) });
+      issue({ type: 'attack', playerId: me, unitIds: ids, targetId: enemyUnit.id }, { x: Math.floor(enemyUnit.x), y: Math.floor(enemyUnit.y) });
       return;
     }
     const cell = cellAt(clientX, clientY);
     if (!cell) return;
     const structure = enemyBuildingAt(clientX, clientY);
     if (structure !== null) {
-      issue({ type: 'attack', playerId: PLAYER_ID, unitIds: ids, targetId: structure }, cell);
+      issue({ type: 'attack', playerId: me, unitIds: ids, targetId: structure }, cell);
       return;
     }
-    const node = sim.world.nodes.find((entry) => entry.x === cell.x && entry.y === cell.y && entry.amount > 0);
+    const node = world.nodes.find((entry) => entry.x === cell.x && entry.y === cell.y && entry.amount > 0);
     const miners = engineerIds();
     if (node && miners.length > 0) {
-      issue({ type: 'gather', playerId: PLAYER_ID, unitIds: miners, nodeId: node.id }, cell);
+      issue({ type: 'gather', playerId: me, unitIds: miners, nodeId: node.id }, cell);
       return;
     }
     const military = ids.every((id) => {
-      const unit = sim.world.units.find((entry) => entry.id === id);
+      const unit = world.units.find((entry) => entry.id === id);
       return unit ? unitDef(unit.kind).damage > 0 : false;
     });
     issue(
       military
-        ? { type: 'attack_move', playerId: PLAYER_ID, unitIds: ids, to: cell }
-        : { type: 'move', playerId: PLAYER_ID, unitIds: ids, to: cell },
+        ? { type: 'attack_move', playerId: me, unitIds: ids, to: cell }
+        : { type: 'move', playerId: me, unitIds: ids, to: cell },
       cell,
     );
   }
@@ -496,15 +547,15 @@ export function startField(
     const miners = engineerIds();
     const ids = miners.length > 0 ? miners : selectedIds();
     if (ids.length === 0) return;
-    issue({ type: 'build', playerId: PLAYER_ID, unitIds: ids, kind: buildKind, at: cell }, cell);
+    issue({ type: 'build', playerId: me, unitIds: ids, kind: buildKind, at: cell }, cell);
   }
 
   function nearestOre(): number | null {
-    const anchor = sim.world.units.find((unit) => selected.has(unit.id) && unit.kind === 'engineer');
+    const anchor = world.units.find((unit) => selected.has(unit.id) && unit.kind === 'engineer');
     if (!anchor) return null;
     let best: number | null = null;
     let bestDist = Infinity;
-    for (const node of sim.world.nodes) {
+    for (const node of world.nodes) {
       if (node.kind !== 'ore' || node.amount <= 0) continue;
       const dx = node.x - anchor.x;
       const dy = node.y - anchor.y;
@@ -521,15 +572,15 @@ export function startField(
     stop() {
       const ids = selectedIds();
       if (ids.length === 0) return;
-      issue({ type: 'stop', playerId: PLAYER_ID, unitIds: ids }, null);
+      issue({ type: 'stop', playerId: me, unitIds: ids }, null);
     },
     mine() {
       const miners = engineerIds();
       const ids = miners.length > 0 ? miners : selectedIds();
       const nodeId = nearestOre();
       if (ids.length === 0 || nodeId === null) return;
-      const node = sim.world.nodes.find((entry) => entry.id === nodeId);
-      issue({ type: 'gather', playerId: PLAYER_ID, unitIds: ids, nodeId }, node ? { x: node.x, y: node.y } : null);
+      const node = world.nodes.find((entry) => entry.id === nodeId);
+      issue({ type: 'gather', playerId: me, unitIds: ids, nodeId }, node ? { x: node.x, y: node.y } : null);
     },
     attack() {
       mode = mode === 'attack' ? 'none' : 'attack';
@@ -552,7 +603,7 @@ export function startField(
     },
     produce(kind) {
       if (selectedBuilding === null) return;
-      issue({ type: 'produce', playerId: PLAYER_ID, buildingId: selectedBuilding, kind }, null);
+      issue({ type: 'produce', playerId: me, buildingId: selectedBuilding, kind }, null);
     },
     cancel() {
       mode = 'none';
@@ -561,7 +612,9 @@ export function startField(
       publish();
     },
     saveReplay() {
-      const blob = new Blob([serializeReplay(sim.log, sim.world.tick, { seed: sim.world.seed, seats: sim.seats })], { type: 'application/json' });
+      const text = sim ? serializeReplay(sim.log, world.tick, { seed: world.seed, seats: sim.seats }) : guest?.end?.replay;
+      if (!text) return;
+      const blob = new Blob([text], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -570,6 +623,7 @@ export function startField(
       URL.revokeObjectURL(url);
     },
     loadReplay(text) {
+      if (fieldMode.kind !== 'offline') return;
       const file = deserializeReplay(text);
       if (!file) {
         note = messages.replay_invalid;
@@ -577,8 +631,9 @@ export function startField(
         return;
       }
       sim = Simulation.replay(file.commands, file.ticks, file);
-      watchCombat = combatWatcher(PLAYER_ID);
-      watchCombat(sim.world);
+      world = sim.world;
+      watchCombat = combatWatcher(me);
+      watchCombat(world);
       previous = capture();
       current = capture();
       selected.clear();
@@ -586,9 +641,10 @@ export function startField(
       mode = 'none';
       buildKind = null;
       buildOpen = false;
-      pendingOrder = false;
+      pendingTicket = null;
+      marker = null;
+      lastReason = null;
       note = null;
-      refusedAt = null;
       publish();
     },
   };
@@ -638,7 +694,7 @@ export function startField(
     if (!drag || event.pointerId !== drag.pointerId) return;
     if (drag.moved && box) selectIds(unitsIn(box, lastAlpha), event.shiftKey);
     else {
-      const id = pick(event.clientX, event.clientY, lastAlpha, PLAYER_ID);
+      const id = pick(event.clientX, event.clientY, lastAlpha, me);
       if (id !== null) selectIds([id], event.shiftKey);
       else {
         const building = ownBuildingAt(event.clientX, event.clientY);
@@ -707,30 +763,53 @@ export function startField(
     if (keys.has('KeyW')) view.pan(0, pan);
     if (keys.has('KeyS')) view.pan(0, -pan);
 
-    const stepped = stepper.advance(elapsed);
-    if (stepped.steps > 0) {
+    /** A host waits for a guest who dropped; a guest only draws. */
+    const stepped = stepper.advance(sim && !(host && peerGone) ? elapsed : 0);
+    if (sim && stepped.steps > 0) {
       previous = current;
       for (let i = 0; i < stepped.steps; i++) {
         sim.step();
-        for (const effect of watchCombat(sim.world)) view.addEffect(effect.kind, effect.x, effect.y, effect.height, effect.size);
+        host?.afterStep();
+        for (const effect of watchCombat(world)) view.addEffect(effect.kind, effect.x, effect.y, effect.height, effect.size);
+        if (pendingTicket !== null && sim.results.has(pendingTicket)) settle(pendingTicket, sim.results.get(pendingTicket) ?? null);
       }
       current = capture();
-      if (pendingOrder) {
-        pendingOrder = false;
-        if (sim.lastRejection === null) refusedAt = null;
-      }
-      if (selectedBuilding !== null && !sim.world.buildings.some((building) => building.id === selectedBuilding)) {
-        selectedBuilding = null;
-      }
-      for (const id of [...selected]) {
-        if (!sim.world.units.some((unit) => unit.id === id)) selected.delete(id);
-      }
+      forget();
     }
-    lastAlpha = stepped.alpha;
-    paint(stepped.alpha);
+    if (guest && now - pingAt >= PING_MS) {
+      pingAt = now;
+      guest.ping(now);
+    }
+    lastAlpha = guest ? Math.min(1, (now - viewAt) / VIEW_MS) : stepped.alpha;
+    paint(lastAlpha);
     publish();
     frame = requestAnimationFrame(tick);
   }
+
+  /** Drop selections of units and buildings that are gone. */
+  function forget(): void {
+    if (selectedBuilding !== null && !world.buildings.some((building) => building.id === selectedBuilding)) {
+      selectedBuilding = null;
+    }
+    for (const id of [...selected]) {
+      if (!world.units.some((unit) => unit.id === id)) selected.delete(id);
+    }
+  }
+
+  if (guest && mirror) {
+    guest.onView = (next) => {
+      previous = current;
+      mirror.apply(next, guest.explored);
+      current = capture();
+      viewAt = performance.now();
+      for (const effect of watchCombat(world, new Set(next.dead ?? []))) view.addEffect(effect.kind, effect.x, effect.y, effect.height, effect.size);
+      forget();
+    };
+    guest.onAck = (ack) => settle(ack.seq, ack.reason);
+  }
+  const channels = fieldMode.kind === 'host' ? fieldMode.channels : null;
+  if (channels) channels.reliable.onClose(() => (peerGone = true));
+  if (guest) guest.onClose(() => (peerGone = true));
 
   const keyDown = (event: KeyboardEvent) => onKey(event, true);
   const keyUp = (event: KeyboardEvent) => onKey(event, false);
@@ -762,6 +841,7 @@ export function startField(
     window.removeEventListener('keydown', keyDown);
     window.removeEventListener('keyup', keyUp);
     window.removeEventListener('resize', view.resize);
+    host?.close();
     view.dispose();
   };
 }
