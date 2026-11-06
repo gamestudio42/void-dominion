@@ -190,7 +190,12 @@ describe('host and guest sessions', () => {
       sim.step();
       host.afterStep();
     }
-    await settle(10);
+    /** Views are compressed and inflated asynchronously; wait for the last ones and the end, as a real guest would. */
+    for (let round = 0; round < 100; round++) {
+      const caughtUp = guest.view !== null && guest.view.tick >= sim.world.tick - 2;
+      if (caughtUp && (sim.world.winner === 0 || guest.end !== null)) break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
     return { sim, host, guest, acks };
   }
 
@@ -198,7 +203,7 @@ describe('host and guest sessions', () => {
     const { sim, host, guest, acks } = await play();
     expect(guest.seat).toBe(ENEMY_ID);
     expect(guest.view?.seat).toBe(ENEMY_ID);
-    expect(guest.view!.tick).toBeGreaterThan(sim.world.tick - 4);
+    expect(guest.view!.tick).toBeGreaterThanOrEqual(sim.world.tick - 2);
     expect(guest.explored!.some((cell) => cell === 1)).toBe(true);
     /** The second order names player 1's units, which the guest cannot see: refused like a missing unit. */
     expect(acks).toEqual([null, 'unknown_unit']);
