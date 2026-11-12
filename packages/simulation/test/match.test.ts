@@ -324,6 +324,31 @@ describe('refusals behind the fog', () => {
     );
     expect(reason).toBe(RejectReason.unknownUnit);
   });
+
+  it('trains an interceptor from a finished factory and refuses it from the command center', () => {
+    const sim = Simulation.create();
+    for (const unit of sim.world.units) {
+      if (unit.owner === PLAYER_ID) unit.order = 'idle';
+    }
+    const stock = player(sim);
+    stock.ore = 500;
+    stock.aether = 100;
+    const cc = sim.world.buildings.find((building) => building.owner === PLAYER_ID && building.kind === 'command_center')!;
+    sim.world.buildings.push(makeBuilding(sim.world, PLAYER_ID, 'vehicle_factory', 24, 90, true));
+    rebake(sim.world);
+    const factory = sim.world.buildings.find((building) => building.kind === 'vehicle_factory')!;
+    sim.enqueue({ type: 'produce', playerId: PLAYER_ID, buildingId: cc.id, kind: 'interceptor' });
+    sim.step();
+    expect(sim.lastRejection).toBe(RejectReason.cannotProduce);
+    expect(stock.ore).toBe(500);
+    expect(stock.aether).toBe(100);
+    sim.enqueue({ type: 'produce', playerId: PLAYER_ID, buildingId: factory.id, kind: 'interceptor' });
+    sim.step();
+    expect(sim.lastRejection).toBeNull();
+    expect(stock.ore).toBe(500 - UNITS.interceptor.ore);
+    expect(stock.aether).toBe(100 - UNITS.interceptor.aether);
+    expect(factory.prod?.kind).toBe('interceptor');
+  });
 });
 
 describe('replay file', () => {

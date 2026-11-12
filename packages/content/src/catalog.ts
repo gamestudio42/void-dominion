@@ -1,4 +1,4 @@
-export const UNIT_KINDS = ['engineer', 'rifleman', 'rocketeer', 'scout_rover', 'assault_walker'] as const;
+export const UNIT_KINDS = ['engineer', 'rifleman', 'rocketeer', 'scout_rover', 'assault_walker', 'interceptor'] as const;
 export type UnitKind = (typeof UNIT_KINDS)[number];
 
 export const BUILDING_KINDS = [
@@ -54,6 +54,8 @@ export const UNITS: Record<UnitKind, UnitDef> = {
   rocketeer: { hp: 55, armor: 0, speed: 0.24, sight: 8, ore: 75, aether: 25, supply: 2, damage: 12, range: 6, cooldown: 22, carry: 0, gatherTicks: 0, trainTicks: 140 },
   scout_rover: { hp: 70, armor: 1, speed: 0.38, sight: 11, ore: 75, aether: 0, supply: 2, damage: 5, range: 4, cooldown: 12, carry: 0, gatherTicks: 0, trainTicks: 120 },
   assault_walker: { hp: 160, armor: 2, speed: 0.16, sight: 8, ore: 150, aether: 50, supply: 3, damage: 16, range: 5, cooldown: 18, carry: 0, gatherTicks: 0, trainTicks: 220 },
+  /** Studio hull. Faster and sharper-eyed than the scout, lighter than the walker. It still walks the ground grid. */
+  interceptor: { hp: 80, armor: 0, speed: 0.46, sight: 12, ore: 100, aether: 25, supply: 2, damage: 8, range: 5, cooldown: 12, carry: 0, gatherTicks: 0, trainTicks: 160 },
 };
 
 export const BUILDINGS: Record<BuildingKind, BuildingDef> = {
@@ -62,7 +64,7 @@ export const BUILDINGS: Record<BuildingKind, BuildingDef> = {
   aether_refinery: { width: 3, height: 3, ore: 100, aether: 0, buildTicks: 200, hp: 600, armor: 0, sight: 6, supply: 2, powerGive: 0, powerTake: 1, produces: [], damage: 0, range: 0, cooldown: 0 },
   power_generator: { width: 2, height: 2, ore: 100, aether: 0, buildTicks: 180, hp: 450, armor: 0, sight: 5, supply: 8, powerGive: 15, powerTake: 0, produces: [], damage: 0, range: 0, cooldown: 0 },
   barracks: { width: 3, height: 3, ore: 150, aether: 0, buildTicks: 240, hp: 900, armor: 1, sight: 7, supply: 4, powerGive: 0, powerTake: 2, produces: ['rifleman', 'rocketeer'], damage: 0, range: 0, cooldown: 0 },
-  vehicle_factory: { width: 4, height: 3, ore: 200, aether: 50, buildTicks: 320, hp: 1100, armor: 1, sight: 7, supply: 4, powerGive: 0, powerTake: 4, produces: ['scout_rover', 'assault_walker'], damage: 0, range: 0, cooldown: 0 },
+  vehicle_factory: { width: 4, height: 3, ore: 200, aether: 50, buildTicks: 320, hp: 1100, armor: 1, sight: 7, supply: 4, powerGive: 0, powerTake: 4, produces: ['scout_rover', 'assault_walker', 'interceptor'], damage: 0, range: 0, cooldown: 0 },
   defense_turret: { width: 2, height: 2, ore: 100, aether: 0, buildTicks: 180, hp: 350, armor: 1, sight: 8, supply: 0, powerGive: 0, powerTake: 2, produces: [], damage: 10, range: 7, cooldown: 12 },
 };
 
