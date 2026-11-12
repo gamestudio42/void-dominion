@@ -91,9 +91,9 @@ The client loads units and buildings through one `setModels` call. A building un
 
 ## 021. Rock ridges are tiled boulders, hidden until explored
 
-Nodes and rocks follow the building meshes. A node model fits its one cell. A rock rect from the match is not one model stretched to 10 by 24 cells: the view tiles it with two boulder models about two cells apart, over a low slab so the ridge reads as one wall. Position, turn, size and the spire share come from a hash of the boulder's place in the rect, so the ridge looks the same on every load. That hash lives in the view and never touches the simulation.
+Nodes and rocks follow the building meshes. A node model fits its one cell. A rock rect from the match is not one model stretched to 10 by 24 cells: the view tiles it with boulder models a little over a cell apart, plus smaller stones in some of the gaps, so the ridge reads as scree. The ground under that rect is a stone bed in the terrain shader, a different colour from the soil, with a noisy apron past the rect and no survey line across it, instead of a dark slab. Position, turn, size and the spire share come from a hash of the boulder's place in the rect, so the ridge looks the same on every load. That hash lives in the view and never touches the simulation.
 
-Boulders stand up to about 2.4 cells, well above the fog plane at 0.95. A boulder is shown only once its cell is explored, so the black fog never shows where unexplored rock is. The slab stays below the fog and is always drawn, as the old boxes were. Until both boulder models load, each rect stays one box.
+Boulders stand above the fog plane. A boulder is shown only once its cell is explored, so the black fog never shows where unexplored rock is. Until both boulder models load, each rect stays one box.
 
 ## 022. The speed table is a measurement, not a gate
 
@@ -146,4 +146,8 @@ On 2026-11-12 a building still looked pasted on the ground: nothing sat under it
 ## 029. A squad takes different cells around one footprint
 
 On 2026-11-12 several engineers ordered to the same ore node walked to the single nearest ring cell and stood on one point, so three units drew as one. The fixed camera also stacks any two cells that share `x - y`, even when the cells themselves differ. Orders that approach a footprint (gather, return, build and chase) now reserve a free ring cell, and both those orders and a group move prefer a free camera lane when one exists. An engineer mines, delivers or builds only after the path is finished, so a crowded unit steps aside before the work timer starts. The three unattended seeds still share a winner, a tick and the stockpiles. The tick moved from 3333 to 3338. The checksums are 3280354694, 2653787263 and 3889541598.
+
+## 030. The frontier has relief, and the grid stays flat
+
+On 2026-11-12 the match was still a flat sheet, so the rock walls and the bases did not read as ground you could hold. A hill under each base, then a roll across the whole map, both read as too much landform. The view mesh is level again. Units, shots and the fog sit on that surface, and a click hits the mesh. Nothing in the simulation changes: paths, footprints and the checksum stay on the flat grid. A cliff that blocks movement is a later rule, not this picture.
 

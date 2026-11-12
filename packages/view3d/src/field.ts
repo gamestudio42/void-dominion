@@ -1,6 +1,8 @@
 import {
   AmbientLight,
   BoxGeometry,
+  BufferAttribute,
+  BufferGeometry,
   ClampToEdgeWrapping,
   CanvasTexture,
   CircleGeometry,
@@ -17,7 +19,6 @@ import {
   NoColorSpace,
   Object3D,
   OrthographicCamera,
-  Plane,
   PlaneGeometry,
   Raycaster,
   RGBAFormat,
@@ -31,9 +32,11 @@ import {
   TextureLoader,
   Vector2,
   Vector3,
+  Vector4,
   WebGLRenderer,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { bakeRelief, sampleRelief, type Pad } from './relief.ts';
 
 export interface DrawUnit {
   id: number;
@@ -214,7 +217,6 @@ export function createField(
   const pitch = Math.PI / 5;
   const yaw = Math.PI / 4;
   const distance = 140;
-  const ground = new Plane(new Vector3(0, 1, 0), 0);
   const raycaster = new Raycaster();
   const pointer = new Vector2();
   const hit = new Vector3();
@@ -256,7 +258,7 @@ export function createField(
   const structures = new Map<number, Body>();
   const nodeMeshes = new Map<number, { root: Object3D; box: boolean }>();
   /** Boulders keep the cell they stand on, so unexplored rock never pokes through the black fog. */
-  const rockMeshes: { root: Object3D; cell: number }[] = [];
+  const rockMeshes: { root: Object3D; cell: number; lift: number }[] = [];
   let rockRects: DrawRock[] = [];
 
   /** Sprites draw after the fog and through the meshes, so a hit inside a building still shows. */
@@ -303,6 +305,7 @@ export function createField(
   const fogMaterial = new ShaderMaterial({
     transparent: true,
     depthWrite: false,
+    side: DoubleSide,
     uniforms: {
       fogMap: { value: fogTexture },
       mapSize: { value: mapSize },
@@ -322,21 +325,43 @@ export function createField(
       void main() {
         float u = clamp(vWorld.x / mapSize, 0.0, 1.0);
         float v = clamp(vWorld.z / mapSize, 0.0, 1.0);
-        gl_FragColor = texture2D(fogMap, vec2(u, v));
+        vec4 fog = texture2D(fogMap, vec2(u, v));
+        gl_FragColor = fog;
       }
     `,
   });
-  const fog = new Mesh(new PlaneGeometry(mapSize, mapSize), fogMaterial);
-  fog.rotation.x = -Math.PI / 2;
-  fog.position.set(mapSize / 2, 0.95, mapSize / 2);
-  fog.renderOrder = 2;
-  scene.add(fog);
+  const groundGeometry = reliefGeometry(mapSize);
+  let heights = bakeRelief(mapSize, []);
+  let buildingPads: Pad[] = [];
+  let nodePads: Pad[] = [];
+  let shapeKey = '';
+
+  function surface(x: number, z: number): number {
+    return sampleRelief(heights, mapSize, x, z);
+  }
+
+  function reshape(): void {
+    let key = '';
+    for (const pad of buildingPads) key += `${pad.x},${pad.z},${pad.width},${pad.depth};`;
+    key += '#';
+    for (const pad of nodePads) key += `${pad.x},${pad.z};`;
+    if (key === shapeKey) return;
+    shapeKey = key;
+    heights = bakeRelief(mapSize, [...buildingPads, ...nodePads]);
+    writeHeights(groundGeometry, heights);
+    liftRocks();
+    placeCamera();
+  }
 
   const nodeSlots = Array.from({ length: 8 }, () => new Vector3());
+  const bedSlots = Array.from({ length: 4 }, () => new Vector4());
   const groundMaterial = new ShaderMaterial({
+    side: DoubleSide,
     uniforms: {
       nodes: { value: nodeSlots },
       nodeCount: { value: 0 },
+      beds: { value: bedSlots },
+      bedCount: { value: 0 },
     },
     vertexShader: `
       varying vec3 vWorld;
@@ -349,36 +374,77 @@ export function createField(
     fragmentShader: `
       uniform vec3 nodes[8];
       uniform float nodeCount;
+      uniform vec4 beds[4];
+      uniform float bedCount;
       varying vec3 vWorld;
-      float hash(vec2 p) {
+      float cellNoise(vec2 p) {
         vec2 q = fract(p * vec2(0.1031, 0.11369));
         q += dot(q, q.yx + 19.19);
         return fract((q.x + q.y) * q.x);
       }
+      float mottle(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        float a = cellNoise(i);
+        float b = cellNoise(i + vec2(1.0, 0.0));
+        float c = cellNoise(i + vec2(0.0, 1.0));
+        float d = cellNoise(i + vec2(1.0, 1.0));
+        return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+      }
       void main() {
-        vec2 cell = floor(vWorld.xz);
-        float speck = hash(cell);
-        float patch = hash(floor(cell / 4.0));
-        vec3 color = mix(vec3(0.17, 0.19, 0.21), vec3(0.34, 0.26, 0.18), speck);
-        color = mix(color, vec3(0.22, 0.24, 0.27), patch * 0.85);
+        vec2 xz = vWorld.xz;
+        // Soft patches, not a squared grit. A lattice of constant cells reads as tiles here.
+        vec2 diag = vec2(xz.x * 0.8 + xz.y, xz.x - xz.y * 1.3);
+        float broad = mottle(xz * 0.09 + vec2(2.0, 7.0));
+        float mid = mottle(diag * 0.2 + 4.0);
+        float fine = mottle(vec2(xz.y * 1.25, xz.x * 1.05) + 9.0);
+        vec3 color = mix(vec3(0.20, 0.19, 0.16), vec3(0.48, 0.36, 0.24), broad);
+        color = mix(color, vec3(0.15, 0.14, 0.12), smoothstep(0.55, 0.88, mid) * 0.62);
+        color = mix(color, vec3(0.56, 0.45, 0.31), smoothstep(0.62, 0.9, fine) * 0.45);
+        color *= 0.94 + 0.12 * mottle(xz * 3.2 + 1.0);
+        float bed = 0.0;
+        for (int i = 0; i < 4; i++) {
+          float live = step(float(i) + 0.5, bedCount);
+          vec2 origin = beds[i].xy;
+          vec2 span = beds[i].zw;
+          float outsideX = max(max(origin.x - xz.x, xz.x - (origin.x + span.x)), 0.0);
+          float outsideZ = max(max(origin.y - xz.y, xz.y - (origin.y + span.y)), 0.0);
+          float wobble = mottle(xz * 0.47 + float(i) * 9.0) - 0.5;
+          float outside = length(vec2(outsideX, outsideZ)) - wobble * 1.6;
+          bed = max(bed, (1.0 - smoothstep(0.0, 2.8, outside)) * live);
+        }
+        float chips = mottle(xz * 3.4 + 6.0);
+        float pits = mottle(xz * 1.15 + 21.0);
+        vec3 stone = mix(vec3(0.36, 0.33, 0.28), vec3(0.64, 0.57, 0.46), chips);
+        stone = mix(stone, vec3(0.24, 0.22, 0.19), smoothstep(0.55, 0.95, pits) * 0.55);
+        stone *= 0.94 + 0.1 * mottle(xz * 4.5 + 8.0);
+        color = mix(color, stone, smoothstep(0.02, 0.4, bed));
         for (int i = 0; i < 8; i++) {
           float live = step(float(i) + 0.5, nodeCount);
-          float dist = distance(vWorld.xz, nodes[i].xy);
+          float dist = distance(xz, nodes[i].xy);
           float stain = smoothstep(6.5, 0.4, dist) * live;
           vec3 tint = mix(vec3(0.72, 0.42, 0.16), vec3(0.16, 0.62, 0.60), step(0.5, nodes[i].z));
           color = mix(color, tint, stain * 0.78);
         }
-        vec2 grid = fract(vWorld.xz / 4.0);
-        float line = clamp(step(0.93, grid.x) + step(0.93, grid.y), 0.0, 1.0);
-        color = mix(color, vec3(0.55, 0.62, 0.70), line * 0.55);
+        vec2 grid = fract(xz / 4.0);
+        float line = clamp(step(0.992, grid.x) + step(0.992, grid.y), 0.0, 1.0);
+        float open = 1.0 - smoothstep(0.04, 0.35, bed);
+        color = mix(color, vec3(0.58, 0.60, 0.54), line * 0.035 * open);
         gl_FragColor = vec4(color, 1.0);
       }
     `,
   });
-  const floorGeometry = new BoxGeometry(mapSize, 0.02, mapSize);
-  const floor = new Mesh(floorGeometry, groundMaterial);
-  floor.position.set(mapSize / 2, -0.01, mapSize / 2);
+  writeHeights(groundGeometry, heights);
+  const floor = new Mesh(groundGeometry, groundMaterial);
+  floor.frustumCulled = false;
   scene.add(floor);
+  /** The shroud sits just above the ground, so a hidden cell stays covered. */
+  const fog = new Mesh(groundGeometry, fogMaterial);
+  fog.position.y = 0.22;
+  fog.renderOrder = 2;
+  fog.frustumCulled = false;
+  scene.add(fog);
 
   scene.add(new AmbientLight('#c9d2de', 0.42));
   const sun = new DirectionalLight('#ffe2b4', 1.35);
@@ -389,9 +455,11 @@ export function createField(
   scene.add(rim);
 
   function placeCamera(): void {
+    const groundY = surface(target.x, target.z);
+    target.y = groundY;
     camera.position.set(
       target.x + distance * Math.cos(pitch) * Math.sin(yaw),
-      distance * Math.sin(pitch),
+      distance * Math.sin(pitch) + groundY,
       target.z + distance * Math.cos(pitch) * Math.cos(yaw),
     );
     camera.lookAt(target);
@@ -547,7 +615,7 @@ export function createField(
   }
 
   function placeShadow(shadow: Mesh, x: number, z: number, width: number, depth: number): void {
-    shadow.position.set(x, 0.03, z);
+    shadow.position.set(x, surface(x, z) + 0.03, z);
     /** The disc is rotated flat, so local Y is world Z. */
     shadow.scale.set(width, depth, 1);
   }
@@ -561,7 +629,7 @@ export function createField(
     /** The bar copies the camera orientation, whose local +Z points back at the viewer. */
     body.fill.position.set(-BAR_WIDTH / 2 + frame.shown / 2, 0, 0.08);
     (body.fill.material as MeshBasicMaterial).color.set(frame.color);
-    body.bar.position.set(x, height, z);
+    body.bar.position.set(x, surface(x, z) + height, z);
     body.bar.quaternion.copy(camera.quaternion);
   }
 
@@ -626,7 +694,13 @@ export function createField(
     rockMeshes.length = 0;
   }
 
-  /** Tile each rock rect with boulders about two cells apart, or keep one box per rect until both models load. */
+  /** Tile each rock rect with boulders a little over a cell apart, or keep one box per rect until both models load. */
+  function liftRocks(): void {
+    for (const rock of rockMeshes) {
+      rock.root.position.y = surface(rock.root.position.x, rock.root.position.z) + rock.lift;
+    }
+  }
+
   function placeRocks(): void {
     clearRocks();
     const boulder = models.get('rock');
@@ -634,34 +708,49 @@ export function createField(
     for (const rect of rockRects) {
       if (!boulder || !spire) {
         const mesh = new Mesh(new BoxGeometry(rect.width, 0.7, rect.height), rockMaterial);
-        mesh.position.set(rect.x + rect.width / 2, 0.35, rect.y + rect.height / 2);
+        mesh.position.set(rect.x + rect.width / 2, 0, rect.y + rect.height / 2);
         scene.add(mesh);
-        rockMeshes.push({ root: mesh, cell: -1 });
+        rockMeshes.push({ root: mesh, cell: -1, lift: 0.35 });
         continue;
       }
-      /** A low slab under the boulders, so the ridge reads as one wall and not loose stones. */
-      const slab = new Mesh(new BoxGeometry(rect.width, 0.18, rect.height), rockMaterial);
-      slab.position.set(rect.x + rect.width / 2, 0.09, rect.y + rect.height / 2);
-      scene.add(slab);
-      rockMeshes.push({ root: slab, cell: -1 });
-      const columns = Math.max(1, Math.round(rect.width / 2));
-      const rows = Math.max(1, Math.round(rect.height / 2));
+      const rockModel = boulder;
+      const spireModel = spire;
+      const spacing = 1.2;
+      const columns = Math.max(1, Math.ceil(rect.width / spacing));
+      const rows = Math.max(1, Math.ceil(rect.height / spacing));
       const stepX = rect.width / columns;
       const stepZ = rect.height / rows;
+      const margin = 0.35;
       for (let column = 0; column < columns; column++) {
         for (let row = 0; row < rows; row++) {
-          const x = rect.x + stepX * (column + 0.5 + (scatter(column, row, 1) - 0.5) * 0.4);
-          const z = rect.y + stepZ * (row + 0.5 + (scatter(column, row, 2) - 0.5) * 0.4);
-          const root = (scatter(column, row, 3) < 0.22 ? spire : boulder).clone(true);
-          const size = 0.9 + scatter(column, row, 4) * 0.25;
-          root.scale.set(size, 0.75 + scatter(column, row, 5) * 0.45, size);
-          root.rotation.y = scatter(column, row, 6) * Math.PI * 2;
-          root.position.set(x, 0, z);
-          scene.add(root);
-          rockMeshes.push({ root, cell: Math.floor(z) * mapSize + Math.floor(x) });
+          const mainX = rect.x + stepX * (column + 0.5 + (scatter(column, row, 1) - 0.5) * 0.45);
+          const mainZ = rect.y + stepZ * (row + 0.5 + (scatter(column, row, 2) - 0.5) * 0.45);
+          placeStone(mainX, mainZ, column, row, 0, 0.9 + scatter(column, row, 4) * 0.45);
+          if (scatter(column, row, 8) > 0.38) {
+            const fillX = rect.x + stepX * (column + 0.2 + (scatter(column, row, 9) - 0.5) * 0.25);
+            const fillZ = rect.y + stepZ * (row + 0.8 + (scatter(column, row, 10) - 0.5) * 0.25);
+            placeStone(fillX, fillZ, column, row, 1, 0.48 + scatter(column, row, 11) * 0.22);
+          }
+          if (scatter(column, row, 12) > 0.7) {
+            const chipX = rect.x + stepX * (column + 0.72 + (scatter(column, row, 13) - 0.5) * 0.2);
+            const chipZ = rect.y + stepZ * (row + 0.28 + (scatter(column, row, 14) - 0.5) * 0.2);
+            placeStone(chipX, chipZ, column, row, 2, 0.28 + scatter(column, row, 15) * 0.14);
+          }
         }
       }
+
+      function placeStone(x: number, z: number, column: number, row: number, pass: number, size: number): void {
+        const clampedX = Math.min(rect.x + rect.width - margin, Math.max(rect.x + margin, x));
+        const clampedZ = Math.min(rect.y + rect.height - margin, Math.max(rect.y + margin, z));
+        const root = (pass === 0 && scatter(column, row, 3) < 0.16 ? spireModel : rockModel).clone(true);
+        root.scale.set(size, pass === 0 ? 0.8 + scatter(column, row, 5) * 0.55 : size, size);
+        root.rotation.y = scatter(column, row, 6 + pass) * Math.PI * 2;
+        root.position.set(clampedX, 0, clampedZ);
+        scene.add(root);
+        rockMeshes.push({ root, cell: Math.floor(clampedZ) * mapSize + Math.floor(clampedX), lift: 0 });
+      }
     }
+    liftRocks();
   }
 
   placeCamera();
@@ -713,7 +802,7 @@ export function createField(
       const sprite = new Sprite(new SpriteMaterial({ map, transparent: true, depthTest: false, depthWrite: false }));
       sprite.renderOrder = 3;
       sprite.scale.set(size, size, 1);
-      sprite.position.set(x, height, z);
+      sprite.position.set(x, surface(x, z) + height, z);
       scene.add(sprite);
       effects.push({ sprite, sheet: loaded.sheet, born: performance.now() });
     },
@@ -737,9 +826,9 @@ export function createField(
           const fraction = unit.maxHp > 0 ? unit.hp / unit.maxHp : 1;
           const height = scale[1] * (0.45 + 0.55 * fraction);
           body.root.scale.set(scale[0], height, scale[2]);
-          body.root.position.set(unit.x, height / 2, unit.y);
+          body.root.position.set(unit.x, height / 2 + surface(unit.x, unit.y), unit.y);
         } else {
-          body.root.position.set(unit.x, 0, unit.y);
+          body.root.position.set(unit.x, surface(unit.x, unit.y), unit.y);
           /** Face the way the unit moved. Models look down -Z, as the Blender export contract fixes. */
           const dx = unit.x - body.lastX;
           const dz = unit.y - body.lastZ;
@@ -747,7 +836,8 @@ export function createField(
         }
         body.lastX = unit.x;
         body.lastZ = unit.y;
-        body.ring.position.set(unit.x, 0.12, unit.y);
+        const groundY = surface(unit.x, unit.y);
+        body.ring.position.set(unit.x, groundY + 0.12, unit.y);
         body.ring.scale.set(1.25, 1.25, 1);
         body.ring.visible = unit.selected;
         const span = unitShadow(unit.kind);
@@ -779,6 +869,13 @@ export function createField(
       }
     },
     setBuildings(buildings) {
+      buildingPads = buildings.map((building) => ({
+        x: building.x,
+        z: building.y,
+        width: building.width,
+        depth: building.height,
+      }));
+      reshape();
       const seen = new Set<number>();
       for (const building of buildings) {
         seen.add(building.id);
@@ -798,7 +895,7 @@ export function createField(
         if (body.box) {
           const raised = building.wreck ? 0.16 : 0.25 + progress * 1.15;
           body.root.scale.set(building.width * 0.92, raised, building.height * 0.92);
-          body.root.position.set(centerX, raised / 2, centerZ);
+          body.root.position.set(centerX, surface(centerX, centerZ) + raised / 2, centerZ);
           if (building.wreck && body.tint) {
             body.tint.color.copy(WRECK);
             body.tint.emissive.set('#000000');
@@ -806,10 +903,11 @@ export function createField(
         } else {
           /** The spec already sizes the model to the footprint. Height shows construction, or a flattened wreck. */
           body.root.scale.set(1, building.wreck ? 0.25 : 0.15 + progress * 0.85, 1);
-          body.root.position.set(centerX, 0, centerZ);
+          body.root.position.set(centerX, surface(centerX, centerZ), centerZ);
           if (building.wreck && !body.wrecked) wreckModel(body);
         }
-        body.ring.position.set(centerX, 0.12, centerZ);
+        const groundY = surface(centerX, centerZ);
+        body.ring.position.set(centerX, groundY + 0.12, centerZ);
         body.ring.scale.setScalar(Math.max(building.width, building.height) * 1.05);
         body.ring.visible = building.selected;
         placeShadow(body.shadow, centerX, centerZ, building.width * 1.35, building.height * 1.35);
@@ -822,6 +920,8 @@ export function createField(
       }
     },
     setNodes(nodes) {
+      nodePads = nodes.map((node) => ({ x: node.x, z: node.y, width: 1, depth: 1 }));
+      reshape();
       const count = Math.min(nodes.length, nodeSlots.length);
       for (let i = 0; i < nodeSlots.length; i++) {
         const node = nodes[i];
@@ -843,8 +943,9 @@ export function createField(
           scene.add(shown.root);
           nodeMeshes.set(node.id, shown);
         }
-        if (shown.box) shown.root.position.set(node.x + 0.5, node.kind === 'ore' ? 0.28 : 0.45, node.y + 0.5);
-        else shown.root.position.set(node.x + 0.5, 0, node.y + 0.5);
+        const groundY = surface(node.x + 0.5, node.y + 0.5);
+        if (shown.box) shown.root.position.set(node.x + 0.5, groundY + (node.kind === 'ore' ? 0.28 : 0.45), node.y + 0.5);
+        else shown.root.position.set(node.x + 0.5, groundY, node.y + 0.5);
       }
       for (const [id, shown] of nodeMeshes) {
         if (seen.has(id)) continue;
@@ -854,6 +955,13 @@ export function createField(
     },
     setRocks(rocks) {
       rockRects = rocks.map((rock) => ({ ...rock }));
+      const count = Math.min(rocks.length, bedSlots.length);
+      for (let i = 0; i < bedSlots.length; i++) {
+        const rock = rocks[i];
+        if (i < count && rock) bedSlots[i].set(rock.x, rock.y, rock.width, rock.height);
+        else bedSlots[i].set(0, 0, 0, 0);
+      }
+      groundMaterial.uniforms.bedCount!.value = count;
       placeRocks();
     },
     setFog(explored, visible) {
@@ -894,13 +1002,13 @@ export function createField(
       const east = ghostEdges[3];
       if (!north || !south || !west || !east) return;
       north.scale.set(next.width, 1, thickness);
-      north.position.set(next.x + next.width / 2, 0.08, next.y + thickness / 2);
+      north.position.set(next.x + next.width / 2, surface(next.x + next.width / 2, next.y + thickness / 2) + 0.08, next.y + thickness / 2);
       south.scale.set(next.width, 1, thickness);
-      south.position.set(next.x + next.width / 2, 0.08, next.y + next.height - thickness / 2);
+      south.position.set(next.x + next.width / 2, surface(next.x + next.width / 2, next.y + next.height - thickness / 2) + 0.08, next.y + next.height - thickness / 2);
       west.scale.set(thickness, 1, next.height);
-      west.position.set(next.x + thickness / 2, 0.08, next.y + next.height / 2);
+      west.position.set(next.x + thickness / 2, surface(next.x + thickness / 2, next.y + next.height / 2) + 0.08, next.y + next.height / 2);
       east.scale.set(thickness, 1, next.height);
-      east.position.set(next.x + next.width - thickness / 2, 0.08, next.y + next.height / 2);
+      east.position.set(next.x + next.width - thickness / 2, surface(next.x + next.width - thickness / 2, next.y + next.height / 2) + 0.08, next.y + next.height / 2);
     },
     setMarker(cell, accepted, raised = false) {
       if (!cell) {
@@ -908,7 +1016,7 @@ export function createField(
         return;
       }
       marker.visible = true;
-      marker.position.set(cell.x + 0.5, raised ? 1.35 : 0.16, cell.y + 0.5);
+      marker.position.set(cell.x + 0.5, surface(cell.x + 0.5, cell.y + 0.5) + (raised ? 1.35 : 0.16), cell.y + 0.5);
       marker.scale.setScalar(raised ? 2.2 : 1);
       markerMaterial.color.copy(accepted ? MARKER_OK : MARKER_BAD);
       markerMaterial.emissive.copy(accepted ? MARKER_OK : MARKER_BAD);
@@ -941,13 +1049,13 @@ export function createField(
       pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
-      if (!raycaster.ray.intersectPlane(ground, hit)) return null;
-      if (hit.x < 0 || hit.z < 0 || hit.x >= mapSize || hit.z >= mapSize) return null;
-      return { x: hit.x, y: hit.z };
+      const point = raycaster.intersectObject(floor, false)[0]?.point;
+      if (!point || point.x < 0 || point.z < 0 || point.x >= mapSize || point.z >= mapSize) return null;
+      return { x: point.x, y: point.z };
     },
     project(x, y, height = 0) {
       const rect = canvas.getBoundingClientRect();
-      hit.set(x, height, y);
+      hit.set(x, surface(x, y) + height, y);
       hit.project(camera);
       return {
         x: (hit.x * 0.5 + 0.5) * rect.width + rect.left,
@@ -982,9 +1090,8 @@ export function createField(
       oreGeometry.dispose();
       aetherGeometry.dispose();
       markerGeometry.dispose();
-      floorGeometry.dispose();
+      groundGeometry.dispose();
       groundMaterial.dispose();
-      fog.geometry.dispose();
       fogMaterial.dispose();
       fogTexture.dispose();
       for (const texture of panels.values()) texture.dispose();
@@ -994,4 +1101,48 @@ export function createField(
       ghostBar.dispose();
     },
   };
+}
+
+/** A grid in cell space, one vertex per corner. Y is filled by `writeHeights`. */
+function reliefGeometry(mapSize: number): BufferGeometry {
+  const stride = mapSize + 1;
+  const positions = new Float32Array(stride * stride * 3);
+  const indices = new Uint32Array(mapSize * mapSize * 6);
+  for (let z = 0; z <= mapSize; z++) {
+    for (let x = 0; x <= mapSize; x++) {
+      const index = (z * stride + x) * 3;
+      positions[index] = x;
+      positions[index + 2] = z;
+    }
+  }
+  let cursor = 0;
+  for (let z = 0; z < mapSize; z++) {
+    for (let x = 0; x < mapSize; x++) {
+      const a = z * stride + x;
+      const b = a + 1;
+      const c = a + stride;
+      const d = c + 1;
+      indices[cursor++] = a;
+      indices[cursor++] = c;
+      indices[cursor++] = b;
+      indices[cursor++] = b;
+      indices[cursor++] = c;
+      indices[cursor++] = d;
+    }
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new BufferAttribute(positions, 3));
+  geometry.setIndex(new BufferAttribute(indices, 1));
+  return geometry;
+}
+
+function writeHeights(geometry: BufferGeometry, heights: Float32Array): void {
+  const source = geometry.getAttribute('position').array as Float32Array;
+  const copy = new Float32Array(source);
+  for (let i = 0; i < heights.length; i++) copy[i * 3 + 1] = heights[i] ?? 0;
+  // A fresh attribute is what actually reaches the GPU. Updating the original
+  // buffer in place left the mesh flat.
+  geometry.setAttribute('position', new BufferAttribute(copy, 3));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
 }
