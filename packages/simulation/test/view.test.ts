@@ -22,7 +22,7 @@ function leaks(sim: Simulation, view: ClientView): string[] {
   for (const unit of view.units) {
     if (unit.owner === seat) continue;
     if (!canSee(world, seat, Math.floor(unit.x), Math.floor(unit.y))) found.push(`unit ${unit.id} out of sight`);
-    if (unit.order !== undefined || unit.carryOre !== undefined) found.push(`unit ${unit.id} orders`);
+    if (unit.order !== undefined || unit.carryOre !== undefined || unit.path !== undefined) found.push(`unit ${unit.id} orders`);
   }
   for (const building of view.buildings) {
     if (building.owner === seat) continue;
@@ -87,6 +87,28 @@ describe('client view', () => {
     node.amount -= 100;
     expect(clientView(secret.world, PLAYER_ID, true)).toEqual(clientView(plain.world, PLAYER_ID, true));
     expect(clientView(secret.world, ENEMY_ID)).not.toEqual(clientView(plain.world, ENEMY_ID));
+  });
+
+  it('sends a march only to the unit owner', () => {
+    const sim = Simulation.create();
+    const unit = sim.world.units.find((entry) => entry.owner === PLAYER_ID)!;
+    unit.waypoints = [
+      { x: unit.x + 1, y: unit.y },
+      { x: unit.x + 3, y: unit.y },
+    ];
+    const own = clientView(sim.world, PLAYER_ID).units.find((entry) => entry.id === unit.id);
+    expect(own?.path).toEqual(unit.waypoints);
+    const many = Array.from({ length: 40 }, (_, index) => ({ x: index + 0.5, y: unit.y }));
+    unit.waypoints = many;
+    const thinned = clientView(sim.world, PLAYER_ID).units.find((entry) => entry.id === unit.id)?.path;
+    expect(thinned).toHaveLength(24);
+    expect(thinned?.[0]).toEqual(many[0]);
+    expect(thinned?.at(-1)).toEqual(many.at(-1));
+    const cell = Math.floor(unit.y) * MAP_SIZE + Math.floor(unit.x);
+    sim.world.visible[ENEMY_ID - 1]![cell] = 1;
+    const foreign = clientView(sim.world, ENEMY_ID).units.find((entry) => entry.id === unit.id);
+    expect(foreign?.id).toBe(unit.id);
+    expect(foreign?.path).toBeUndefined();
   });
 
   it('carries the explored grid only in a full view', () => {

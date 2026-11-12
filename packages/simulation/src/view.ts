@@ -47,6 +47,8 @@ export interface ViewUnit {
   order?: OrderKind;
   carryOre?: number;
   carryAether?: number;
+  /** The seat's own march, thinned. Never sent for a unit the seat does not own. */
+  path?: { x: number; y: number }[];
 }
 
 export interface ViewBuilding {
@@ -105,6 +107,20 @@ export function decodeRuns(runs: readonly number[], size: number): Uint8Array | 
   return at === size ? grid : null;
 }
 
+/** A march across the map must not blow the host message. First and last points stay. */
+const PATH_LIMIT = 24;
+
+function thinPath(points: { x: number; y: number }[]): { x: number; y: number }[] {
+  if (points.length <= PATH_LIMIT) return points.map((point) => ({ x: point.x, y: point.y }));
+  const kept: { x: number; y: number }[] = [];
+  for (let index = 0; index < PATH_LIMIT; index++) {
+    const at = Math.floor((index * (points.length - 1)) / (PATH_LIMIT - 1));
+    const point = points[at]!;
+    kept.push({ x: point.x, y: point.y });
+  }
+  return kept;
+}
+
 /** Build the view for one seat. `full` adds the explored grid, for a first view or a reconnect. */
 export function clientView(world: World, seat: number, full = false): ClientView {
   const index = seat - 1;
@@ -119,6 +135,7 @@ export function clientView(world: World, seat: number, full = false): ClientView
       drawn.order = unit.order;
       drawn.carryOre = unit.carryOre;
       drawn.carryAether = unit.carryAether;
+      if (unit.waypoints.length > 0) drawn.path = thinPath(unit.waypoints);
     }
     units.push(drawn);
   }

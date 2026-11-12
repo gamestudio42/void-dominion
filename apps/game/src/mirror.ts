@@ -37,7 +37,7 @@ export function createMirror(seed: number, seat: number): Mirror {
         x: unit.x,
         y: unit.y,
         hp: unit.hp,
-        waypoints: [],
+        waypoints: (unit.path ?? []).map((point) => ({ x: point.x, y: point.y })),
         order: unit.order ?? 'idle',
         targetId: 0,
         goalX: unit.x,

@@ -76,12 +76,19 @@ describe('messages', () => {
 
   it('refuses a view that would not draw', () => {
     const view = clientView(Simulation.create().world, PLAYER_ID, true);
+    const marched = {
+      ...view,
+      units: view.units.map((unit, index) => (index === 0 ? { ...unit, path: [{ x: 1.5, y: 2.5 }] } : unit)),
+    };
+    expect(host({ t: 'view', v, view: marched }).ok).toBe(true);
     const broken = [
       { ...view, seat: 0 },
       { ...view, visible: [1] },
       { ...view, explored: [5, 5] },
       { ...view, units: [{ ...view.units[0]!, kind: 'dragon' }] },
       { ...view, units: [{ ...view.units[0]!, x: 'left' }] },
+      { ...view, units: [{ ...view.units[0]!, path: [{ x: 'east', y: 1 }] }] },
+      { ...view, units: [{ ...view.units[0]!, path: [] }] },
       { ...view, buildings: [{ ...view.buildings[0]!, queue: ['dragon'] }] },
       { ...view, nodes: [{ ...view.nodes[0]!, kind: 'gold' }] },
       { ...view, ore: null },
