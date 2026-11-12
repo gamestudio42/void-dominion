@@ -3,11 +3,15 @@ import {
   BoxGeometry,
   ClampToEdgeWrapping,
   CanvasTexture,
+  CircleGeometry,
   Color,
   DataTexture,
   DirectionalLight,
+  DoubleSide,
+  Group,
   LinearFilter,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   NearestFilter,
   NoColorSpace,
@@ -138,6 +142,10 @@ const PANELED = new Set([
 interface Body {
   root: Object3D;
   ring: Mesh;
+  shadow: Mesh;
+  /** Set for a unit. Hidden until that unit has lost hit points. */
+  bar: Group | null;
+  fill: Mesh | null;
   /** Owner-tinted material: the box material, or this body's copy of the model's team material. */
   tint: MeshStandardMaterial | null;
   box: boolean;
@@ -145,6 +153,35 @@ interface Body {
   wrecked: boolean;
   lastX: number;
   lastZ: number;
+}
+
+/** Disc diameter under a unit. The circle geometry has radius 0.5, so this is the world span. */
+function unitShadow(kind: string): number {
+  if (kind === 'interceptor') return 1.7;
+  if (kind === 'assault_walker') return 1.35;
+  if (kind === 'scout_rover') return 1.2;
+  return 1.15;
+}
+
+/** Just above the mesh. A fixed height left the bar floating over the infantry. */
+function barHeight(kind: string): number {
+  if (kind === 'assault_walker') return 1.15;
+  if (kind === 'rocketeer' || kind === 'rifleman') return 0.95;
+  if (kind === 'interceptor') return 0.72;
+  if (kind === 'scout_rover') return 0.55;
+  return 0.62;
+}
+
+const BAR_WIDTH = 0.9;
+
+/** A world bar only after the unit is wounded. Full health stays unmarked. */
+export function healthBarFrame(hp: number, maxHp: number): { show: boolean; shown: number; color: string } {
+  const show = maxHp > 0 && hp > 0 && hp < maxHp;
+  if (!show) return { show: false, shown: 0, color: '#9be7b4' };
+  const fraction = hp / maxHp;
+  const shown = Math.max(0.05, BAR_WIDTH * fraction);
+  const color = fraction > 0.5 ? '#9be7b4' : fraction > 0.25 ? '#ffb03a' : '#ff5a52';
+  return { show: true, shown, color };
 }
 
 /** Fallback box sizes while a unit model is missing. */
@@ -186,8 +223,28 @@ export function createField(
 
   const unitGeometry = new BoxGeometry(1, 1, 1);
   const buildingGeometry = new BoxGeometry(1, 1, 1);
-  const ringGeometry = new RingGeometry(0.42, 0.56, 24);
+  const ringGeometry = new RingGeometry(0.58, 0.78, 40);
   ringGeometry.rotateX(-Math.PI / 2);
+  const shadowGeometry = new CircleGeometry(0.5, 24);
+  shadowGeometry.rotateX(-Math.PI / 2);
+  const shadowMaterial = new MeshBasicMaterial({
+    color: '#05070b',
+    transparent: true,
+    opacity: 0.72,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  const barGeometry = new PlaneGeometry(1, 1);
+  const barBackMaterial = new MeshBasicMaterial({
+    color: '#1a1210',
+    transparent: true,
+    opacity: 0.92,
+    depthWrite: false,
+    side: DoubleSide,
+    toneMapped: false,
+  });
   const oreGeometry = new BoxGeometry(0.7, 0.55, 0.7);
   const aetherGeometry = new BoxGeometry(0.45, 0.9, 0.45);
 
@@ -217,13 +274,20 @@ export function createField(
   marker.position.y = 0.2;
   scene.add(marker);
 
-  const ghostMaterial = new MeshStandardMaterial({
+  const ghostMaterial = new MeshBasicMaterial({
     color: MARKER_OK,
     transparent: true,
-    opacity: 0.4,
+    opacity: 0.95,
     depthWrite: false,
   });
-  const ghost = new Mesh(buildingGeometry, ghostMaterial);
+  const ghostBar = new BoxGeometry(1, 0.08, 1);
+  const ghost = new Group();
+  const ghostEdges = [0, 1, 2, 3].map(() => {
+    const edge = new Mesh(ghostBar, ghostMaterial);
+    edge.renderOrder = 1;
+    ghost.add(edge);
+    return edge;
+  });
   ghost.visible = false;
   scene.add(ghost);
 
@@ -433,12 +497,32 @@ export function createField(
     });
   }
 
-  function makeBody(kind: string, fallback: BoxGeometry, roughness: number, x: number, z: number): Body {
-    const ring = new Mesh(ringGeometry, new MeshStandardMaterial({ color: '#f4e7c8', emissive: '#f4e7c8', emissiveIntensity: 0.4 }));
+  function makeBody(kind: string, fallback: BoxGeometry, roughness: number, x: number, z: number, bars: boolean): Body {
+    const ring = new Mesh(
+      ringGeometry,
+      new MeshBasicMaterial({ color: '#ffe7b0', transparent: true, opacity: 0.95, depthWrite: false }),
+    );
+    const shadow = new Mesh(shadowGeometry, shadowMaterial);
+    shadow.renderOrder = 1;
+    let bar: Group | null = null;
+    let fill: Mesh | null = null;
+    if (bars) {
+      bar = new Group();
+      const back = new Mesh(barGeometry, barBackMaterial);
+      back.scale.set(0.98, 0.18, 1);
+      fill = new Mesh(
+        barGeometry,
+        new MeshBasicMaterial({ color: '#9be7b4', depthWrite: false, side: DoubleSide, toneMapped: false }),
+      );
+      fill.position.z = 0.08;
+      bar.add(back, fill);
+      bar.visible = false;
+      bar.renderOrder = 3;
+    }
     const template = models.get(kind);
     if (!template) {
       const material = new MeshStandardMaterial({ roughness, metalness: 0.08 });
-      return { root: new Mesh(fallback, material), ring, tint: material, box: true, wrecked: false, lastX: x, lastZ: z };
+      return { root: new Mesh(fallback, material), ring, shadow, bar, fill, tint: material, box: true, wrecked: false, lastX: x, lastZ: z };
     }
     /** Geometry stays shared. Team (or the interceptor hull) is copied per body. Building hulls take a panel map. */
     const root = template.clone(true);
@@ -459,7 +543,26 @@ export function createField(
         child.material = plated;
       }
     });
-    return { root, ring, tint, box: false, wrecked: false, lastX: x, lastZ: z };
+    return { root, ring, shadow, bar, fill, tint, box: false, wrecked: false, lastX: x, lastZ: z };
+  }
+
+  function placeShadow(shadow: Mesh, x: number, z: number, width: number, depth: number): void {
+    shadow.position.set(x, 0.03, z);
+    /** The disc is rotated flat, so local Y is world Z. */
+    shadow.scale.set(width, depth, 1);
+  }
+
+  function placeBar(body: Body, x: number, z: number, hp: number, maxHp: number, height: number): void {
+    if (!body.bar || !body.fill) return;
+    const frame = healthBarFrame(hp, maxHp);
+    body.bar.visible = frame.show;
+    if (!frame.show) return;
+    body.fill.scale.set(frame.shown, 0.11, 1);
+    /** The bar copies the camera orientation, whose local +Z points back at the viewer. */
+    body.fill.position.set(-BAR_WIDTH / 2 + frame.shown / 2, 0, 0.08);
+    (body.fill.material as MeshBasicMaterial).color.set(frame.color);
+    body.bar.position.set(x, height, z);
+    body.bar.quaternion.copy(camera.quaternion);
   }
 
   /** Repaint a model with the shared wreck material. Its own team copy is no longer drawn. */
@@ -501,9 +604,11 @@ export function createField(
   }
 
   function dropBody(body: Body): void {
-    scene.remove(body.root, body.ring);
+    scene.remove(body.root, body.ring, body.shadow);
+    if (body.bar) scene.remove(body.bar);
     body.tint?.dispose();
-    (body.ring.material as MeshStandardMaterial).dispose();
+    (body.ring.material as MeshBasicMaterial).dispose();
+    if (body.fill) (body.fill.material as MeshBasicMaterial).dispose();
   }
 
   /** Small integer hash, so a boulder's look depends only on where it stands. */
@@ -622,8 +727,9 @@ export function createField(
           body = undefined;
         }
         if (!body) {
-          body = makeBody(unit.kind, unitGeometry, 0.55, unit.x, unit.y);
-          scene.add(body.root, body.ring);
+          body = makeBody(unit.kind, unitGeometry, 0.55, unit.x, unit.y, true);
+          scene.add(body.root, body.ring, body.shadow);
+          if (body.bar) scene.add(body.bar);
           bodies.set(unit.id, body);
         }
         if (body.box) {
@@ -641,8 +747,12 @@ export function createField(
         }
         body.lastX = unit.x;
         body.lastZ = unit.y;
-        body.ring.position.set(unit.x, 0.08, unit.y);
+        body.ring.position.set(unit.x, 0.12, unit.y);
+        body.ring.scale.set(1.25, 1.25, 1);
         body.ring.visible = unit.selected;
+        const span = unitShadow(unit.kind);
+        placeShadow(body.shadow, unit.x, unit.y, span, span);
+        placeBar(body, unit.x, unit.y, unit.hp, unit.maxHp, barHeight(unit.kind));
         if (body.tint) paintOwner(body.tint, unit.owner, unit.selected, unit.hp, unit.maxHp);
       }
       for (const [id, body] of bodies) {
@@ -680,8 +790,8 @@ export function createField(
           body = undefined;
         }
         if (!body) {
-          body = makeBody(building.kind, buildingGeometry, 0.72, centerX, centerZ);
-          scene.add(body.root, body.ring);
+          body = makeBody(building.kind, buildingGeometry, 0.72, centerX, centerZ, false);
+          scene.add(body.root, body.ring, body.shadow);
           structures.set(building.id, body);
         }
         const progress = Math.max(0, Math.min(1, building.progress));
@@ -699,9 +809,10 @@ export function createField(
           body.root.position.set(centerX, 0, centerZ);
           if (building.wreck && !body.wrecked) wreckModel(body);
         }
-        body.ring.position.set(centerX, 0.08, centerZ);
-        body.ring.scale.setScalar(Math.max(building.width, building.height));
+        body.ring.position.set(centerX, 0.12, centerZ);
+        body.ring.scale.setScalar(Math.max(building.width, building.height) * 1.05);
         body.ring.visible = building.selected;
+        placeShadow(body.shadow, centerX, centerZ, building.width * 1.35, building.height * 1.35);
         if (!building.wreck && body.tint) paintOwner(body.tint, building.owner, building.selected, building.hp, building.maxHp);
       }
       for (const [id, body] of structures) {
@@ -775,9 +886,21 @@ export function createField(
         return;
       }
       ghost.visible = true;
-      ghost.scale.set(next.width * 0.92, 0.2, next.height * 0.92);
-      ghost.position.set(next.x + next.width / 2, 1.05, next.y + next.height / 2);
       ghostMaterial.color.copy(next.ok ? MARKER_OK : MARKER_BAD);
+      const thickness = 0.14;
+      const north = ghostEdges[0];
+      const south = ghostEdges[1];
+      const west = ghostEdges[2];
+      const east = ghostEdges[3];
+      if (!north || !south || !west || !east) return;
+      north.scale.set(next.width, 1, thickness);
+      north.position.set(next.x + next.width / 2, 0.08, next.y + thickness / 2);
+      south.scale.set(next.width, 1, thickness);
+      south.position.set(next.x + next.width / 2, 0.08, next.y + next.height - thickness / 2);
+      west.scale.set(thickness, 1, next.height);
+      west.position.set(next.x + thickness / 2, 0.08, next.y + next.height / 2);
+      east.scale.set(thickness, 1, next.height);
+      east.position.set(next.x + next.width - thickness / 2, 0.08, next.y + next.height / 2);
     },
     setMarker(cell, accepted, raised = false) {
       if (!cell) {
@@ -852,6 +975,10 @@ export function createField(
       unitGeometry.dispose();
       buildingGeometry.dispose();
       ringGeometry.dispose();
+      shadowGeometry.dispose();
+      shadowMaterial.dispose();
+      barGeometry.dispose();
+      barBackMaterial.dispose();
       oreGeometry.dispose();
       aetherGeometry.dispose();
       markerGeometry.dispose();
@@ -864,6 +991,7 @@ export function createField(
       panels.clear();
       markerMaterial.dispose();
       ghostMaterial.dispose();
+      ghostBar.dispose();
     },
   };
 }

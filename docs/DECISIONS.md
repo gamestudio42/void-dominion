@@ -139,3 +139,7 @@ On 2026-11-12 the match looked like a flat colour with a grid drawn on it, and t
 
 On 2026-11-12 the seven buildings still read as one clay colour, and the five ground units did too, because the view cloned the first `team` or `hull` material and painted every slot with it. The owner colour now stays on the `team` material. The interceptor is the exception: it has no `team` slot, so the owner still shifts its `hull`. Building hulls take a panel map drawn in the view, one mark per kind, so the Blender meshes stay untextured. The selection card shows current hit points for one unit or building, and catalog damage, range and cost. Stop, mine, attack and build use inline marks. Accept, refuse, a shot and a finished building each play one synthesized tone in the client. None of this is a command, and the simulation checksum is unchanged.
 
+## 028. Contact, the selection band, and the footprint outline
+
+On 2026-11-12 a building still looked pasted on the ground: nothing sat under it, the selection ring was a thin line, and the build preview was a translucent slab. The view now lays a dark disc under each unit and building, draws a brighter selection band, and shows a bar over a unit only after it has lost hit points. The build preview is the footprint outline, green when the site is legal and red when it is not. None of this is a command, and the simulation checksum is unchanged.
+

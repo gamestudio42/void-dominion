@@ -30,7 +30,7 @@ The beat this build changes is the whole skirmish: gather ore, spend it, train s
 - Accepts one produce, group or defend plan between ticks. The plan becomes an ordinary command and cannot see hidden units. The client does not consult a model.
 - Compares three unattended seeds headless. They end on the same tick. The checksum changes with the seed, because no rule draws from the random stream yet.
 - Shows ore, aether, supply, power and the match clock in one panel. The command card stops, mines, attacks, builds and trains. WASD pans, the wheel zooms, F3 shows tick and FPS.
-- Paints the ground in the view: regolith that varies by cell, a faint line every four cells, and a stain on an explored ore or aether node. The menu is that opening, frozen, until a match starts. Building hulls carry a panel map drawn in the view; the owner colour stays on the team stripe. A selected unit or building shows hit points, damage, range and cost. Accept, refuse, a shot and a finished building each play one short synthesized tone.
+- Paints the ground in the view: regolith that varies by cell, a faint line every four cells, and a stain on an explored ore or aether node. The menu is that opening, frozen, until a match starts. Building hulls carry a panel map drawn in the view; the owner colour stays on the team stripe. A selected unit or building shows hit points, damage, range and cost. A disc sits under each mesh, the selection band is brighter, and a unit draws a bar only after it loses hit points. The build preview is the footprint outline. Accept, refuse, a shot and a finished building each play one short synthesized tone.
 
 ## What this build does not do
 
