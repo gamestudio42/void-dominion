@@ -224,6 +224,60 @@ describe('skirmish', () => {
     const replay = Simulation.replay(restored!.commands, restored!.ticks);
     expect(replay.hashState()).toBe(live.hashState());
   });
+
+  it('stands the opening engineers on different cells around the ore', () => {
+    const sim = Simulation.create();
+    const node = sim.world.nodes.find((item) => item.kind === 'ore' && item.x === 16)!;
+    const settled = new Map<number, { x: number; y: number }>();
+    for (let i = 0; i < 40 && settled.size < 4; i++) {
+      sim.step();
+      for (const unit of engineers(sim)) {
+        if (settled.has(unit.id) || unit.order !== 'gather' || unit.waypoints.length > 0) continue;
+        const x = Math.floor(unit.x);
+        const y = Math.floor(unit.y);
+        const dx = Math.abs(x - node.x);
+        const dy = Math.abs(y - node.y);
+        if (dx > 1 || dy > 1 || (dx === 0 && dy === 0)) continue;
+        settled.set(unit.id, { x, y });
+      }
+    }
+    const spots = [...settled.values()];
+    expect(spots).toHaveLength(4);
+    expect(new Set(spots.map((spot) => `${spot.x},${spot.y}`)).size).toBe(4);
+    expect(new Set(spots.map((spot) => spot.x - spot.y)).size).toBe(4);
+  });
+
+  it('splits engineers that start on the same cell', () => {
+    const sim = Simulation.create();
+    const node = sim.world.nodes.find((item) => item.kind === 'ore' && item.x === 16)!;
+    const miners = engineers(sim);
+    for (const unit of miners) {
+      unit.x = 15.5;
+      unit.y = 99.5;
+      unit.waypoints = [];
+      unit.order = 'gather';
+      unit.targetId = node.id;
+      unit.timer = 0;
+      unit.carryOre = 0;
+    }
+    const settled = new Map<number, { x: number; y: number }>();
+    for (let i = 0; i < 40 && settled.size < miners.length; i++) {
+      sim.step();
+      for (const unit of miners) {
+        if (settled.has(unit.id) || unit.order !== 'gather' || unit.waypoints.length > 0) continue;
+        const x = Math.floor(unit.x);
+        const y = Math.floor(unit.y);
+        const dx = Math.abs(x - node.x);
+        const dy = Math.abs(y - node.y);
+        if (dx > 1 || dy > 1 || (dx === 0 && dy === 0)) continue;
+        settled.set(unit.id, { x, y });
+      }
+    }
+    const spots = [...settled.values()];
+    expect(spots).toHaveLength(miners.length);
+    expect(new Set(spots.map((spot) => `${spot.x},${spot.y}`)).size).toBe(miners.length);
+    expect(new Set(spots.map((spot) => spot.x - spot.y)).size).toBe(miners.length);
+  });
 });
 
 describe('refusals behind the fog', () => {
@@ -323,6 +377,31 @@ describe('refusals behind the fog', () => {
       }),
     );
     expect(reason).toBe(RejectReason.unknownUnit);
+  });
+
+  it('trains an interceptor from a finished factory and refuses it from the command center', () => {
+    const sim = Simulation.create();
+    for (const unit of sim.world.units) {
+      if (unit.owner === PLAYER_ID) unit.order = 'idle';
+    }
+    const stock = player(sim);
+    stock.ore = 500;
+    stock.aether = 100;
+    const cc = sim.world.buildings.find((building) => building.owner === PLAYER_ID && building.kind === 'command_center')!;
+    sim.world.buildings.push(makeBuilding(sim.world, PLAYER_ID, 'vehicle_factory', 24, 90, true));
+    rebake(sim.world);
+    const factory = sim.world.buildings.find((building) => building.kind === 'vehicle_factory')!;
+    sim.enqueue({ type: 'produce', playerId: PLAYER_ID, buildingId: cc.id, kind: 'interceptor' });
+    sim.step();
+    expect(sim.lastRejection).toBe(RejectReason.cannotProduce);
+    expect(stock.ore).toBe(500);
+    expect(stock.aether).toBe(100);
+    sim.enqueue({ type: 'produce', playerId: PLAYER_ID, buildingId: factory.id, kind: 'interceptor' });
+    sim.step();
+    expect(sim.lastRejection).toBeNull();
+    expect(stock.ore).toBe(500 - UNITS.interceptor.ore);
+    expect(stock.aether).toBe(100 - UNITS.interceptor.aether);
+    expect(factory.prod?.kind).toBe('interceptor');
   });
 });
 

@@ -178,7 +178,14 @@ function isViewUnit(value: Record<string, unknown>): boolean {
   if (!isCount(value.id) || !isSeat(value.owner) || typeof value.kind !== 'string' || !isUnitKind(value.kind)) return false;
   if (!isFinite(value.x) || !isFinite(value.y) || !isFinite(value.hp) || !isCount(value.cooldown)) return false;
   if (value.order !== undefined && !ORDERS.has(value.order as string)) return false;
+  if (value.path !== undefined && !isPath(value.path)) return false;
   return optionalFinite(value.carryOre) && optionalFinite(value.carryAether);
+}
+
+/** Own march only. Capped so a view cannot smuggle a map. */
+function isPath(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 64) return false;
+  return value.every((point) => isRecord(point) && isFinite(point.x) && isFinite(point.y));
 }
 
 function isViewBuilding(value: Record<string, unknown>): boolean {

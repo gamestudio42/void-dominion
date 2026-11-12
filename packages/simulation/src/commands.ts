@@ -1,5 +1,6 @@
 import {
   BUILDINGS,
+  MAP_SIZE,
   QUEUE_LIMIT,
   inMap,
   buildingDef,
@@ -165,11 +166,82 @@ function assignSlots(world: World, units: Unit[], to: Cell, order: 'move' | 'att
   return null;
 }
 
-function chase(world: World, unit: Unit, aim: Aim): void {
+function crowded(claimed: Uint8Array, unit: Unit): boolean {
+  return claimed[cellIndex(cellOf(unit.x), cellOf(unit.y))] > 1;
+}
+
+function chase(world: World, unit: Unit, aim: Aim, claimed: Uint8Array, lanes: Uint8Array): void {
   const range = unitDef(unit.kind).range;
-  if (range > 0 && inRange(unit.x, unit.y, aim, range)) return;
-  const path = approachPath(world.blocked, cellOf(unit.x), cellOf(unit.y), aim.cellX, aim.cellY, aim.w, aim.h);
-  if (path) unit.waypoints = toWaypoints(path);
+  if (range > 0 && inRange(unit.x, unit.y, aim, range) && !crowded(claimed, unit)) return;
+  steerToFootprint(world, unit, aim.cellX, aim.cellY, aim.w, aim.h, claimed, lanes);
+}
+
+/** Cells and camera lanes a unit is standing on, or already walking toward. */
+function claimCells(world: World, lanes: Uint8Array): Uint8Array {
+  const claimed = new Uint8Array(MAP_SIZE * MAP_SIZE);
+  for (const unit of world.units) {
+    const x = cellOf(unit.x);
+    const y = cellOf(unit.y);
+    hold(claimed, x, y);
+    holdLane(lanes, x, y);
+    const last = unit.waypoints[unit.waypoints.length - 1];
+    if (!last) continue;
+    const endX = cellOf(last.x);
+    const endY = cellOf(last.y);
+    if (endX === x && endY === y) continue;
+    hold(claimed, endX, endY);
+    holdLane(lanes, endX, endY);
+  }
+  return claimed;
+}
+
+function hold(claimed: Uint8Array, x: number, y: number): void {
+  if (!inMap(x, y)) return;
+  const index = cellIndex(x, y);
+  if (claimed[index] < 255) claimed[index] += 1;
+}
+
+function release(claimed: Uint8Array, x: number, y: number): void {
+  if (!inMap(x, y)) return;
+  const index = cellIndex(x, y);
+  if (claimed[index] > 0) claimed[index] -= 1;
+}
+
+function holdLane(lanes: Uint8Array, x: number, y: number): void {
+  if (!inMap(x, y)) return;
+  const index = x - y + MAP_SIZE - 1;
+  if (lanes[index] < 255) lanes[index] += 1;
+}
+
+function releaseLane(lanes: Uint8Array, x: number, y: number): void {
+  if (!inMap(x, y)) return;
+  const index = x - y + MAP_SIZE - 1;
+  if (lanes[index] > 0) lanes[index] -= 1;
+}
+
+/** Walk to a free cell touching the footprint. The unit's own cell is free to keep. */
+function steerToFootprint(
+  world: World,
+  unit: Unit,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  claimed: Uint8Array,
+  lanes: Uint8Array,
+): void {
+  const fromX = cellOf(unit.x);
+  const fromY = cellOf(unit.y);
+  release(claimed, fromX, fromY);
+  releaseLane(lanes, fromX, fromY);
+  const path = approachPath(world.blocked, fromX, fromY, x, y, width, height, claimed, lanes);
+  hold(claimed, fromX, fromY);
+  holdLane(lanes, fromX, fromY);
+  if (!path || path.length === 0) return;
+  unit.waypoints = toWaypoints(path);
+  const end = path[path.length - 1]!;
+  hold(claimed, end.x, end.y);
+  holdLane(lanes, end.x, end.y);
 }
 
 function pathToGoal(world: World, unit: Unit): void {
@@ -181,6 +253,8 @@ function pathToGoal(world: World, unit: Unit): void {
 
 /** Recompute a path when the next cell is blocked or the order has nowhere to walk. */
 export function steerAll(world: World): void {
+  const lanes = new Uint8Array(MAP_SIZE * 2);
+  const claimed = claimCells(world, lanes);
   for (const unit of world.units) {
     if (unit.waypoints.length > 0) {
       const next = unit.waypoints[0]!;
@@ -201,7 +275,7 @@ export function steerAll(world: World): void {
       if (seesAim(world, unit.owner, aim)) {
         unit.goalX = aim.cellX;
         unit.goalY = aim.cellY;
-        if (unit.waypoints.length === 0) chase(world, unit, aim);
+        if (unit.waypoints.length === 0) chase(world, unit, aim, claimed, lanes);
         continue;
       }
       if (unit.waypoints.length === 0) pathToGoal(world, unit);
@@ -215,7 +289,7 @@ export function steerAll(world: World): void {
           unit.targetId = threat.id;
           unit.waypoints.length = 0;
         }
-        if (unit.waypoints.length === 0) chase(world, unit, threat);
+        if (unit.waypoints.length === 0) chase(world, unit, threat, claimed, lanes);
         continue;
       }
       if (unit.targetId !== 0) {
@@ -228,27 +302,25 @@ export function steerAll(world: World): void {
     if (unit.waypoints.length > 0) continue;
     if (unit.order === 'gather') {
       const node = world.nodes.find((candidate) => candidate.id === unit.targetId);
-      if (!node || nearNode(unit, node.x, node.y)) continue;
-      const path = approachPath(world.blocked, cellOf(unit.x), cellOf(unit.y), node.x, node.y, 1, 1);
-      if (path) unit.waypoints = toWaypoints(path);
+      if (!node) continue;
+      if (nearNode(unit, node.x, node.y) && !crowded(claimed, unit)) continue;
+      steerToFootprint(world, unit, node.x, node.y, 1, 1, claimed, lanes);
       continue;
     }
     if (unit.order === 'return') {
       const drop = dropoffFor(world, unit);
       if (!drop) continue;
       const def = buildingDef(drop.kind);
-      if (nearFootprint(unit, drop.x, drop.y, def.width, def.height)) continue;
-      const path = approachPath(world.blocked, cellOf(unit.x), cellOf(unit.y), drop.x, drop.y, def.width, def.height);
-      if (path) unit.waypoints = toWaypoints(path);
+      if (nearFootprint(unit, drop.x, drop.y, def.width, def.height) && !crowded(claimed, unit)) continue;
+      steerToFootprint(world, unit, drop.x, drop.y, def.width, def.height, claimed, lanes);
       continue;
     }
     if (unit.order === 'build') {
       const building = world.buildings.find((candidate) => candidate.id === unit.targetId);
       if (!building) continue;
       const def = buildingDef(building.kind);
-      if (nearFootprint(unit, building.x, building.y, def.width, def.height)) continue;
-      const path = approachPath(world.blocked, cellOf(unit.x), cellOf(unit.y), building.x, building.y, def.width, def.height);
-      if (path) unit.waypoints = toWaypoints(path);
+      if (nearFootprint(unit, building.x, building.y, def.width, def.height) && !crowded(claimed, unit)) continue;
+      steerToFootprint(world, unit, building.x, building.y, def.width, def.height, claimed, lanes);
     }
   }
 }

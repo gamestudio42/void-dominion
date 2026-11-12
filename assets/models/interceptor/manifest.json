@@ -1,0 +1,93 @@
+{
+  "asset": "interceptor",
+  "tool": {
+    "name": "export_bbmodel.py",
+    "version": "1"
+  },
+  "exports": [
+    {
+      "asset": "interceptor",
+      "export": {
+        "path": "assets/models/interceptor/interceptor.glb",
+        "kind": "glb",
+        "codec": "gltf",
+        "bytes": 593288,
+        "sha256": "dc3f5c6a9f211943d1b3dc8a8bc6229c52623abd3ca12f3af8e0206915751a0b",
+        "bin_chunk_bytes": 590660
+      },
+      "mesh": {
+        "generator": "export_bbmodel.py",
+        "version": "2.0",
+        "triangles": 1856,
+        "vertices": 5568,
+        "primitives": 2,
+        "meshes": 1,
+        "meshNodes": [
+          "interceptor"
+        ],
+        "nodes": 1,
+        "materials": [
+          {
+            "name": "hull",
+            "baseColor": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "metallic": 1,
+            "roughness": 1,
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "hasTexture": true
+          },
+          {
+            "name": "glow",
+            "baseColor": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "metallic": 0,
+            "roughness": 1,
+            "emissive": [
+              1,
+              1,
+              1
+            ],
+            "hasTexture": false
+          }
+        ],
+        "images": 3,
+        "textures": 3,
+        "animations": 0,
+        "skins": 0,
+        "bbox": {
+          "min": [
+            -0.7117,
+            0.0,
+            -0.8
+          ],
+          "max": [
+            0.7117,
+            0.4812,
+            0.8
+          ],
+          "dims": [
+            1.4235,
+            0.4812,
+            1.6
+          ]
+        }
+      },
+      "verdict": "pass",
+      "issues": []
+    }
+  ],
+  "verdict": "pass",
+  "generated_at": "2026-11-12T03:36:51+00:00"
+}

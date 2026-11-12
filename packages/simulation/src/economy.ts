@@ -35,7 +35,7 @@ function gather(world: World, unit: World['units'][number]): void {
     unit.order = unit.carryOre > 0 || unit.carryAether > 0 ? 'return' : 'idle';
     return;
   }
-  if (!nearNode(unit, node.x, node.y)) return;
+  if (!nearNode(unit, node.x, node.y) || unit.waypoints.length > 0) return;
   unit.timer += 1;
   const def = unitDef('engineer');
   if (unit.timer < def.gatherTicks) return;
@@ -57,7 +57,7 @@ function deliver(world: World, unit: World['units'][number]): void {
   const drop = dropoffFor(world, unit);
   if (!drop) return;
   const def = buildingDef(drop.kind);
-  if (!nearFootprint(unit, drop.x, drop.y, def.width, def.height)) return;
+  if (!nearFootprint(unit, drop.x, drop.y, def.width, def.height) || unit.waypoints.length > 0) return;
   const player = playerOf(world, unit.owner);
   if (!player) return;
   player.ore += unit.carryOre;
@@ -77,7 +77,7 @@ function construct(world: World): void {
     let workers = 0;
     for (const unit of world.units) {
       if (unit.order !== 'build' || unit.targetId !== building.id) continue;
-      if (!nearFootprint(unit, building.x, building.y, def.width, def.height)) continue;
+      if (!nearFootprint(unit, building.x, building.y, def.width, def.height) || unit.waypoints.length > 0) continue;
       workers += 1;
     }
     if (workers === 0) continue;

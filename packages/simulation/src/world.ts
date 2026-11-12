@@ -121,6 +121,7 @@ const UNIT_CODE: Record<UnitKind, number> = {
   rocketeer: 3,
   scout_rover: 4,
   assault_walker: 5,
+  interceptor: 6,
 };
 
 const BUILDING_CODE: Record<BuildingKind, number> = {

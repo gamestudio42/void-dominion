@@ -15,6 +15,22 @@ function parse(bytes: Buffer) {
   return new GLTFLoader().parseAsync(buffer, '');
 }
 
+/** The interceptor embeds PNG maps. Node's GLTFLoader cannot decode those, so the test reads the JSON chunk. */
+function gltfDocument(bytes: Buffer): { materials?: { name?: string }[]; accessors?: { min?: number[]; max?: number[] }[] } {
+  const magic = bytes.readUInt32LE(0);
+  if (magic !== 0x46546c67) throw new Error('not a glb');
+  const length = bytes.readUInt32LE(8);
+  let offset = 12;
+  while (offset + 8 <= length) {
+    const chunkLength = bytes.readUInt32LE(offset);
+    const chunkType = bytes.readUInt32LE(offset + 4);
+    offset += 8;
+    if (chunkType === 0x4e4f534a) return JSON.parse(bytes.subarray(offset, offset + chunkLength).toString('utf8'));
+    offset += chunkLength;
+  }
+  throw new Error('glb has no json chunk');
+}
+
 /** Read a shipped model, check it against its manifest, and return its bounds and material names. */
 async function load(url: string) {
   const path = fileURLToPath(url);
@@ -36,7 +52,27 @@ describe('unit models', () => {
   });
 
   for (const kind of UNIT_KINDS) {
-    it(`loads ${kind} with a team material, standing on the ground`, async () => {
+    it(`loads ${kind} standing on the ground`, async () => {
+      if (kind === 'interceptor') {
+        const path = fileURLToPath(UNIT_MODELS[kind]!);
+        const bytes = readFileSync(path);
+        const manifest = JSON.parse(readFileSync(path.replace(/[^/]+\.glb$/, 'manifest.json'), 'utf8'));
+        expect(manifest.verdict).toBe('pass');
+        expect(manifest.exports.at(-1).export.sha256).toBe(createHash('sha256').update(bytes).digest('hex'));
+        const doc = gltfDocument(bytes);
+        const names = (doc.materials ?? []).map((material) => material.name);
+        expect(names).toContain('hull');
+        expect(names).toContain('glow');
+        expect(names).not.toContain('team');
+        const position = doc.accessors?.find((accessor) => accessor.min && accessor.max);
+        expect(position?.min?.[1]).toBeCloseTo(0, 3);
+        const span = Math.max(
+          (position?.max?.[0] ?? 0) - (position?.min?.[0] ?? 0),
+          (position?.max?.[2] ?? 0) - (position?.min?.[2] ?? 0),
+        );
+        expect(span).toBeCloseTo(1.6, 1);
+        return;
+      }
       const { names, bounds } = await load(UNIT_MODELS[kind]!);
       expect(names).toContain('team');
       expect(bounds.min.y).toBeCloseTo(0, 3);

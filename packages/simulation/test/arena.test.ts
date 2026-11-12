@@ -37,9 +37,9 @@ describe('seed arena', () => {
     expect(reports[0]).toMatchObject({
       seed: MATCH.seed >>> 0,
       winner: ENEMY_ID,
-      tick: 3333,
-      hash: 1794058122,
-      steps: 3333,
+      tick: 3338,
+      hash: 3280354694,
+      steps: 3338,
     });
     for (const report of reports) {
       expect(report.winner).toBe(reports[0]!.winner);
@@ -48,7 +48,7 @@ describe('seed arena', () => {
       expect(report.ore).toEqual(reports[0]!.ore);
       expect(report.units).toEqual(reports[0]!.units);
     }
-    expect(reports.map((report) => report.hash)).toEqual([1794058122, 2673108699, 1865163346]);
+    expect(reports.map((report) => report.hash)).toEqual([3280354694, 2653787263, 3889541598]);
   }, CEILING_MS);
 
   it('tells a commanded opening apart from the unattended one', () => {

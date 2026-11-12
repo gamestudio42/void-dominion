@@ -2,7 +2,7 @@
 
 No third-party art, audio or fonts are shipped.
 
-The boot screen and the placement preview are drawn by code. Colour is a material, not a texture from another game.
+The boot screen is the frozen opening of the match. The ground colour is generated in the view from the cell grid, not stored as a file. Building panel maps are generated the same way. Colour on a unit is still a material, except the interceptor atlas. The owner tint is the `team` slot; the interceptor shifts `hull` because that mesh has no team stripe.
 
 ## Shipped
 
@@ -11,6 +11,7 @@ The boot screen and the placement preview are drawn by code. Colour is a materia
 | README screenshots: menu, field, contact | `docs/screenshots/<name>.jpg` | Captured from the browser build by a headless Chrome session driven over the DevTools protocol. No imported art. | Original, same as the code: AGPL-3.0-or-later |
 | README play button | `docs/screenshots/play.svg` | Drawn by hand in SVG with the client palette. | Original, same as the code: AGPL-3.0-or-later |
 | Unit meshes: engineer, rifleman, rocketeer, scout_rover, assault_walker | `assets/models/<kind>/` | Generated from `tools/asset-pipeline/blender/specs/<kind>.json` by `bake_mesh.sh` (Blender 5.2.2). Primitives only, no imported art. | Original, same as the code: AGPL-3.0-or-later |
+| Interceptor hull | `assets/models/interceptor/` | Baked by `tools/asset-pipeline/blockbench/export_bbmodel.py` from the vendored Blockbench hull, atlas, ORM and glow in `tools/asset-pipeline/blockbench/interceptor/`. Those files are the studio ship kit's interceptor, copied in so the bake can be repeated. 1856 triangles, verdict `pass`. | Original, same as the code: AGPL-3.0-or-later |
 | Building meshes: command_center, ore_extractor, aether_refinery, power_generator, barracks, vehicle_factory, defense_turret | `assets/models/<kind>/` | Same pipeline and specs folder. Each spec is drawn in cells at 92% of the footprint in `packages/content`. | Original, same as the code: AGPL-3.0-or-later |
 | Terrain meshes: ore_node, aether_node, rock, rock_spire | `assets/models/<kind>/` | Same pipeline and specs folder. Nodes fit one cell; the two boulders are two cells across and tile the rock rects. | Original, same as the code: AGPL-3.0-or-later |
 | Combat VFX: muzzle_flash, impact_hit, explosion | `assets/vfx/<kind>/sheet.png` | Built from `tools/asset-pipeline/vfx/<kind>.build.json` by `bake.sh` (EffectCraft 0.21.1): shapes, CC Particle World, Turbulent Displace and Gaussian Blur, no imported art. The verified PNG sequence is scaled to 128 px cells and tiled into one sheet with ffmpeg. | Original, same as the code: AGPL-3.0-or-later |
@@ -27,3 +28,14 @@ Each folder holds the `.glb`, the `manifest.json` written by `verify_glb.py` (ve
 | Props, units, terrain chunks | `docs/blender-pipeline.md` | `assets/models/<asset>/` after `verify_glb.py` |
 
 Renders are written to `assets/_staging/` first. That directory is gitignored. The scout ship JSON under `tools/asset-pipeline/blender/examples/` is a pipeline fixture, not a unit in this game.
+
+## Reviewed and not shipped
+
+Decision 025. Nothing below is copied into this repository.
+
+| Source | What was reviewed | Why it stays out |
+| --- | --- | --- |
+| Star-RTS `models/` | 66 Blender-generated GLBs for three factions | Borrowed faction silhouettes. Textured. Blender forward is +X, not this pipeline's +Y. No license on the code or the meshes. |
+| Crônicas da Extinção `models/` and `assets/sprites/` | The same kit, plus isometric sprite sheets of its three factions | Same reasons. The sheets would also replace the live meshes this client draws. |
+| Studio ship kit, besides the interceptor (`assets/naves` beside this repo) | Corvette, heavy corvette, dreadnought: Blockbench, atlas, ORM, glow | Not units yet. The interceptor is the one hull shipped, from a copy of that kit. |
+| Star-RTS `sounds/` | CC0 effects and music, credited in that tree's `sounds/CREDITOS.md` | Not imported. A later audio decision lists each file in the table above before it ships. |

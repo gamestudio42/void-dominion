@@ -10,9 +10,11 @@ Measured on 2026-11-05: Intel Core i7-13620H, 16 threads, Node v22.23.4, 10 runs
 
 | Seed | Ticks | Checksum | Match (ms) | Step mean (µs) | p50 (µs) | p95 (µs) | max (µs) | × real time |
 | --- | --: | --: | --: | --: | --: | --: | --: | --: |
-| 0x5eed | 3333 | 1794058122 | 311 | 93 | 79 | 121 | 3550 | 536 |
-| 0x51eed | 3333 | 2673108699 | 301 | 90 | 79 | 114 | 2839 | 554 |
-| 0xa11ce | 3333 | 1865163346 | 300 | 90 | 78 | 115 | 2869 | 555 |
+| 0x5eed | 3338 | 3280354694 | 311 | 93 | 79 | 121 | 3550 | 536 |
+| 0x51eed | 3338 | 2653787263 | 301 | 90 | 79 | 114 | 2839 | 554 |
+| 0xa11ce | 3338 | 3889541598 | 300 | 90 | 78 | 115 | 2869 | 555 |
+
+The tick and checksum columns moved on 2026-11-12, when squads stopped sharing one cell. The timing columns are still the 2026-11-05 measurement.
 
 - **Match** is the mean wall time of one full unattended match, about 167 s of game time at 20 Hz.
 - **× real time** is the 50 ms tick budget divided by the mean step.

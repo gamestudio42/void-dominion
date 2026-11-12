@@ -40,7 +40,7 @@ function scripted(sim: Simulation): void {
 describe('seat control', () => {
   it('keeps the skirmish as the default, with its pinned checksum', () => {
     expect(Simulation.create().seats).toEqual(SKIRMISH_SEATS);
-    expect(runArena(MATCH.seed).hash).toBe(1794058122);
+    expect(runArena(MATCH.seed).hash).toBe(3280354694);
     /** A whole match: the same ceiling as the arena test, so a busy machine does not fail on Vitest's 5 s default. */
   }, 20_000);
 

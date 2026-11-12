@@ -23,7 +23,6 @@ canvas.field,
 }
 
 .topbar,
-.selected,
 .refusal,
 .debug,
 .banner,
@@ -36,12 +35,46 @@ canvas.field,
 .topbar {
   top: 12px;
   left: 16px;
-  right: 196px;
   display: flex;
-  gap: 16px;
+  gap: 4px;
+  align-items: center;
+  padding: 6px 8px;
+  background: rgba(18, 21, 28, 0.9);
+  border: 1px solid #3d4d62;
   font-size: 14px;
   letter-spacing: 0.03em;
   font-variant-numeric: tabular-nums;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+}
+
+.chip::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: #9aa6b5;
+}
+
+.chip.ore::before {
+  background: #d08a45;
+}
+
+.chip.aether::before {
+  background: #5ec4c0;
+}
+
+.chip.supply::before {
+  background: #e7e1d6;
+}
+
+.chip.power::before {
+  background: #8fb4e0;
 }
 
 .topbar .short {
@@ -49,7 +82,8 @@ canvas.field,
 }
 
 .clock {
-  margin-left: auto;
+  margin-left: 8px;
+  padding-right: 6px;
 }
 
 .contact {
@@ -63,10 +97,40 @@ canvas.field,
 }
 
 .selected {
-  top: 40px;
-  left: 16px;
+  margin: 0;
   font-size: 14px;
   letter-spacing: 0.04em;
+}
+
+.card {
+  position: fixed;
+  top: 62px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(18, 21, 28, 0.9);
+  border: 1px solid #3d4d62;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.card p {
+  margin: 0;
+}
+
+.hp {
+  height: 4px;
+  background: #243044;
+}
+
+.hp span {
+  display: block;
+  height: 100%;
+  background: #8fd0a8;
 }
 
 .refusal {
@@ -114,6 +178,7 @@ canvas.field,
   border: 1px solid #3d4d62;
   background: #12151c;
   cursor: crosshair;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
 .commands {
@@ -124,11 +189,17 @@ canvas.field,
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  max-height: 96px;
+  max-height: 120px;
   overflow: auto;
+  padding: 8px;
+  background: rgba(18, 21, 28, 0.9);
+  border: 1px solid #3d4d62;
 }
 
 .commands button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: #243044;
   color: #e7e1d6;
   border: 1px solid #3d4d62;
@@ -139,32 +210,71 @@ canvas.field,
   cursor: pointer;
 }
 
+.glyph {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
 .commands button.active {
   background: #6a4a16;
   border-color: #e0a045;
 }
 
-.menu {
+.poster {
+  position: fixed;
+  inset: 0;
+  width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 0 16px;
-  text-align: center;
+  display: block;
 }
 
-.menu h1 {
-  margin: 0 0 16px;
-  font-size: 40px;
-  letter-spacing: 0.16em;
+.menu {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 7vw;
+  background:
+    linear-gradient(90deg, rgba(8, 10, 14, 0.78) 0%, rgba(8, 10, 14, 0.42) 46%, rgba(8, 10, 14, 0.12) 100%);
+}
+
+.menu-card {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 28px 28px 22px;
+  background: rgba(18, 21, 28, 0.92);
+  border: 1px solid #3d4d62;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  text-align: left;
+}
+
+.menu .eyebrow {
+  margin: 0;
+  color: #e0a045;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.menu-card h1 {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #f4e7c8;
 }
 
+.menu .tagline {
+  margin: 0 0 8px;
+  color: #c9c2b4;
+}
+
 .menu p {
-  max-width: 520px;
+  max-width: none;
   margin: 0;
   line-height: 1.5;
 }
@@ -175,7 +285,7 @@ canvas.field,
 
 .menu button,
 .link button {
-  min-width: 280px;
+  min-width: 0;
   background: #243044;
   color: #e7e1d6;
   border: 1px solid #3d4d62;
@@ -183,6 +293,7 @@ canvas.field,
   padding: 12px 16px;
   font: inherit;
   cursor: pointer;
+  text-align: left;
 }
 
 .menu button:hover,

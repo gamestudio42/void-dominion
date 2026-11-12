@@ -12,6 +12,7 @@ export const UNIT_MODELS: Readonly<Record<string, string>> = {
   rocketeer: model('rocketeer'),
   scout_rover: model('scout_rover'),
   assault_walker: model('assault_walker'),
+  interceptor: model('interceptor'),
 };
 
 export const BUILDING_MODELS: Readonly<Record<string, string>> = {

@@ -1,11 +1,17 @@
 import {
   AmbientLight,
   BoxGeometry,
+  ClampToEdgeWrapping,
+  CanvasTexture,
+  CircleGeometry,
   Color,
   DataTexture,
   DirectionalLight,
-  GridHelper,
+  DoubleSide,
+  Group,
+  LinearFilter,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   NearestFilter,
   NoColorSpace,
@@ -119,11 +125,27 @@ const MARKER_BAD = new Color('#d4766a');
 
 /** Material name in each GLB that takes the owner colour. Set by the Blender spec palette. */
 const TEAM_MATERIAL = 'team';
+/** Textured hull. The atlas stays visible; the owner only shifts its colour. */
+const HULL_MATERIAL = 'hull';
 const WRECK = new Color('#3a342c');
+/** Buildings wear a generated panel map on `hull`. Units keep the flat metal so the silhouette stays the spec. */
+const PANELED = new Set([
+  'command_center',
+  'ore_extractor',
+  'aether_refinery',
+  'power_generator',
+  'barracks',
+  'vehicle_factory',
+  'defense_turret',
+]);
 
 interface Body {
   root: Object3D;
   ring: Mesh;
+  shadow: Mesh;
+  /** Set for a unit. Hidden until that unit has lost hit points. */
+  bar: Group | null;
+  fill: Mesh | null;
   /** Owner-tinted material: the box material, or this body's copy of the model's team material. */
   tint: MeshStandardMaterial | null;
   box: boolean;
@@ -133,6 +155,35 @@ interface Body {
   lastZ: number;
 }
 
+/** Disc diameter under a unit. The circle geometry has radius 0.5, so this is the world span. */
+function unitShadow(kind: string): number {
+  if (kind === 'interceptor') return 1.7;
+  if (kind === 'assault_walker') return 1.35;
+  if (kind === 'scout_rover') return 1.2;
+  return 1.15;
+}
+
+/** Just above the mesh. A fixed height left the bar floating over the infantry. */
+function barHeight(kind: string): number {
+  if (kind === 'assault_walker') return 1.15;
+  if (kind === 'rocketeer' || kind === 'rifleman') return 0.95;
+  if (kind === 'interceptor') return 0.72;
+  if (kind === 'scout_rover') return 0.55;
+  return 0.62;
+}
+
+const BAR_WIDTH = 0.9;
+
+/** A world bar only after the unit is wounded. Full health stays unmarked. */
+export function healthBarFrame(hp: number, maxHp: number): { show: boolean; shown: number; color: string } {
+  const show = maxHp > 0 && hp > 0 && hp < maxHp;
+  if (!show) return { show: false, shown: 0, color: '#9be7b4' };
+  const fraction = hp / maxHp;
+  const shown = Math.max(0.05, BAR_WIDTH * fraction);
+  const color = fraction > 0.5 ? '#9be7b4' : fraction > 0.25 ? '#ffb03a' : '#ff5a52';
+  return { show: true, shown, color };
+}
+
 /** Fallback box sizes while a unit model is missing. */
 const UNIT_SCALE: Record<string, [number, number, number]> = {
   engineer: [0.55, 0.48, 0.55],
@@ -140,6 +191,7 @@ const UNIT_SCALE: Record<string, [number, number, number]> = {
   rocketeer: [0.48, 0.78, 0.48],
   scout_rover: [0.86, 0.32, 0.44],
   assault_walker: [0.95, 0.9, 0.95],
+  interceptor: [1.42, 0.48, 1.6],
 };
 
 /**
@@ -171,8 +223,28 @@ export function createField(
 
   const unitGeometry = new BoxGeometry(1, 1, 1);
   const buildingGeometry = new BoxGeometry(1, 1, 1);
-  const ringGeometry = new RingGeometry(0.42, 0.56, 24);
+  const ringGeometry = new RingGeometry(0.58, 0.78, 40);
   ringGeometry.rotateX(-Math.PI / 2);
+  const shadowGeometry = new CircleGeometry(0.5, 24);
+  shadowGeometry.rotateX(-Math.PI / 2);
+  const shadowMaterial = new MeshBasicMaterial({
+    color: '#05070b',
+    transparent: true,
+    opacity: 0.72,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  const barGeometry = new PlaneGeometry(1, 1);
+  const barBackMaterial = new MeshBasicMaterial({
+    color: '#1a1210',
+    transparent: true,
+    opacity: 0.92,
+    depthWrite: false,
+    side: DoubleSide,
+    toneMapped: false,
+  });
   const oreGeometry = new BoxGeometry(0.7, 0.55, 0.7);
   const aetherGeometry = new BoxGeometry(0.45, 0.9, 0.45);
 
@@ -202,21 +274,30 @@ export function createField(
   marker.position.y = 0.2;
   scene.add(marker);
 
-  const ghostMaterial = new MeshStandardMaterial({
+  const ghostMaterial = new MeshBasicMaterial({
     color: MARKER_OK,
     transparent: true,
-    opacity: 0.4,
+    opacity: 0.95,
     depthWrite: false,
   });
-  const ghost = new Mesh(buildingGeometry, ghostMaterial);
+  const ghostBar = new BoxGeometry(1, 0.08, 1);
+  const ghost = new Group();
+  const ghostEdges = [0, 1, 2, 3].map(() => {
+    const edge = new Mesh(ghostBar, ghostMaterial);
+    edge.renderOrder = 1;
+    ghost.add(edge);
+    return edge;
+  });
   ghost.visible = false;
   scene.add(ghost);
 
   const fogBytes = new Uint8Array(mapSize * mapSize * 4);
   const fogTexture = new DataTexture(fogBytes, mapSize, mapSize, RGBAFormat);
   fogTexture.colorSpace = NoColorSpace;
-  fogTexture.magFilter = NearestFilter;
-  fogTexture.minFilter = NearestFilter;
+  fogTexture.magFilter = LinearFilter;
+  fogTexture.minFilter = LinearFilter;
+  fogTexture.wrapS = ClampToEdgeWrapping;
+  fogTexture.wrapT = ClampToEdgeWrapping;
   fogTexture.flipY = false;
   fogTexture.needsUpdate = true;
   const fogMaterial = new ShaderMaterial({
@@ -239,8 +320,8 @@ export function createField(
       uniform float mapSize;
       varying vec3 vWorld;
       void main() {
-        float u = (floor(vWorld.x) + 0.5) / mapSize;
-        float v = (floor(vWorld.z) + 0.5) / mapSize;
+        float u = clamp(vWorld.x / mapSize, 0.0, 1.0);
+        float v = clamp(vWorld.z / mapSize, 0.0, 1.0);
         gl_FragColor = texture2D(fogMap, vec2(u, v));
       }
     `,
@@ -251,19 +332,61 @@ export function createField(
   fog.renderOrder = 2;
   scene.add(fog);
 
+  const nodeSlots = Array.from({ length: 8 }, () => new Vector3());
+  const groundMaterial = new ShaderMaterial({
+    uniforms: {
+      nodes: { value: nodeSlots },
+      nodeCount: { value: 0 },
+    },
+    vertexShader: `
+      varying vec3 vWorld;
+      void main() {
+        vec4 world = modelMatrix * vec4(position, 1.0);
+        vWorld = world.xyz;
+        gl_Position = projectionMatrix * viewMatrix * world;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 nodes[8];
+      uniform float nodeCount;
+      varying vec3 vWorld;
+      float hash(vec2 p) {
+        vec2 q = fract(p * vec2(0.1031, 0.11369));
+        q += dot(q, q.yx + 19.19);
+        return fract((q.x + q.y) * q.x);
+      }
+      void main() {
+        vec2 cell = floor(vWorld.xz);
+        float speck = hash(cell);
+        float patch = hash(floor(cell / 4.0));
+        vec3 color = mix(vec3(0.17, 0.19, 0.21), vec3(0.34, 0.26, 0.18), speck);
+        color = mix(color, vec3(0.22, 0.24, 0.27), patch * 0.85);
+        for (int i = 0; i < 8; i++) {
+          float live = step(float(i) + 0.5, nodeCount);
+          float dist = distance(vWorld.xz, nodes[i].xy);
+          float stain = smoothstep(6.5, 0.4, dist) * live;
+          vec3 tint = mix(vec3(0.72, 0.42, 0.16), vec3(0.16, 0.62, 0.60), step(0.5, nodes[i].z));
+          color = mix(color, tint, stain * 0.78);
+        }
+        vec2 grid = fract(vWorld.xz / 4.0);
+        float line = clamp(step(0.93, grid.x) + step(0.93, grid.y), 0.0, 1.0);
+        color = mix(color, vec3(0.55, 0.62, 0.70), line * 0.55);
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+  });
   const floorGeometry = new BoxGeometry(mapSize, 0.02, mapSize);
-  const floor = new Mesh(floorGeometry, new MeshStandardMaterial({ color: GROUND, roughness: 1, metalness: 0 }));
+  const floor = new Mesh(floorGeometry, groundMaterial);
   floor.position.set(mapSize / 2, -0.01, mapSize / 2);
   scene.add(floor);
 
-  const grid = new GridHelper(mapSize, 32, '#314054', '#263140');
-  grid.position.set(mapSize / 2, 0.01, mapSize / 2);
-  scene.add(grid);
-
-  scene.add(new AmbientLight('#d5dbe6', 0.72));
-  const sun = new DirectionalLight('#fff4e0', 1.15);
-  sun.position.set(40, 80, 20);
+  scene.add(new AmbientLight('#c9d2de', 0.42));
+  const sun = new DirectionalLight('#ffe2b4', 1.35);
+  sun.position.set(48, 72, 16);
   scene.add(sun);
+  const rim = new DirectionalLight('#7ecfd2', 0.48);
+  rim.position.set(-40, 36, -30);
+  scene.add(rim);
 
   function placeCamera(): void {
     camera.position.set(
@@ -292,9 +415,77 @@ export function createField(
   function paintOwner(material: MeshStandardMaterial, owner: number, selected: boolean, hp: number, maxHp: number): void {
     const tint = owner === 1 ? PLAYER : ENEMY;
     const fraction = maxHp > 0 ? hp / maxHp : 1;
+    if (material.name === HULL_MATERIAL) {
+      material.color.set('#ffffff').lerp(tint, 0.35).multiplyScalar(0.55 + 0.45 * fraction);
+      if (selected) material.color.lerp(new Color('#f6e2bc'), 0.25);
+      return;
+    }
     material.color.copy(tint).multiplyScalar(0.4 + 0.6 * fraction);
     if (selected) material.color.lerp(new Color('#f6e2bc'), 0.45);
     material.emissive.set(selected ? '#6a4a16' : '#000000');
+  }
+
+  const panels = new Map<string, CanvasTexture>();
+
+  /** A small original atlas per building. Each face of the Blender cube already carries a 0–1 UV. */
+  function panelMap(kind: string): CanvasTexture {
+    const cached = panels.get(kind);
+    if (cached) return cached;
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      const empty = new CanvasTexture(canvas);
+      panels.set(kind, empty);
+      return empty;
+    }
+    ctx.fillStyle = '#c5ced8';
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.strokeStyle = '#1c2430';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(3, 3, 58, 58);
+    for (let i = 16; i < 64; i += 16) {
+      ctx.beginPath();
+      ctx.moveTo(i, 4);
+      ctx.lineTo(i, 60);
+      ctx.moveTo(4, i);
+      ctx.lineTo(60, i);
+      ctx.stroke();
+    }
+    ctx.fillStyle = markColor(kind);
+    paintMark(ctx, kind);
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    texture.magFilter = NearestFilter;
+    texture.minFilter = NearestFilter;
+    texture.needsUpdate = true;
+    panels.set(kind, texture);
+    return texture;
+  }
+
+  function markColor(kind: string): string {
+    if (kind === 'ore_extractor' || kind === 'power_generator') return '#e0a045';
+    if (kind === 'aether_refinery') return '#5ec4c0';
+    if (kind === 'defense_turret') return '#d0504a';
+    return '#7ecfd2';
+  }
+
+  function paintMark(ctx: CanvasRenderingContext2D, kind: string): void {
+    if (kind === 'command_center') ctx.fillRect(6, 26, 52, 8);
+    else if (kind === 'ore_extractor') ctx.fillRect(8, 8, 48, 10);
+    else if (kind === 'aether_refinery') {
+      ctx.fillRect(14, 8, 8, 48);
+      ctx.fillRect(42, 8, 8, 48);
+    } else if (kind === 'power_generator') ctx.fillRect(8, 40, 48, 10);
+    else if (kind === 'barracks') {
+      for (let x = 10; x <= 46; x += 12) ctx.fillRect(x, 22, 8, 8);
+    } else if (kind === 'vehicle_factory') ctx.fillRect(10, 14, 44, 28);
+    else {
+      ctx.beginPath();
+      ctx.arc(32, 32, 14, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function disposeTree(root: Object3D): void {
@@ -306,23 +497,72 @@ export function createField(
     });
   }
 
-  function makeBody(kind: string, fallback: BoxGeometry, roughness: number, x: number, z: number): Body {
-    const ring = new Mesh(ringGeometry, new MeshStandardMaterial({ color: '#f4e7c8', emissive: '#f4e7c8', emissiveIntensity: 0.4 }));
+  function makeBody(kind: string, fallback: BoxGeometry, roughness: number, x: number, z: number, bars: boolean): Body {
+    const ring = new Mesh(
+      ringGeometry,
+      new MeshBasicMaterial({ color: '#ffe7b0', transparent: true, opacity: 0.95, depthWrite: false }),
+    );
+    const shadow = new Mesh(shadowGeometry, shadowMaterial);
+    shadow.renderOrder = 1;
+    let bar: Group | null = null;
+    let fill: Mesh | null = null;
+    if (bars) {
+      bar = new Group();
+      const back = new Mesh(barGeometry, barBackMaterial);
+      back.scale.set(0.98, 0.18, 1);
+      fill = new Mesh(
+        barGeometry,
+        new MeshBasicMaterial({ color: '#9be7b4', depthWrite: false, side: DoubleSide, toneMapped: false }),
+      );
+      fill.position.z = 0.08;
+      bar.add(back, fill);
+      bar.visible = false;
+      bar.renderOrder = 3;
+    }
     const template = models.get(kind);
     if (!template) {
       const material = new MeshStandardMaterial({ roughness, metalness: 0.08 });
-      return { root: new Mesh(fallback, material), ring, tint: material, box: true, wrecked: false, lastX: x, lastZ: z };
+      return { root: new Mesh(fallback, material), ring, shadow, bar, fill, tint: material, box: true, wrecked: false, lastX: x, lastZ: z };
     }
-    /** Geometry and the other materials stay shared with the template; only the team colour is per body. */
+    /** Geometry stays shared. Team (or the interceptor hull) is copied per body. Building hulls take a panel map. */
     const root = template.clone(true);
     let tint: MeshStandardMaterial | null = null;
+    let plated: MeshStandardMaterial | null = null;
+    const ownerSlot = kind === 'interceptor' ? HULL_MATERIAL : TEAM_MATERIAL;
     root.traverse((child) => {
       if (!(child instanceof Mesh) || !(child.material instanceof MeshStandardMaterial)) return;
-      if (child.material.name !== TEAM_MATERIAL) return;
-      tint ??= child.material.clone();
-      child.material = tint;
+      if (child.material.name === ownerSlot) {
+        tint ??= child.material.clone();
+        child.material = tint;
+        return;
+      }
+      if (PANELED.has(kind) && child.material.name === 'hull') {
+        plated ??= child.material.clone();
+        plated.map = panelMap(kind);
+        plated.color.set('#ffffff');
+        child.material = plated;
+      }
     });
-    return { root, ring, tint, box: false, wrecked: false, lastX: x, lastZ: z };
+    return { root, ring, shadow, bar, fill, tint, box: false, wrecked: false, lastX: x, lastZ: z };
+  }
+
+  function placeShadow(shadow: Mesh, x: number, z: number, width: number, depth: number): void {
+    shadow.position.set(x, 0.03, z);
+    /** The disc is rotated flat, so local Y is world Z. */
+    shadow.scale.set(width, depth, 1);
+  }
+
+  function placeBar(body: Body, x: number, z: number, hp: number, maxHp: number, height: number): void {
+    if (!body.bar || !body.fill) return;
+    const frame = healthBarFrame(hp, maxHp);
+    body.bar.visible = frame.show;
+    if (!frame.show) return;
+    body.fill.scale.set(frame.shown, 0.11, 1);
+    /** The bar copies the camera orientation, whose local +Z points back at the viewer. */
+    body.fill.position.set(-BAR_WIDTH / 2 + frame.shown / 2, 0, 0.08);
+    (body.fill.material as MeshBasicMaterial).color.set(frame.color);
+    body.bar.position.set(x, height, z);
+    body.bar.quaternion.copy(camera.quaternion);
   }
 
   /** Repaint a model with the shared wreck material. Its own team copy is no longer drawn. */
@@ -364,9 +604,11 @@ export function createField(
   }
 
   function dropBody(body: Body): void {
-    scene.remove(body.root, body.ring);
+    scene.remove(body.root, body.ring, body.shadow);
+    if (body.bar) scene.remove(body.bar);
     body.tint?.dispose();
-    (body.ring.material as MeshStandardMaterial).dispose();
+    (body.ring.material as MeshBasicMaterial).dispose();
+    if (body.fill) (body.fill.material as MeshBasicMaterial).dispose();
   }
 
   /** Small integer hash, so a boulder's look depends only on where it stands. */
@@ -485,8 +727,9 @@ export function createField(
           body = undefined;
         }
         if (!body) {
-          body = makeBody(unit.kind, unitGeometry, 0.55, unit.x, unit.y);
-          scene.add(body.root, body.ring);
+          body = makeBody(unit.kind, unitGeometry, 0.55, unit.x, unit.y, true);
+          scene.add(body.root, body.ring, body.shadow);
+          if (body.bar) scene.add(body.bar);
           bodies.set(unit.id, body);
         }
         if (body.box) {
@@ -504,8 +747,12 @@ export function createField(
         }
         body.lastX = unit.x;
         body.lastZ = unit.y;
-        body.ring.position.set(unit.x, 0.08, unit.y);
+        body.ring.position.set(unit.x, 0.12, unit.y);
+        body.ring.scale.set(1.25, 1.25, 1);
         body.ring.visible = unit.selected;
+        const span = unitShadow(unit.kind);
+        placeShadow(body.shadow, unit.x, unit.y, span, span);
+        placeBar(body, unit.x, unit.y, unit.hp, unit.maxHp, barHeight(unit.kind));
         if (body.tint) paintOwner(body.tint, unit.owner, unit.selected, unit.hp, unit.maxHp);
       }
       for (const [id, body] of bodies) {
@@ -543,8 +790,8 @@ export function createField(
           body = undefined;
         }
         if (!body) {
-          body = makeBody(building.kind, buildingGeometry, 0.72, centerX, centerZ);
-          scene.add(body.root, body.ring);
+          body = makeBody(building.kind, buildingGeometry, 0.72, centerX, centerZ, false);
+          scene.add(body.root, body.ring, body.shadow);
           structures.set(building.id, body);
         }
         const progress = Math.max(0, Math.min(1, building.progress));
@@ -562,9 +809,10 @@ export function createField(
           body.root.position.set(centerX, 0, centerZ);
           if (building.wreck && !body.wrecked) wreckModel(body);
         }
-        body.ring.position.set(centerX, 0.08, centerZ);
-        body.ring.scale.setScalar(Math.max(building.width, building.height));
+        body.ring.position.set(centerX, 0.12, centerZ);
+        body.ring.scale.setScalar(Math.max(building.width, building.height) * 1.05);
         body.ring.visible = building.selected;
+        placeShadow(body.shadow, centerX, centerZ, building.width * 1.35, building.height * 1.35);
         if (!building.wreck && body.tint) paintOwner(body.tint, building.owner, building.selected, building.hp, building.maxHp);
       }
       for (const [id, body] of structures) {
@@ -574,6 +822,13 @@ export function createField(
       }
     },
     setNodes(nodes) {
+      const count = Math.min(nodes.length, nodeSlots.length);
+      for (let i = 0; i < nodeSlots.length; i++) {
+        const node = nodes[i];
+        if (i < count && node) nodeSlots[i].set(node.x + 0.5, node.y + 0.5, node.kind === 'aether' ? 1 : 0);
+        else nodeSlots[i].set(0, 0, 0);
+      }
+      groundMaterial.uniforms.nodeCount!.value = count;
       const seen = new Set<number>();
       for (const node of nodes) {
         seen.add(node.id);
@@ -631,9 +886,21 @@ export function createField(
         return;
       }
       ghost.visible = true;
-      ghost.scale.set(next.width * 0.92, 0.2, next.height * 0.92);
-      ghost.position.set(next.x + next.width / 2, 1.05, next.y + next.height / 2);
       ghostMaterial.color.copy(next.ok ? MARKER_OK : MARKER_BAD);
+      const thickness = 0.14;
+      const north = ghostEdges[0];
+      const south = ghostEdges[1];
+      const west = ghostEdges[2];
+      const east = ghostEdges[3];
+      if (!north || !south || !west || !east) return;
+      north.scale.set(next.width, 1, thickness);
+      north.position.set(next.x + next.width / 2, 0.08, next.y + thickness / 2);
+      south.scale.set(next.width, 1, thickness);
+      south.position.set(next.x + next.width / 2, 0.08, next.y + next.height - thickness / 2);
+      west.scale.set(thickness, 1, next.height);
+      west.position.set(next.x + thickness / 2, 0.08, next.y + next.height / 2);
+      east.scale.set(thickness, 1, next.height);
+      east.position.set(next.x + next.width - thickness / 2, 0.08, next.y + next.height / 2);
     },
     setMarker(cell, accepted, raised = false) {
       if (!cell) {
@@ -708,15 +975,23 @@ export function createField(
       unitGeometry.dispose();
       buildingGeometry.dispose();
       ringGeometry.dispose();
+      shadowGeometry.dispose();
+      shadowMaterial.dispose();
+      barGeometry.dispose();
+      barBackMaterial.dispose();
       oreGeometry.dispose();
       aetherGeometry.dispose();
       markerGeometry.dispose();
       floorGeometry.dispose();
+      groundMaterial.dispose();
       fog.geometry.dispose();
       fogMaterial.dispose();
       fogTexture.dispose();
+      for (const texture of panels.values()) texture.dispose();
+      panels.clear();
       markerMaterial.dispose();
       ghostMaterial.dispose();
+      ghostBar.dispose();
     },
   };
 }
