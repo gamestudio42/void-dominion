@@ -20,7 +20,7 @@ The beat this build changes is the whole skirmish: gather ore, spend it, train s
 ## What this build does
 
 - Starts a Helion versus Helion skirmish on the 128×128 field. The human is player 1. General Varek, a weight-driven opponent, is player 2.
-- Engineers already mine the nearest ore. Ore is delivered to a command center or a finished extractor. Aether needs a finished refinery touching the node.
+- Engineers already mine the nearest ore. Ore is delivered to a command center or a finished extractor. Aether needs a finished refinery touching the node. A squad sent to one footprint takes different cells around it, and prefers cells the camera does not stack, so several units do not draw as one. An engineer mines, delivers or builds only after stopping.
 - Builds the Helion roster from `packages/content`: extractor, refinery, generator, barracks, factory, turret and a second command center. Barracks and the factory train the combat units.
 - Fights with hit points, armor and cooldown. A unit or turret only shoots what its player can see. Destroying every command center of a player ends the match. Both lost on the same tick is a draw.
 - Hides unexplored ground. Explored ground keeps a memory of enemy buildings, including a wreck if one falls out of sight.

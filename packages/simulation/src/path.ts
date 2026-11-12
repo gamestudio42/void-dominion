@@ -151,32 +151,60 @@ export function findPath(blocked: Uint8Array, fromX: number, fromY: number, toX:
 }
 
 /** Walkable cells in spiral order, starting at the origin. Null when there are not enough. */
+function laneOf(x: number, y: number): number {
+  return x - y + MAP_SIZE - 1;
+}
+
+/**
+ * Spiral of walkable cells. The first pass keeps one cell per camera lane
+ * (constant x - y), because units on one lane draw on top of each other.
+ * A second pass fills the count when the map runs out of free lanes.
+ */
 export function gatherSlots(blocked: Uint8Array, x: number, y: number, count: number): Cell[] | null {
   if (count <= 0) return [];
   const found: Cell[] = [];
-  if (isWalkable(blocked, x, y)) found.push({ x, y });
-  const dirs: readonly (readonly [number, number])[] = [
-    [1, 0],
-    [0, 1],
-    [-1, 0],
-    [0, -1],
-  ];
-  let cx = x;
-  let cy = y;
-  let dir = 0;
-  let leg = 1;
-  while (found.length < count && leg < MAP_SIZE * 2) {
-    for (let turn = 0; turn < 2; turn++) {
-      const step = dirs[dir]!;
-      for (let i = 0; i < leg; i++) {
-        cx += step[0];
-        cy += step[1];
-        if (isWalkable(blocked, cx, cy)) found.push({ x: cx, y: cy });
-        if (found.length >= count) return found;
+  const taken = new Uint8Array(MAP_SIZE * MAP_SIZE);
+  const lanes = new Uint8Array(MAP_SIZE * 2);
+  const pull = (freeLane: boolean): void => {
+    if (found.length >= count) return;
+    if (isWalkable(blocked, x, y) && taken[cellIndex(x, y)] === 0) {
+      const lane = laneOf(x, y);
+      if (!freeLane || lanes[lane] === 0) {
+        found.push({ x, y });
+        taken[cellIndex(x, y)] = 1;
+        lanes[lane] = 1;
       }
-      dir = (dir + 1) % 4;
     }
-    leg += 1;
-  }
+    const dirs: readonly (readonly [number, number])[] = [
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+      [0, -1],
+    ];
+    let cx = x;
+    let cy = y;
+    let dir = 0;
+    let leg = 1;
+    while (found.length < count && leg < MAP_SIZE * 2) {
+      for (let turn = 0; turn < 2; turn++) {
+        const step = dirs[dir]!;
+        for (let i = 0; i < leg; i++) {
+          cx += step[0];
+          cy += step[1];
+          if (!isWalkable(blocked, cx, cy) || taken[cellIndex(cx, cy)] !== 0) continue;
+          const lane = laneOf(cx, cy);
+          if (freeLane && lanes[lane] !== 0) continue;
+          found.push({ x: cx, y: cy });
+          taken[cellIndex(cx, cy)] = 1;
+          lanes[lane] = 1;
+          if (found.length >= count) return;
+        }
+        dir = (dir + 1) % 4;
+      }
+      leg += 1;
+    }
+  };
+  pull(true);
+  pull(false);
   return found.length >= count ? found : null;
 }

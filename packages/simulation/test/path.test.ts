@@ -1,6 +1,6 @@
 import { DEMO_OBSTACLE, rectContains } from '@void-dominion/content';
 import { describe, expect, it } from 'vitest';
-import { createBlocked, findPath, isWalkable } from '../src/index.ts';
+import { createBlocked, findPath, gatherSlots, isWalkable } from '../src/index.ts';
 
 describe('findPath', () => {
   const blocked = createBlocked(DEMO_OBSTACLE);
@@ -39,5 +39,14 @@ describe('findPath', () => {
     const path = findPath(grid, 1, 1, 2, 2);
     expect(path).not.toBeNull();
     expect(path!.some((cell) => cell.x === 2 && cell.y === 1)).toBe(false);
+  });
+});
+
+describe('gatherSlots', () => {
+  it('gives a squad cells on different camera lanes', () => {
+    const slots = gatherSlots(new Uint8Array(128 * 128), 20, 20, 4);
+    expect(slots).toHaveLength(4);
+    const lanes = slots!.map((cell) => cell.x - cell.y);
+    expect(new Set(lanes).size).toBe(4);
   });
 });

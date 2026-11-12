@@ -52,7 +52,8 @@ describe('effect sheets', () => {
 describe('combat watcher', () => {
   it('turns a visible fight into flashes, hits and a death', () => {
     const combat = new Set(['muzzle_flash', 'impact_hit', 'explosion']);
-    const effects = watch(skirmish(), 200).filter((effect) => combat.has(effect.kind));
+    /** Miners leave the rifleman's cell instead of stacking on it, so the kill lands after the old 200-tick window. */
+    const effects = watch(skirmish(), 400).filter((effect) => combat.has(effect.kind));
     const kinds = new Set(effects.map((effect) => effect.kind));
     expect(kinds).toEqual(new Set(['muzzle_flash', 'impact_hit', 'explosion']));
     /** Every shot lands: a hit, or a death when the target leaves the world on that tick. */

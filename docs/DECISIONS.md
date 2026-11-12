@@ -143,3 +143,7 @@ On 2026-11-12 the seven buildings still read as one clay colour, and the five gr
 
 On 2026-11-12 a building still looked pasted on the ground: nothing sat under it, the selection ring was a thin line, and the build preview was a translucent slab. The view now lays a dark disc under each unit and building, draws a brighter selection band, and shows a bar over a unit only after it has lost hit points. The build preview is the footprint outline, green when the site is legal and red when it is not. None of this is a command, and the simulation checksum is unchanged.
 
+## 029. A squad takes different cells around one footprint
+
+On 2026-11-12 several engineers ordered to the same ore node walked to the single nearest ring cell and stood on one point, so three units drew as one. The fixed camera also stacks any two cells that share `x - y`, even when the cells themselves differ. Orders that approach a footprint (gather, return, build and chase) now reserve a free ring cell, and both those orders and a group move prefer a free camera lane when one exists. An engineer mines, delivers or builds only after the path is finished, so a crowded unit steps aside before the work timer starts. The three unattended seeds still share a winner, a tick and the stockpiles. The tick moved from 3333 to 3338. The checksums are 3280354694, 2653787263 and 3889541598.
+

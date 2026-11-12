@@ -1,10 +1,11 @@
 import {
   BUILDINGS,
+  MAP_SIZE,
   buildingDef,
   unitDef,
   type BuildingKind,
 } from '@void-dominion/content';
-import { isWalkable } from './grid.ts';
+import { cellIndex, isWalkable } from './grid.ts';
 import { findPath, type Cell } from './path.ts';
 import { canSee, canSeeFootprint, footprintSeen } from './vision.ts';
 import type { Building, Unit, World } from './world.ts';
@@ -159,7 +160,15 @@ export function nodeTouches(world: World, kind: 'ore' | 'aether', x: number, y: 
   return false;
 }
 
-/** Nearest walkable ring cell, then a path that does not include the start. */
+/** Bigger than any footprint ring, so a free camera lane wins over a nearer shared one. */
+const LANE_PENALTY = 256;
+
+/**
+ * Nearest walkable ring cell, then a path that does not include the start.
+ * A claimed cell is already spoken for, so the next unit takes another side.
+ * A claimed lane (constant x - y) is the camera's depth line: two units on it
+ * draw on top of each other. The penalty keeps a squad on separate lanes.
+ */
 export function approachPath(
   blocked: Uint8Array,
   fromX: number,
@@ -168,6 +177,8 @@ export function approachPath(
   y: number,
   width: number,
   height: number,
+  claimed?: Uint8Array,
+  lanes?: Uint8Array,
 ): Cell[] | null {
   let best: Cell | null = null;
   let bestScore = Infinity;
@@ -175,9 +186,12 @@ export function approachPath(
     for (let cx = x - 1; cx <= x + width; cx++) {
       if (cx >= x && cx < x + width && cy >= y && cy < y + height) continue;
       if (!isWalkable(blocked, cx, cy)) continue;
+      if (claimed && claimed[cellIndex(cx, cy)]) continue;
       const dx = cx - fromX;
       const dy = cy - fromY;
-      const score = dx * dx + dy * dy;
+      let score = dx * dx + dy * dy;
+      const lane = lanes?.[cx - cy + MAP_SIZE - 1] ?? 0;
+      if (lane > 0) score += LANE_PENALTY;
       const closer = score < bestScore;
       const tie = score === bestScore && best !== null && (cy < best.y || (cy === best.y && cx < best.x));
       if (closer || tie) {
