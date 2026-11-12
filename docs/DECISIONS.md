@@ -120,3 +120,22 @@ The match has no game server to run or pay for. The host's browser runs the only
 Lockstep would hand both players the whole world. Host authority keeps decision 016's fog rule for the guest. The host can still read the whole map and plays without network delay, which is accepted for play between friends. A host that edits the rules is caught after the match: the guest replays the v2 file and compares checksums.
 
 On the measured match, a view is under 2.2 KB of JSON and takes about 34 µs to build, so the host's upload is small. There is no TURN relay. Two players behind symmetric NAT or CGNAT cannot connect, and the client says so. The transport sits behind one interface, so a dedicated server can replace the host later without changing the protocol.
+
+## 025. Neighbouring RTS art stays out; the interceptor is the one studio hull in the match
+
+Reviewed on 2026-11-12. Star-RTS and Crônicas da Extinção share a Godot 4.7 RTS kit. Their meshes, isometric sprite sheets, faction names, maps and campaign are not shipped. Pillar 4 forbids a borrowed faction, unit or map. Their GLBs are textured and face +X in Blender; this client tints an untextured `team` material and expects the nose on +Y before export. Their Godot scripts are not ported: this client is TypeScript, and those trees carry no license for the code. The multiplayer shape they use is already milestone 7.
+
+The studio ship kit (corvette, interceptor, heavy corvette, dreadnought) is original Blockbench work. On 2026-11-12 the owner asked for the interceptor in the match. It is a vehicle-factory unit: 100 ore, 25 aether, supply 2, faster than the scout and lighter than the walker. It uses the ground grid. The glTF is baked by `tools/asset-pipeline/blockbench/export_bbmodel.py` from the vendored `.bbmodel`, atlas, ORM and glow, then checked by `verify_glb.py`. The view multiplies the hull slightly toward the owner colour and leaves the glow map alone. The corvette, the heavy corvette and the dreadnought stay out until a unit is designed for each.
+
+CC0 audio under Star-RTS `sounds/` is the only set with a clear license. It is not imported. Sound, if it is added later, is its own decision, and each file is listed in `docs/assets.md`.
+
+The next roadmap work remains the two-network proof of the host match. There is still no TURN relay.
+
+## 026. The field reads as ground; the menu is the frozen opening
+
+On 2026-11-12 the match looked like a flat colour with a grid drawn on it, and the menu was that colour with two buttons. Vazante, Dead Sector and Void Frontier were reviewed for presentation only. Their maps, tiles and sector names stay out: pillar 4, and each of those games is a different place. What transferred is the arrangement. The ground colour is generated in the view from the cell coordinate, so ore and aether stains appear where an explored node stands and the player can tell the deposit from the plain. A line every four cells replaces the graph-paper grid. The menu draws the opening and does not step it. Stocks and orders sit on panels. A warm key and a cyan rim light the meshes that were already in the match. None of this is a new command, and the simulation checksum is unchanged.
+
+## 027. Panels, the owner stripe, and a cue for each state change
+
+On 2026-11-12 the seven buildings still read as one clay colour, and the five ground units did too, because the view cloned the first `team` or `hull` material and painted every slot with it. The owner colour now stays on the `team` material. The interceptor is the exception: it has no `team` slot, so the owner still shifts its `hull`. Building hulls take a panel map drawn in the view, one mark per kind, so the Blender meshes stay untextured. The selection card shows current hit points for one unit or building, and catalog damage, range and cost. Stop, mine, attack and build use inline marks. Accept, refuse, a shot and a finished building each play one synthesized tone in the client. None of this is a command, and the simulation checksum is unchanged.
+

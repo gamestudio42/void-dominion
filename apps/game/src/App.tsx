@@ -32,6 +32,7 @@ const EMPTY: FieldUi = {
   buildKind: null,
   buildOpen: false,
   trains: [],
+  card: null,
   contact: false,
   banner: null,
   online: null,
@@ -69,36 +70,61 @@ export function App() {
 
   if (screen.kind === 'playing') return <Field mode={screen.mode} />;
   return (
-    <main className="menu">
-      <h1>{text.title}</h1>
-      {screen.kind === 'menu' && (
-        <>
-          <button type="button" onClick={() => setScreen({ kind: 'playing', mode: { kind: 'offline' } })}>
-            {text.skirmish}
-          </button>
-          <button type="button" onClick={host}>
-            {text.host_match}
-          </button>
-        </>
-      )}
-      {screen.kind === 'hosting' && (
-        <>
-          <p>{text.host_waiting}</p>
-          {screen.link && <Link link={screen.link} copy={text.copy} copied={text.copied} />}
-        </>
-      )}
-      {screen.kind === 'joining' && <p>{text.joining}</p>}
-      {screen.kind === 'failed' && (
-        <>
-          <p className="failure">
-            {screen.reason === 'timeout' ? text.fail_timeout : screen.reason === 'unsupported' ? text.fail_unsupported : text.fail_connection}
-          </p>
-          <button type="button" onClick={() => location.assign(location.pathname + location.search)}>
-            {text.back}
-          </button>
-        </>
-      )}
-    </main>
+    <>
+      <Poster />
+      <main className="menu">
+        <section className="menu-card">
+          <p className="eyebrow">{text.frontier}</p>
+          <h1>{text.title}</h1>
+          <p className="tagline">{text.tagline}</p>
+          {screen.kind === 'menu' && (
+            <>
+              <button type="button" onClick={() => setScreen({ kind: 'playing', mode: { kind: 'offline' } })}>
+                {text.skirmish}
+              </button>
+              <button type="button" onClick={host}>
+                {text.host_match}
+              </button>
+            </>
+          )}
+          {screen.kind === 'hosting' && (
+            <>
+              <p>{text.host_waiting}</p>
+              {screen.link && <Link link={screen.link} copy={text.copy} copied={text.copied} />}
+            </>
+          )}
+          {screen.kind === 'joining' && <p>{text.joining}</p>}
+          {screen.kind === 'failed' && (
+            <>
+              <p className="failure">
+                {screen.reason === 'timeout' ? text.fail_timeout : screen.reason === 'unsupported' ? text.fail_unsupported : text.fail_connection}
+              </p>
+              <button type="button" onClick={() => location.assign(location.pathname + location.search)}>
+                {text.back}
+              </button>
+            </>
+          )}
+        </section>
+      </main>
+    </>
+  );
+}
+
+/** The opening, frozen. The match starts only when a button leaves this screen. */
+function Poster() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mapRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const minimap = mapRef.current;
+    if (!canvas || !minimap) return;
+    return startField(canvas, minimap, () => {}, navigator.language, { current: null }, { kind: 'poster' });
+  }, []);
+  return (
+    <>
+      <canvas ref={canvasRef} className="poster" />
+      <canvas ref={mapRef} hidden />
+    </>
   );
 }
 
@@ -135,16 +161,31 @@ function Field({ mode }: { mode: FieldMode }) {
     <div className="field">
       <canvas ref={canvasRef} />
       <header className="topbar">
-        <span>{text.ore(ui.ore)}</span>
-        <span>{text.aether(ui.aether)}</span>
-        <span>{text.supply(ui.supplyUsed, ui.supplyCap)}</span>
-        <span className={ui.powerTake > ui.powerGive ? 'short' : undefined}>{text.power(ui.powerGive, ui.powerTake)}</span>
-        {ui.latency !== null && <span>{text.latency(ui.latency)}</span>}
+        <span className="chip ore">{text.ore(ui.ore)}</span>
+        <span className="chip aether">{text.aether(ui.aether)}</span>
+        <span className="chip supply">{text.supply(ui.supplyUsed, ui.supplyCap)}</span>
+        <span className={ui.powerTake > ui.powerGive ? 'chip power short' : 'chip power'}>{text.power(ui.powerGive, ui.powerTake)}</span>
+        {ui.latency !== null && <span className="chip">{text.latency(ui.latency)}</span>}
         <span className="clock">{ui.clock}</span>
       </header>
       {ui.peerGone && !banner && <p className="contact">{text.peer_left}</p>}
       {banner && ui.audit && <p className={ui.audit === 'ok' ? 'audit' : 'audit failed'}>{ui.audit === 'ok' ? text.verified : text.unverified}</p>}
-      {ui.selectedLabel && <p className="selected">{ui.selectedLabel}</p>}
+      {ui.card && (
+        <section className="card">
+          <p className="selected">{ui.card.title}</p>
+          {ui.card.maxHp > 0 && (
+            <>
+              <p>{text.hp(ui.card.hp, ui.card.maxHp)}</p>
+              <div className="hp">
+                <span style={{ width: `${Math.max(0, Math.min(100, (ui.card.hp / ui.card.maxHp) * 100))}%` }} />
+              </div>
+            </>
+          )}
+          {ui.card.damage > 0 && <p>{text.damage(ui.card.damage)}</p>}
+          {ui.card.range > 0 && <p>{text.reach(ui.card.range)}</p>}
+          {(ui.card.ore > 0 || ui.card.aether > 0) && <p>{text.cost(ui.card.ore, ui.card.aether)}</p>}
+        </section>
+      )}
       {ui.rejection && <p className="refusal">{ui.rejection}</p>}
       {ui.debug && (
         <p className="debug">
@@ -161,12 +202,20 @@ function Field({ mode }: { mode: FieldMode }) {
       )}
       <canvas ref={mapRef} className="minimap" width={168} height={168} />
       <section className="commands">
-        <button type="button" onClick={() => actions.current?.stop()}>{text.stop}</button>
-        <button type="button" onClick={() => actions.current?.mine()}>{text.mine}</button>
+        <button type="button" onClick={() => actions.current?.stop()}>
+          <Glyph name="stop" />
+          {text.stop}
+        </button>
+        <button type="button" onClick={() => actions.current?.mine()}>
+          <Glyph name="mine" />
+          {text.mine}
+        </button>
         <button type="button" className={ui.mode === 'attack' ? 'active' : undefined} onClick={() => actions.current?.attack()}>
+          <Glyph name="attack" />
           {text.attack}
         </button>
         <button type="button" className={ui.buildOpen ? 'active' : undefined} onClick={() => actions.current?.toggleBuild()}>
+          <Glyph name="build" />
           {text.build}
         </button>
         {ui.trains.map((train) => (
@@ -203,5 +252,37 @@ function Field({ mode }: { mode: FieldMode }) {
         />
       </section>
     </div>
+  );
+}
+
+function Glyph({ name }: { name: 'stop' | 'mine' | 'attack' | 'build' }) {
+  const common = { className: 'glyph', viewBox: '0 0 16 16', 'aria-hidden': true as const };
+  if (name === 'stop') {
+    return (
+      <svg {...common}>
+        <rect x="3.5" y="3.5" width="9" height="9" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (name === 'mine') {
+    return (
+      <svg {...common}>
+        <path d="M3 13 L7 5 L9 8 L13 2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="4" cy="13" r="1.4" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (name === 'attack') {
+    return (
+      <svg {...common}>
+        <circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+        <path d="M8 2 V5 M8 11 V14 M2 8 H5 M11 8 H14" stroke="currentColor" strokeWidth="1.4" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <path d="M7 2 H9 V7 H14 V9 H9 V14 H7 V9 H2 V7 H7 Z" fill="currentColor" />
+    </svg>
   );
 }

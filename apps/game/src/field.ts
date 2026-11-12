@@ -28,7 +28,8 @@ import {
   type World,
 } from '@void-dominion/simulation';
 import { createField } from '@void-dominion/view3d';
-import { combatWatcher, EFFECT_SHEETS } from './effects.ts';
+import { createCues } from './audio.ts';
+import { combatWatcher, EFFECT_SHEETS, type CombatEffect } from './effects.ts';
 import { messagesFor, reasonText } from './locales.ts';
 import { createMirror } from './mirror.ts';
 import { BUILDING_MODELS, TERRAIN_MODELS, UNIT_MODELS } from './models.ts';
@@ -48,6 +49,16 @@ export interface TrainChoice {
 
 export type OrderMode = 'none' | 'attack' | 'build';
 
+export interface SelectionCard {
+  title: string;
+  hp: number;
+  maxHp: number;
+  damage: number;
+  range: number;
+  ore: number;
+  aether: number;
+}
+
 export interface FieldUi {
   selectedLabel: string;
   rejection: string | null;
@@ -66,6 +77,7 @@ export interface FieldUi {
   buildKind: BuildingKind | null;
   buildOpen: boolean;
   trains: TrainChoice[];
+  card: SelectionCard | null;
   contact: boolean;
   banner: 'victory' | 'defeat' | 'draw' | null;
   /** Which side of an online match this window plays, or null offline. */
@@ -82,7 +94,11 @@ export interface FieldUi {
  * Offline, this window runs the match against Varek. As host it runs the match for both
  * seats and serves the guest. As guest it runs no simulation and draws the host's views.
  */
-export type FieldMode = { kind: 'offline' } | { kind: 'host'; channels: Channels } | { kind: 'guest'; session: GuestSession };
+export type FieldMode =
+  | { kind: 'offline' }
+  | { kind: 'poster' }
+  | { kind: 'host'; channels: Channels }
+  | { kind: 'guest'; session: GuestSession };
 
 export interface FieldActions {
   stop(): void;
@@ -117,6 +133,8 @@ export function startField(
   fieldMode: FieldMode = { kind: 'offline' },
 ): () => void {
   const messages = messagesFor(language);
+  const poster = fieldMode.kind === 'poster';
+  const cues = createCues();
   const guest = fieldMode.kind === 'guest' ? fieldMode.session : null;
   /** The seat this window plays. */
   const me = guest ? guest.seat : PLAYER_ID;
@@ -200,6 +218,9 @@ export function startField(
     pendingTicket = null;
     lastReason = reason;
     marker = pendingMark ? { cell: pendingMark, accepted: reason === null } : null;
+    if (poster) return;
+    if (reason) cues.refuse();
+    else cues.accept();
   }
 
   function shownUnits(alpha: number) {
@@ -280,17 +301,36 @@ export function startField(
     return 'defeat';
   }
 
-  function selectionLabel(): string {
+  function selectionCard(): SelectionCard | null {
     if (selectedBuilding !== null) {
       const building = world.buildings.find((entry) => entry.id === selectedBuilding);
-      if (!building) return '';
-      const name = messages.buildingName(building.kind);
+      if (!building) return null;
       const def = buildingDef(building.kind);
-      if (building.progress < def.buildTicks) return messages.constructing(name, Math.floor((building.progress / def.buildTicks) * 100));
-      return name;
+      const name = messages.buildingName(building.kind);
+      const title =
+        building.progress < def.buildTicks
+          ? messages.constructing(name, Math.floor((building.progress / def.buildTicks) * 100))
+          : name;
+      return { title, hp: building.hp, maxHp: def.hp, damage: def.damage, range: def.range, ore: def.ore, aether: def.aether };
     }
-    if (selected.size === 0) return '';
-    return messages.selected(selected.size);
+    const units = world.units.filter((unit) => selected.has(unit.id) && unit.hp > 0);
+    if (units.length === 0) return null;
+    const kind = units[0]!.kind;
+    if (!units.every((unit) => unit.kind === kind)) {
+      return { title: messages.selected(units.length), hp: 0, maxHp: 0, damage: 0, range: 0, ore: 0, aether: 0 };
+    }
+    const def = unitDef(kind);
+    const name = messages.unitName(kind);
+    const one = units.length === 1 ? units[0]! : null;
+    return {
+      title: one ? name : messages.group(units.length, name),
+      hp: one ? one.hp : 0,
+      maxHp: one ? def.hp : 0,
+      damage: def.damage,
+      range: def.range,
+      ore: def.ore,
+      aether: def.aether,
+    };
   }
 
   function trainChoices(): TrainChoice[] {
@@ -309,6 +349,19 @@ export function startField(
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
+  function hear(effects: CombatEffect[]): void {
+    let shot = false;
+    let built = false;
+    for (const effect of effects) {
+      view.addEffect(effect.kind, effect.x, effect.y, effect.height, effect.size);
+      if (effect.kind === 'muzzle_flash') shot = true;
+      if (effect.kind === 'build_complete') built = true;
+    }
+    if (poster) return;
+    if (shot) cues.shot();
+    if (built) cues.built();
+  }
+
   function enemyVisible(): boolean {
     for (const unit of world.units) {
       if (unit.owner === me) continue;
@@ -320,8 +373,10 @@ export function startField(
   function publish(): void {
     const stock = world.players.find((entry) => entry.id === me);
     const trains = trainChoices();
+    const card = selectionCard();
     const next: FieldUi = {
-      selectedLabel: selectionLabel(),
+      selectedLabel: card?.title ?? '',
+      card,
       rejection: note ?? (pendingTicket !== null || hideRejection ? null : reasonText(messages, lastReason)),
       debug,
       tick: world.tick,
@@ -340,7 +395,7 @@ export function startField(
       trains,
       contact: enemyVisible(),
       banner: banner(),
-      online: fieldMode.kind === 'offline' ? null : fieldMode.kind,
+      online: fieldMode.kind === 'host' || fieldMode.kind === 'guest' ? fieldMode.kind : null,
       latency: guest?.latency === null || !guest ? null : Math.round(guest.latency),
       peerGone,
       audit: guest?.audit ? (guest.audit.ok ? 'ok' : 'failed') : null,
@@ -764,13 +819,13 @@ export function startField(
     if (keys.has('KeyS')) view.pan(0, -pan);
 
     /** A host waits for a guest who dropped; a guest only draws. */
-    const stepped = stepper.advance(sim && !(host && peerGone) ? elapsed : 0);
+    const stepped = stepper.advance(sim && !poster && !(host && peerGone) ? elapsed : 0);
     if (sim && stepped.steps > 0) {
       previous = current;
       for (let i = 0; i < stepped.steps; i++) {
         sim.step();
         host?.afterStep();
-        for (const effect of watchCombat(world)) view.addEffect(effect.kind, effect.x, effect.y, effect.height, effect.size);
+        hear(watchCombat(world));
         if (pendingTicket !== null && sim.results.has(pendingTicket)) settle(pendingTicket, sim.results.get(pendingTicket) ?? null);
       }
       current = capture();
@@ -802,7 +857,7 @@ export function startField(
       mirror.apply(next, guest.explored);
       current = capture();
       viewAt = performance.now();
-      for (const effect of watchCombat(world, new Set(next.dead ?? []))) view.addEffect(effect.kind, effect.x, effect.y, effect.height, effect.size);
+      hear(watchCombat(world, new Set(next.dead ?? [])));
       forget();
     };
     guest.onAck = (ack) => settle(ack.seq, ack.reason);
@@ -814,14 +869,16 @@ export function startField(
   const keyDown = (event: KeyboardEvent) => onKey(event, true);
   const keyUp = (event: KeyboardEvent) => onKey(event, false);
   const onContextMenu = (event: Event) => event.preventDefault();
-  canvas.addEventListener('pointerdown', onPointerDown);
-  canvas.addEventListener('pointermove', onPointerMove);
-  canvas.addEventListener('pointerup', onPointerUp);
-  canvas.addEventListener('contextmenu', onContextMenu);
-  canvas.addEventListener('wheel', onWheel, { passive: false });
-  minimap.addEventListener('pointerdown', onMap);
-  window.addEventListener('keydown', keyDown);
-  window.addEventListener('keyup', keyUp);
+  if (!poster) {
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('contextmenu', onContextMenu);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    minimap.addEventListener('pointerdown', onMap);
+    window.addEventListener('keydown', keyDown);
+    window.addEventListener('keyup', keyUp);
+  }
   window.addEventListener('resize', view.resize);
 
   paint(0);

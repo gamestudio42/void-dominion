@@ -1,10 +1,12 @@
 import {
   AmbientLight,
   BoxGeometry,
+  ClampToEdgeWrapping,
+  CanvasTexture,
   Color,
   DataTexture,
   DirectionalLight,
-  GridHelper,
+  LinearFilter,
   Mesh,
   MeshStandardMaterial,
   NearestFilter,
@@ -119,7 +121,19 @@ const MARKER_BAD = new Color('#d4766a');
 
 /** Material name in each GLB that takes the owner colour. Set by the Blender spec palette. */
 const TEAM_MATERIAL = 'team';
+/** Textured hull. The atlas stays visible; the owner only shifts its colour. */
+const HULL_MATERIAL = 'hull';
 const WRECK = new Color('#3a342c');
+/** Buildings wear a generated panel map on `hull`. Units keep the flat metal so the silhouette stays the spec. */
+const PANELED = new Set([
+  'command_center',
+  'ore_extractor',
+  'aether_refinery',
+  'power_generator',
+  'barracks',
+  'vehicle_factory',
+  'defense_turret',
+]);
 
 interface Body {
   root: Object3D;
@@ -140,6 +154,7 @@ const UNIT_SCALE: Record<string, [number, number, number]> = {
   rocketeer: [0.48, 0.78, 0.48],
   scout_rover: [0.86, 0.32, 0.44],
   assault_walker: [0.95, 0.9, 0.95],
+  interceptor: [1.42, 0.48, 1.6],
 };
 
 /**
@@ -215,8 +230,10 @@ export function createField(
   const fogBytes = new Uint8Array(mapSize * mapSize * 4);
   const fogTexture = new DataTexture(fogBytes, mapSize, mapSize, RGBAFormat);
   fogTexture.colorSpace = NoColorSpace;
-  fogTexture.magFilter = NearestFilter;
-  fogTexture.minFilter = NearestFilter;
+  fogTexture.magFilter = LinearFilter;
+  fogTexture.minFilter = LinearFilter;
+  fogTexture.wrapS = ClampToEdgeWrapping;
+  fogTexture.wrapT = ClampToEdgeWrapping;
   fogTexture.flipY = false;
   fogTexture.needsUpdate = true;
   const fogMaterial = new ShaderMaterial({
@@ -239,8 +256,8 @@ export function createField(
       uniform float mapSize;
       varying vec3 vWorld;
       void main() {
-        float u = (floor(vWorld.x) + 0.5) / mapSize;
-        float v = (floor(vWorld.z) + 0.5) / mapSize;
+        float u = clamp(vWorld.x / mapSize, 0.0, 1.0);
+        float v = clamp(vWorld.z / mapSize, 0.0, 1.0);
         gl_FragColor = texture2D(fogMap, vec2(u, v));
       }
     `,
@@ -251,19 +268,61 @@ export function createField(
   fog.renderOrder = 2;
   scene.add(fog);
 
+  const nodeSlots = Array.from({ length: 8 }, () => new Vector3());
+  const groundMaterial = new ShaderMaterial({
+    uniforms: {
+      nodes: { value: nodeSlots },
+      nodeCount: { value: 0 },
+    },
+    vertexShader: `
+      varying vec3 vWorld;
+      void main() {
+        vec4 world = modelMatrix * vec4(position, 1.0);
+        vWorld = world.xyz;
+        gl_Position = projectionMatrix * viewMatrix * world;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 nodes[8];
+      uniform float nodeCount;
+      varying vec3 vWorld;
+      float hash(vec2 p) {
+        vec2 q = fract(p * vec2(0.1031, 0.11369));
+        q += dot(q, q.yx + 19.19);
+        return fract((q.x + q.y) * q.x);
+      }
+      void main() {
+        vec2 cell = floor(vWorld.xz);
+        float speck = hash(cell);
+        float patch = hash(floor(cell / 4.0));
+        vec3 color = mix(vec3(0.17, 0.19, 0.21), vec3(0.34, 0.26, 0.18), speck);
+        color = mix(color, vec3(0.22, 0.24, 0.27), patch * 0.85);
+        for (int i = 0; i < 8; i++) {
+          float live = step(float(i) + 0.5, nodeCount);
+          float dist = distance(vWorld.xz, nodes[i].xy);
+          float stain = smoothstep(6.5, 0.4, dist) * live;
+          vec3 tint = mix(vec3(0.72, 0.42, 0.16), vec3(0.16, 0.62, 0.60), step(0.5, nodes[i].z));
+          color = mix(color, tint, stain * 0.78);
+        }
+        vec2 grid = fract(vWorld.xz / 4.0);
+        float line = clamp(step(0.93, grid.x) + step(0.93, grid.y), 0.0, 1.0);
+        color = mix(color, vec3(0.55, 0.62, 0.70), line * 0.55);
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+  });
   const floorGeometry = new BoxGeometry(mapSize, 0.02, mapSize);
-  const floor = new Mesh(floorGeometry, new MeshStandardMaterial({ color: GROUND, roughness: 1, metalness: 0 }));
+  const floor = new Mesh(floorGeometry, groundMaterial);
   floor.position.set(mapSize / 2, -0.01, mapSize / 2);
   scene.add(floor);
 
-  const grid = new GridHelper(mapSize, 32, '#314054', '#263140');
-  grid.position.set(mapSize / 2, 0.01, mapSize / 2);
-  scene.add(grid);
-
-  scene.add(new AmbientLight('#d5dbe6', 0.72));
-  const sun = new DirectionalLight('#fff4e0', 1.15);
-  sun.position.set(40, 80, 20);
+  scene.add(new AmbientLight('#c9d2de', 0.42));
+  const sun = new DirectionalLight('#ffe2b4', 1.35);
+  sun.position.set(48, 72, 16);
   scene.add(sun);
+  const rim = new DirectionalLight('#7ecfd2', 0.48);
+  rim.position.set(-40, 36, -30);
+  scene.add(rim);
 
   function placeCamera(): void {
     camera.position.set(
@@ -292,9 +351,77 @@ export function createField(
   function paintOwner(material: MeshStandardMaterial, owner: number, selected: boolean, hp: number, maxHp: number): void {
     const tint = owner === 1 ? PLAYER : ENEMY;
     const fraction = maxHp > 0 ? hp / maxHp : 1;
+    if (material.name === HULL_MATERIAL) {
+      material.color.set('#ffffff').lerp(tint, 0.35).multiplyScalar(0.55 + 0.45 * fraction);
+      if (selected) material.color.lerp(new Color('#f6e2bc'), 0.25);
+      return;
+    }
     material.color.copy(tint).multiplyScalar(0.4 + 0.6 * fraction);
     if (selected) material.color.lerp(new Color('#f6e2bc'), 0.45);
     material.emissive.set(selected ? '#6a4a16' : '#000000');
+  }
+
+  const panels = new Map<string, CanvasTexture>();
+
+  /** A small original atlas per building. Each face of the Blender cube already carries a 0–1 UV. */
+  function panelMap(kind: string): CanvasTexture {
+    const cached = panels.get(kind);
+    if (cached) return cached;
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      const empty = new CanvasTexture(canvas);
+      panels.set(kind, empty);
+      return empty;
+    }
+    ctx.fillStyle = '#c5ced8';
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.strokeStyle = '#1c2430';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(3, 3, 58, 58);
+    for (let i = 16; i < 64; i += 16) {
+      ctx.beginPath();
+      ctx.moveTo(i, 4);
+      ctx.lineTo(i, 60);
+      ctx.moveTo(4, i);
+      ctx.lineTo(60, i);
+      ctx.stroke();
+    }
+    ctx.fillStyle = markColor(kind);
+    paintMark(ctx, kind);
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    texture.magFilter = NearestFilter;
+    texture.minFilter = NearestFilter;
+    texture.needsUpdate = true;
+    panels.set(kind, texture);
+    return texture;
+  }
+
+  function markColor(kind: string): string {
+    if (kind === 'ore_extractor' || kind === 'power_generator') return '#e0a045';
+    if (kind === 'aether_refinery') return '#5ec4c0';
+    if (kind === 'defense_turret') return '#d0504a';
+    return '#7ecfd2';
+  }
+
+  function paintMark(ctx: CanvasRenderingContext2D, kind: string): void {
+    if (kind === 'command_center') ctx.fillRect(6, 26, 52, 8);
+    else if (kind === 'ore_extractor') ctx.fillRect(8, 8, 48, 10);
+    else if (kind === 'aether_refinery') {
+      ctx.fillRect(14, 8, 8, 48);
+      ctx.fillRect(42, 8, 8, 48);
+    } else if (kind === 'power_generator') ctx.fillRect(8, 40, 48, 10);
+    else if (kind === 'barracks') {
+      for (let x = 10; x <= 46; x += 12) ctx.fillRect(x, 22, 8, 8);
+    } else if (kind === 'vehicle_factory') ctx.fillRect(10, 14, 44, 28);
+    else {
+      ctx.beginPath();
+      ctx.arc(32, 32, 14, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function disposeTree(root: Object3D): void {
@@ -313,14 +440,24 @@ export function createField(
       const material = new MeshStandardMaterial({ roughness, metalness: 0.08 });
       return { root: new Mesh(fallback, material), ring, tint: material, box: true, wrecked: false, lastX: x, lastZ: z };
     }
-    /** Geometry and the other materials stay shared with the template; only the team colour is per body. */
+    /** Geometry stays shared. Team (or the interceptor hull) is copied per body. Building hulls take a panel map. */
     const root = template.clone(true);
     let tint: MeshStandardMaterial | null = null;
+    let plated: MeshStandardMaterial | null = null;
+    const ownerSlot = kind === 'interceptor' ? HULL_MATERIAL : TEAM_MATERIAL;
     root.traverse((child) => {
       if (!(child instanceof Mesh) || !(child.material instanceof MeshStandardMaterial)) return;
-      if (child.material.name !== TEAM_MATERIAL) return;
-      tint ??= child.material.clone();
-      child.material = tint;
+      if (child.material.name === ownerSlot) {
+        tint ??= child.material.clone();
+        child.material = tint;
+        return;
+      }
+      if (PANELED.has(kind) && child.material.name === 'hull') {
+        plated ??= child.material.clone();
+        plated.map = panelMap(kind);
+        plated.color.set('#ffffff');
+        child.material = plated;
+      }
     });
     return { root, ring, tint, box: false, wrecked: false, lastX: x, lastZ: z };
   }
@@ -574,6 +711,13 @@ export function createField(
       }
     },
     setNodes(nodes) {
+      const count = Math.min(nodes.length, nodeSlots.length);
+      for (let i = 0; i < nodeSlots.length; i++) {
+        const node = nodes[i];
+        if (i < count && node) nodeSlots[i].set(node.x + 0.5, node.y + 0.5, node.kind === 'aether' ? 1 : 0);
+        else nodeSlots[i].set(0, 0, 0);
+      }
+      groundMaterial.uniforms.nodeCount!.value = count;
       const seen = new Set<number>();
       for (const node of nodes) {
         seen.add(node.id);
@@ -712,9 +856,12 @@ export function createField(
       aetherGeometry.dispose();
       markerGeometry.dispose();
       floorGeometry.dispose();
+      groundMaterial.dispose();
       fog.geometry.dispose();
       fogMaterial.dispose();
       fogTexture.dispose();
+      for (const texture of panels.values()) texture.dispose();
+      panels.clear();
       markerMaterial.dispose();
       ghostMaterial.dispose();
     },
