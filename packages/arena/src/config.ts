@@ -16,6 +16,11 @@ export interface ArenaConfig {
   maxTicks: number;
   seats: [SeatConfig, SeatConfig];
   fallbackInvalidThreshold: number;
+  /**
+   * `seeded` nudges both seats' resource nodes from the match seed.
+   * Omitted or `none` is the published skirmish layout.
+   */
+  variation?: 'none' | 'seeded';
 }
 
 export const DEFAULT_SEAT_CONFIG: Omit<SeatConfig, 'agentId'> = {

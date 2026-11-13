@@ -158,30 +158,66 @@ The attack target comes only from that observation. A visible or remembered enem
 
 ### Example agent against Varek
 
-`tools/arena/vs-varek.ts` runs `examples/deterministic.ts` against the engine's Varek seat (`stepAi`, no process, no observation). The external seat alternates: even index on seat 1, odd index on seat 2. Cap is 8000 ticks, the same ceiling as `runArena`. Seeds are `MATCH.seed + 0..9` (24301 through 24310). No match rule draws from the seed, so each seat assignment repeats exactly; the checksum would still differ.
+`tools/arena/vs-varek.ts` runs `examples/deterministic.ts` against the engine's Varek seat (`stepAi`, no process, no observation). The external seat alternates: even index on seat 1, odd index on seat 2. Cap is 8000 ticks, the same ceiling as `runArena`. Seeds are `MATCH.seed + 0..9` (24301 through 24310). The script sets `variation: 'seeded'`, so each seed nudges both seats' resource nodes by a mirrored one-cell offset and the same amount bonus. The default skirmish does not. Replay v2 still records the published layout; reproducing a seeded match means `Simulation.create(seed, seats, 'seeded')`.
+
+The table below replaces the earlier run, which had no rule reading the seed and therefore repeated two games.
 
 | seed | external seat | winner | end reason | ticks | ownDecisions | fallbackDecisions | invalidActions |
 |---|---|---|---|---|---|---|---|
-| 24301 | 1 | 2 | victory | 4614 | 47 | 0 | 0 |
-| 24302 | 2 | 1 | victory | 3986 | 40 | 0 | 0 |
-| 24303 | 1 | 2 | victory | 4614 | 47 | 0 | 0 |
-| 24304 | 2 | 1 | victory | 3986 | 40 | 0 | 0 |
-| 24305 | 1 | 2 | victory | 4614 | 47 | 0 | 0 |
-| 24306 | 2 | 1 | victory | 3986 | 40 | 0 | 0 |
-| 24307 | 1 | 2 | victory | 4614 | 47 | 0 | 0 |
-| 24308 | 2 | 1 | victory | 3986 | 40 | 0 | 0 |
-| 24309 | 1 | 2 | victory | 4614 | 47 | 0 | 0 |
-| 24310 | 2 | 1 | victory | 3986 | 40 | 0 | 0 |
+| 24301 | 1 | 2 | victory | 3988 | 40 | 0 | 0 |
+| 24302 | 2 | 1 | victory | 3996 | 40 | 0 | 0 |
+| 24303 | 1 | 2 | victory | 3851 | 39 | 0 | 0 |
+| 24304 | 2 | 1 | victory | 3957 | 40 | 0 | 0 |
+| 24305 | 1 | 2 | victory | 4156 | 42 | 0 | 0 |
+| 24306 | 2 | 1 | victory | 3885 | 39 | 0 | 0 |
+| 24307 | 1 | 2 | victory | 4015 | 41 | 0 | 0 |
+| 24308 | 2 | 1 | victory | 3988 | 40 | 0 | 0 |
+| 24309 | 1 | 2 | victory | 3988 | 40 | 0 | 0 |
+| 24310 | 2 | 1 | victory | 3996 | 40 | 0 | 0 |
 
-Totals, from the example agent's side: **0 wins, 10 losses, 0 draws**. Every match ended in `victory` for Varek before the tick cap. When the example agent held seat 1, Varek won on tick 4614. When the example agent held seat 2, Varek won on tick 3986. Fallback decisions and invalid actions were zero. The army does reach the enemy side and delays the loss; it does not destroy Varek's command center before his march destroys its own. The CI test covers three of these seeds for 400 ticks only, so it stays on `tick_cap` and checks that Varek's seat records no decisions.
+Totals, from the example agent's side: **0 wins, 10 losses, 0 draws**. Every match ended in `victory` for Varek before the tick cap. Tick counts now move with the seed (3851 through 4156) instead of repeating one number per seat. Fallback decisions and invalid actions were zero. The army still does not destroy Varek's command center before his march destroys its own. The CI test covers three of these seeds for 400 ticks only, on the default layout, so it stays on `tick_cap` and checks that Varek's seat records no decisions.
 
-### Ollama Agent (Optional)
+### Ollama Agent (Optional, not in CI)
+
+Install [Ollama](https://ollama.ai), start it, and pull a model. The example reads two environment variables and blocks on each `agent.observe`, calling the local API once per decision. It is never started by tests or by the benchmark script.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `OLLAMA_API` | `http://localhost:11434` | Generate endpoint, without `/api/generate` |
+| `OLLAMA_MODEL` | `llama3.2` | Model name already pulled |
 
 ```bash
-OLLAMA_MODEL=llama3.2 node --experimental-transform-types examples/ollama.ts
+ollama pull llama3.2
+OLLAMA_MODEL=llama3.2 node --experimental-transform-types --no-warnings examples/ollama.ts
 ```
 
-Requires Ollama installed and running. Not used in CI or tests.
+The Arena, not the example, owns the clock. `strategicPeriodTicks` (default 100) is the match config: one observation every 100 ticks, with `decisionTimeoutMs` (default 10 seconds) as the wait. A local match against Varek passes `variation: 'seeded'` when the openings should differ by seed:
+
+```typescript
+const factory = new ScriptAgentFactory('node', [
+  '--experimental-transform-types',
+  '--no-warnings',
+  'examples/ollama.ts',
+]);
+const config = {
+  ...DEFAULT_ARENA_CONFIG,
+  variation: 'seeded' as const,
+  strategicPeriodTicks: 100,
+  maxTicks: 8000,
+  seats: [
+    { ...DEFAULT_SEAT_CONFIG, agentId: 'ollama', decisionTimeoutMs: 10_000 },
+    { ...DEFAULT_SEAT_CONFIG, agentId: 'varek' },
+  ],
+};
+await runMatch({
+  seed: 24301,
+  engineSeats: ['human', 'varek'],
+  agentFactories: [factory, factory],
+  config,
+});
+```
+
+The second factory is not spawned, because that seat is `varek`.
 
 ## Running Matches
 
