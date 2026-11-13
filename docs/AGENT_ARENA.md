@@ -78,7 +78,7 @@ Transport: **JSON Lines** over stdin/stdout. Each message is a single line of JS
 
 Configured per seat. Applied on timeout, crashed process, or malformed JSON.
 
-1. **fallback** (default): A deterministic reserve agent submits noop actions. Results report own vs fallback decisions separately.
+1. **fallback** (default): A simple defensive fallback agent takes over. It keeps engineers gathering ore and defends the base with available units. Results report own vs fallback decisions separately. The fallback agent is distinct from the example deterministic agent.
 2. **noop**: Skip this decision tick entirely.
 3. **forfeit**: After N consecutive failures (default 3), the seat forfeits the match.
 
@@ -148,7 +148,13 @@ Every event includes `schemaVersion` for forward compatibility.
 node --experimental-transform-types examples/deterministic.ts
 ```
 
-Always responds with noop. Useful for testing the Arena without external dependencies.
+A fully deterministic agent that plays strategically using only its authorized observation. It:
+- Gathers ore with engineers
+- Builds barracks, refineries, and vehicle factories
+- Produces soldiers and tanks
+- Attacks when it has an army
+
+All decisions are deterministic based on game state (tick, resources, units, buildings). No randomness, network, or external dependencies.
 
 ### Ollama Agent (Optional)
 
