@@ -149,14 +149,12 @@ node --experimental-transform-types examples/deterministic.ts
 ```
 
 A fully deterministic agent that plays strategically using only its authorized observation. It:
-- Gathers ore with engineers
+- Gathers ore with engineers, leaving the engineer who is raising the barracks on that order
 - Builds barracks, aether refineries, and vehicle factories
 - Produces riflemen and assault walkers
-- Attack-moves once it has an army
+- Attack-moves the army once it has three combat units
 
-All decisions are deterministic based on game state (tick, resources, units, buildings). No randomness, network, or external dependencies.
-
-The attack order does not aim at the enemy command center. From seat 1 the army is sent to `(100, 100)`; from seat 2 it is sent to `(28, 28)`. The bases are at `(8, 96)` and `(112, 24)`. General Varek still marches on the opposing command center after tick 2400, so he closes these matches.
+The attack target comes only from that observation. A visible or remembered enemy command center is the target. Any other enemy building in the observation is used when the command center has not been seen. With nothing remembered, the army scouts to the opposite corner of the map from its own command center (`MAP_SIZE - 1` minus that building's coordinates). It does not read the world, the other seat's stocks, or the scenario base list.
 
 ### Example agent against Varek
 
@@ -164,18 +162,18 @@ The attack order does not aim at the enemy command center. From seat 1 the army 
 
 | seed | external seat | winner | end reason | ticks | ownDecisions | fallbackDecisions | invalidActions |
 |---|---|---|---|---|---|---|---|
-| 24301 | 1 | 2 | victory | 3599 | 36 | 0 | 0 |
-| 24302 | 2 | 1 | victory | 3369 | 34 | 0 | 0 |
-| 24303 | 1 | 2 | victory | 3599 | 36 | 0 | 0 |
-| 24304 | 2 | 1 | victory | 3369 | 34 | 0 | 0 |
-| 24305 | 1 | 2 | victory | 3599 | 36 | 0 | 0 |
-| 24306 | 2 | 1 | victory | 3369 | 34 | 0 | 0 |
-| 24307 | 1 | 2 | victory | 3599 | 36 | 0 | 0 |
-| 24308 | 2 | 1 | victory | 3369 | 34 | 0 | 0 |
-| 24309 | 1 | 2 | victory | 3599 | 36 | 0 | 0 |
-| 24310 | 2 | 1 | victory | 3369 | 34 | 0 | 0 |
+| 24301 | 1 | 2 | victory | 4614 | 47 | 0 | 0 |
+| 24302 | 2 | 1 | victory | 3986 | 40 | 0 | 0 |
+| 24303 | 1 | 2 | victory | 4614 | 47 | 0 | 0 |
+| 24304 | 2 | 1 | victory | 3986 | 40 | 0 | 0 |
+| 24305 | 1 | 2 | victory | 4614 | 47 | 0 | 0 |
+| 24306 | 2 | 1 | victory | 3986 | 40 | 0 | 0 |
+| 24307 | 1 | 2 | victory | 4614 | 47 | 0 | 0 |
+| 24308 | 2 | 1 | victory | 3986 | 40 | 0 | 0 |
+| 24309 | 1 | 2 | victory | 4614 | 47 | 0 | 0 |
+| 24310 | 2 | 1 | victory | 3986 | 40 | 0 | 0 |
 
-Totals, from the example agent's side: **0 wins, 10 losses, 0 draws**. Every match ended in `victory` for Varek before the tick cap. When the example agent held seat 1, Varek won on tick 3599. When the example agent held seat 2, Varek won on tick 3369. Fallback decisions and invalid actions were zero. The CI test covers three of these seeds for 400 ticks only, so it stays on `tick_cap` and checks that Varek's seat records no decisions.
+Totals, from the example agent's side: **0 wins, 10 losses, 0 draws**. Every match ended in `victory` for Varek before the tick cap. When the example agent held seat 1, Varek won on tick 4614. When the example agent held seat 2, Varek won on tick 3986. Fallback decisions and invalid actions were zero. The army does reach the enemy side and delays the loss; it does not destroy Varek's command center before his march destroys its own. The CI test covers three of these seeds for 400 ticks only, so it stays on `tick_cap` and checks that Varek's seat records no decisions.
 
 ### Ollama Agent (Optional)
 
