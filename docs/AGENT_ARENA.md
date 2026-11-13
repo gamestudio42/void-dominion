@@ -16,7 +16,7 @@ examples/               deterministic.ts, ollama.ts (optional)
 1. **Arena owns the clock.** `reset` and `step` are privileged operations never exposed to agent processes.
 2. **Observations use `clientView`.** External agents never receive information hidden by fog (unlike `observe()`, which leaks resource amounts).
 3. **Commands go through `Simulation.enqueue()`.** The CommanderAdapter injects `playerId` from the seat and submits commands that appear in replay v2.
-4. **Varek is unchanged.** The conventional opponent continues to use `stepAi` and is not an external agent.
+4. **Varek is unchanged.** The conventional opponent continues to use `stepAi` and is not an external agent. A match passes `engineSeats` of `'human' | 'varek'`. A `varek` seat gets no child process and no observation.
 5. **Failure policies are configurable.** Timeouts, crashes, and malformed JSON trigger fallback, noop, or forfeit policies.
 
 ## Protocol
@@ -150,11 +150,32 @@ node --experimental-transform-types examples/deterministic.ts
 
 A fully deterministic agent that plays strategically using only its authorized observation. It:
 - Gathers ore with engineers
-- Builds barracks, refineries, and vehicle factories
-- Produces soldiers and tanks
-- Attacks when it has an army
+- Builds barracks, aether refineries, and vehicle factories
+- Produces riflemen and assault walkers
+- Attack-moves once it has an army
 
 All decisions are deterministic based on game state (tick, resources, units, buildings). No randomness, network, or external dependencies.
+
+The attack order does not aim at the enemy command center. From seat 1 the army is sent to `(100, 100)`; from seat 2 it is sent to `(28, 28)`. The bases are at `(8, 96)` and `(112, 24)`. General Varek still marches on the opposing command center after tick 2400, so he closes these matches.
+
+### Example agent against Varek
+
+`tools/arena/vs-varek.ts` runs `examples/deterministic.ts` against the engine's Varek seat (`stepAi`, no process, no observation). The external seat alternates: even index on seat 1, odd index on seat 2. Cap is 8000 ticks, the same ceiling as `runArena`. Seeds are `MATCH.seed + 0..9` (24301 through 24310). No match rule draws from the seed, so each seat assignment repeats exactly; the checksum would still differ.
+
+| seed | external seat | winner | end reason | ticks | ownDecisions | fallbackDecisions | invalidActions |
+|---|---|---|---|---|---|---|---|
+| 24301 | 1 | 2 | victory | 3599 | 36 | 0 | 0 |
+| 24302 | 2 | 1 | victory | 3369 | 34 | 0 | 0 |
+| 24303 | 1 | 2 | victory | 3599 | 36 | 0 | 0 |
+| 24304 | 2 | 1 | victory | 3369 | 34 | 0 | 0 |
+| 24305 | 1 | 2 | victory | 3599 | 36 | 0 | 0 |
+| 24306 | 2 | 1 | victory | 3369 | 34 | 0 | 0 |
+| 24307 | 1 | 2 | victory | 3599 | 36 | 0 | 0 |
+| 24308 | 2 | 1 | victory | 3369 | 34 | 0 | 0 |
+| 24309 | 1 | 2 | victory | 3599 | 36 | 0 | 0 |
+| 24310 | 2 | 1 | victory | 3369 | 34 | 0 | 0 |
+
+Totals, from the example agent's side: **0 wins, 10 losses, 0 draws**. Every match ended in `victory` for Varek before the tick cap. When the example agent held seat 1, Varek won on tick 3599. When the example agent held seat 2, Varek won on tick 3369. Fallback decisions and invalid actions were zero. The CI test covers three of these seeds for 400 ticks only, so it stays on `tick_cap` and checks that Varek's seat records no decisions.
 
 ### Ollama Agent (Optional)
 

@@ -13,6 +13,11 @@ export interface MatchSetup {
   agentFactories: [AgentFactory, AgentFactory];
   config: ArenaConfig;
   recordPath?: string;
+  /**
+   * Engine seat control. A `varek` seat is driven by `stepAi` inside the simulation
+   * and is not given a process or an observation. Default is two external seats.
+   */
+  engineSeats?: Seats;
 }
 
 function determineEndReason(sim: Simulation, ticks: number, maxTicks: number, seat1Forfeited: boolean, seat2Forfeited: boolean): EndReason {
@@ -50,11 +55,11 @@ function calculateMetrics(decisions: DecisionResult[], agentId: string, seat: nu
 export async function runMatch(setup: MatchSetup): Promise<MatchResult> {
   const matchId = setup.matchId ?? randomUUID();
   const seed = setup.seed ?? MATCH.seed;
-  const seats: Seats = ['human', 'human'];
+  const seats: Seats = setup.engineSeats ?? ['human', 'human'];
   const sim = Simulation.create(seed, seats);
 
-  const seat1Process = setup.agentFactories[0].create(1, seed);
-  const seat2Process = setup.agentFactories[1].create(2, seed);
+  const seat1Process = seats[0] === 'varek' ? null : setup.agentFactories[0].create(1, seed);
+  const seat2Process = seats[1] === 'varek' ? null : setup.agentFactories[1].create(2, seed);
 
   const scheduler = new ArenaScheduler(sim, setup.config, seat1Process, seat2Process);
   const recorder = setup.recordPath ? new DecisionRecorder(setup.recordPath, matchId) : null;

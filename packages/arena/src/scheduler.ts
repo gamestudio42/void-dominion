@@ -8,7 +8,8 @@ import { FallbackAgent } from './fallback.ts';
 import { createHash } from 'node:crypto';
 
 interface SeatState {
-  process: AgentProcess;
+  /** Null when the engine's Varek policy drives this seat. No process, no observation. */
+  process: AgentProcess | null;
   fallbackAgent: FallbackAgent;
   adapter: CommanderAdapter;
   consecutiveFailures: number;
@@ -27,8 +28,8 @@ export class ArenaScheduler {
   constructor(
     private readonly sim: Simulation,
     private readonly config: { seats: [SeatConfig, SeatConfig]; strategicPeriodTicks: number },
-    seat1Process: AgentProcess,
-    seat2Process: AgentProcess,
+    seat1Process: AgentProcess | null,
+    seat2Process: AgentProcess | null,
   ) {
     this.seats = [
       {
@@ -57,7 +58,7 @@ export class ArenaScheduler {
     for (let seatIndex = 0; seatIndex < 2; seatIndex++) {
       const seat = seatIndex + 1;
       const state = this.seats[seatIndex]!;
-      if (state.forfeited) continue;
+      if (!state.process || state.forfeited) continue;
       if (this.pendingRequests.has(seat)) {
         throw new Error(`Seat ${seat} already has a pending decision`);
       }
@@ -79,6 +80,8 @@ export class ArenaScheduler {
       const seat = seatIndex + 1;
       const state = this.seats[seatIndex]!;
       const seatConfig = this.config.seats[seatIndex]!;
+
+      if (!state.process) continue;
 
       if (state.forfeited) {
         results.push({
@@ -166,7 +169,7 @@ export class ArenaScheduler {
 
   cleanup(): void {
     for (const state of this.seats) {
-      state.process.kill();
+      state.process?.kill();
     }
   }
 

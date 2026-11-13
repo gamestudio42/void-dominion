@@ -40,14 +40,15 @@ export function buildObservation(sim: Simulation, seat: number, requestId: strin
     });
   }
 
-  const nodes: ObservationNode[] = view.nodes
-    .filter((node) => node.amount === undefined)
-    .map((node) => ({
-      id: node.id,
-      kind: node.kind,
-      x: node.x,
-      y: node.y,
-    }));
+  // clientView lists explored nodes and attaches amount only while the cell is in sight.
+  // The agent payload keeps the node and drops the amount, so a visible node is known
+  // without the stock the fog is supposed to hide.
+  const nodes: ObservationNode[] = view.nodes.map((node) => ({
+    id: node.id,
+    kind: node.kind,
+    x: node.x,
+    y: node.y,
+  }));
 
   return {
     schemaVersion: '1.0.0',
