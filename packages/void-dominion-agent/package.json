@@ -1,0 +1,11 @@
+{
+  "name": "@void-dominion/agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@void-dominion/agent-sdk": "workspace:*",
+    "@void-dominion/simulation": "workspace:*"
+  }
+}
