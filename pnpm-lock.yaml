@@ -14,6 +14,15 @@ importers:
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
+      '@void-dominion/agent':
+        specifier: workspace:*
+        version: link:packages/void-dominion-agent
+      '@void-dominion/agent-sdk':
+        specifier: workspace:*
+        version: link:packages/agent-sdk
+      '@void-dominion/arena':
+        specifier: workspace:*
+        version: link:packages/arena
       '@void-dominion/content':
         specifier: workspace:*
         version: link:packages/content
@@ -85,6 +94,23 @@ importers:
         specifier: ^7.3.7
         version: 7.3.7(@types/node@22.20.5)
 
+  packages/agent-sdk: {}
+
+  packages/arena:
+    dependencies:
+      '@void-dominion/agent':
+        specifier: workspace:*
+        version: link:../void-dominion-agent
+      '@void-dominion/agent-sdk':
+        specifier: workspace:*
+        version: link:../agent-sdk
+      '@void-dominion/content':
+        specifier: workspace:*
+        version: link:../content
+      '@void-dominion/simulation':
+        specifier: workspace:*
+        version: link:../simulation
+
   packages/content: {}
 
   packages/kernel: {}
@@ -131,6 +157,15 @@ importers:
       '@types/three':
         specifier: ~0.185.0
         version: 0.185.4
+
+  packages/void-dominion-agent:
+    dependencies:
+      '@void-dominion/agent-sdk':
+        specifier: workspace:*
+        version: link:../agent-sdk
+      '@void-dominion/simulation':
+        specifier: workspace:*
+        version: link:../simulation
 
 packages:
 

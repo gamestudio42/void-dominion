@@ -81,7 +81,11 @@ both behind carrier-grade NAT cannot connect.
 
 Still open: the field test of online play across two networks, a campaign, the Mycelian and Aether
 factions, and a language-model commander. The gateway for a plan is in the simulation; this client never
-calls it, and the conventional opponent keeps playing when no plan arrives. See the
+calls it, and the conventional opponent keeps playing when no plan arrives.
+
+The **Agent Arena** (`packages/arena`) allows external agents to play matches via a JSON Lines protocol
+over child processes. It manages processes, applies failure policies, records decisions, and produces
+reproducible replays and benchmarks. See [docs/AGENT_ARENA.md](docs/AGENT_ARENA.md) and the
 [project roadmap](docs/ROADMAP.md).
 
 ## Play
@@ -121,6 +125,9 @@ pnpm dev        # http://localhost:5173
 | `pnpm sim` | Plays the three pinned seeds headless and compares the reports |
 | `pnpm bench` | Times every step of those seeds and prints the speed table (`docs/BENCHMARKS.md`) |
 | `pnpm bench:view` | Measures the view a multiplayer host sends its guest (`docs/BENCHMARKS.md`) |
+| `pnpm arena` | Run a single Agent Arena match |
+| `pnpm arena:bench` | Run Agent Arena benchmark suite |
+| `pnpm arena:replay` | Replay an Agent Arena match from trace |
 | `pnpm build` | Static build in `apps/game/dist` |
 | `pnpm preview` | Serves the build |
 
@@ -128,8 +135,9 @@ The simulation is a pure TypeScript package with a fixed 20 Hz step and a seeded
 Three.js, React or the clock. The Three.js view and the React interface only send commands and read
 state. See the [architecture](docs/ARCHITECTURE.md), the [game design](docs/GDD.md), the
 [decisions](docs/DECISIONS.md), the [testing plan](docs/TESTING.md), the
-[multiplayer plan](docs/MULTIPLAYER.md), the [benchmarks](docs/BENCHMARKS.md), the
-[asset register](docs/assets.md) and the [rules for agents](AGENTS.md).
+[multiplayer plan](docs/MULTIPLAYER.md), the [Agent Arena](docs/AGENT_ARENA.md), the
+[benchmarks](docs/BENCHMARKS.md), the [asset register](docs/assets.md) and the
+[rules for agents](AGENTS.md).
 
 ## Licence
 
