@@ -55,7 +55,7 @@ Language-model calls, HTTP and network replication do not run inside a tick. Bet
 
 ## Agent Arena
 
-The Agent Arena (`packages/arena`) allows external agents to play matches via a JSON Lines protocol over child processes. External agents use `clientView` for observations (not `observe`, which leaks resource amounts) and submit commands via `CommanderAdapter`, which injects `playerId` from the seat and goes through `Simulation.enqueue()` (not `considerCommander`). The Arena owns the clock, manages processes, applies failure policies, records decisions, and produces reproducible replays and benchmarks. See `docs/AGENT_ARENA.md` for details.
+The Agent Arena (`packages/arena`) allows external agents to play matches via a JSON Lines protocol over child processes. External agents use `clientView` for observations. `observe()` includes a node's current `amount` only while that cell is in sight, matching `clientView`. Agents submit commands via `CommanderAdapter`, which injects `playerId` from the seat and goes through `Simulation.enqueue()` (not `considerCommander`). The Arena owns the clock, manages processes, applies failure policies, records decisions, and produces reproducible replays and benchmarks. See `docs/AGENT_ARENA.md` for details.
 
 ## Art
 

@@ -1,6 +1,8 @@
 import { ENEMY_ID, MATCH, PLAYER_ID } from '@void-dominion/content';
 import { describe, expect, it } from 'vitest';
 import { applyCommand, considerCommander, makeUnit, observe, Simulation } from '../src/index.ts';
+import { cellIndex } from '../src/grid.ts';
+import { canSee } from '../src/vision.ts';
 
 function enemyCenter(sim: Simulation): number {
   const center = sim.world.buildings.find((building) => building.owner === ENEMY_ID && building.kind === 'command_center');
@@ -25,6 +27,25 @@ describe('commander gateway', () => {
     expect(view.buildings.every((building) => building.owner === ENEMY_ID)).toBe(true);
     expect(view.nodes.some((node) => node.x === hidden!.ore.x && node.y === hidden!.ore.y)).toBe(false);
     expect(view.nodes.some((node) => node.x === MATCH.bases[1]!.ore.x && node.y === MATCH.bases[1]!.ore.y)).toBe(true);
+  });
+
+  it('does not reveal the amount of a node that is explored but not visible', () => {
+    const sim = Simulation.create();
+    const hidden = sim.world.nodes.find((entry) => entry.x === MATCH.bases[1]!.ore.x && entry.y === MATCH.bases[1]!.ore.y)!;
+    expect(canSee(sim.world, PLAYER_ID, hidden.x, hidden.y)).toBe(false);
+    sim.world.explored[0]![cellIndex(hidden.x, hidden.y)] = 1;
+    const before = observe(sim.world, PLAYER_ID);
+    const listed = before.nodes.find((entry) => entry.id === hidden.id);
+    expect(listed).toBeTruthy();
+    expect(listed?.amount).toBeUndefined();
+    hidden.amount -= 100;
+    expect(observe(sim.world, PLAYER_ID)).toEqual(before);
+
+    const own = sim.world.nodes.find((entry) => entry.x === MATCH.bases[0]!.ore.x && entry.y === MATCH.bases[0]!.ore.y)!;
+    expect(canSee(sim.world, PLAYER_ID, own.x, own.y)).toBe(true);
+    expect(observe(sim.world, PLAYER_ID).nodes.find((entry) => entry.id === own.id)?.amount).toBe(own.amount);
+    own.amount -= 50;
+    expect(observe(sim.world, PLAYER_ID).nodes.find((entry) => entry.id === own.id)?.amount).toBe(own.amount);
   });
 
   it('falls back when the source is absent, malformed or throws', () => {
