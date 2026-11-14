@@ -8,7 +8,7 @@ Agent Arena allows external agents to play Void Dominion matches against each ot
 packages/arena          Match orchestrator, scheduler, child processes, recorder
 packages/void-dominion-agent  Observation builder, CommanderAdapter
 packages/agent-sdk      JSON contracts, validation, JSONL transport
-examples/               deterministic.ts, ollama.ts (optional)
+examples/               deterministic.ts, reference.ts, ollama.ts (optional)
 ```
 
 ### Key Principles
@@ -177,6 +177,46 @@ The table below replaces the earlier run, which had no rule reading the seed and
 
 Totals, from the example agent's side: **0 wins, 10 losses, 0 draws**. Every match ended in `victory` for Varek before the tick cap. Tick counts now move with the seed (3851 through 4156) instead of repeating one number per seat. Fallback decisions and invalid actions were zero. The army still does not destroy Varek's command center before his march destroys its own. The CI test covers three of these seeds for 400 ticks only, on the default layout, so it stays on `tick_cap` and checks that Varek's seat records no decisions.
 
+### Reference agent
+
+```bash
+node --experimental-transform-types --no-warnings examples/reference.ts
+pnpm arena:bench
+```
+
+`examples/reference.ts` is the agent measured by `pnpm arena:bench`. It uses the same observation and command path as any external agent: `clientView` in, `Simulation.enqueue` out. It does not read the world, the other seat's stock, or the scenario base list. The same observation stream produces the same actions.
+
+The opening leaves the starting gather orders in place. One engineer builds an ore extractor, a barracks, a turret just east of the command center (the side Varek's march aims at), and a second barracks. Both barracks train riflemen. The army holds that approach until eight riflemen are up and the turret has had time to finish, then attack-moves toward a remembered enemy building, or to the opposite corner of the map when nothing has been seen. Once the enemy command center is in sight, the army attacks that building. Enemy units redirect the army only when they are already next to our command center.
+
+`pnpm arena:bench` runs that agent against Varek with `variation: 'seeded'`. The default is 20 matches, cap 12000 ticks, strategic period 100. Even indexes seat the reference agent on seat 1, odd indexes on seat 2. `ARENA_MATCHES` and `ARENA_MAX_TICKS` override the defaults. The run is not part of CI. The CI test checks the opening decisions and that two short matches on one seed share a checksum.
+
+Seeds are `MATCH.seed + 0..19` (24301 through 24320).
+
+| seed | external seat | winner | end reason | ticks | ownDecisions | fallbackDecisions | invalidActions |
+|---|---|---|---|---|---|---|---|
+| 24301 | 1 | 1 | victory | 4038 | 41 | 0 | 0 |
+| 24302 | 2 | 2 | victory | 4401 | 45 | 0 | 0 |
+| 24303 | 1 | 1 | victory | 5509 | 56 | 0 | 0 |
+| 24304 | 2 | 2 | victory | 7919 | 80 | 0 | 0 |
+| 24305 | 1 | 1 | victory | 4326 | 44 | 0 | 0 |
+| 24306 | 2 | 2 | victory | 7213 | 73 | 0 | 0 |
+| 24307 | 1 | 1 | victory | 4487 | 45 | 0 | 0 |
+| 24308 | 2 | 2 | victory | 7048 | 71 | 0 | 0 |
+| 24309 | 1 | 1 | victory | 4038 | 41 | 0 | 0 |
+| 24310 | 2 | 2 | victory | 4375 | 44 | 0 | 0 |
+| 24311 | 1 | 1 | victory | 5507 | 56 | 0 | 0 |
+| 24312 | 2 | 2 | victory | 6101 | 62 | 0 | 0 |
+| 24313 | 1 | 1 | victory | 4326 | 44 | 0 | 0 |
+| 24314 | 2 | 2 | victory | 5735 | 58 | 0 | 0 |
+| 24315 | 1 | 1 | victory | 4487 | 45 | 0 | 0 |
+| 24316 | 2 | 2 | victory | 6974 | 70 | 0 | 0 |
+| 24317 | 1 | 1 | victory | 4038 | 41 | 0 | 0 |
+| 24318 | 2 | 0 | tick_cap | 12000 | 120 | 0 | 0 |
+| 24319 | 1 | 1 | victory | 5499 | 55 | 0 | 0 |
+| 24320 | 2 | 2 | victory | 7189 | 72 | 0 | 0 |
+
+Totals, from the reference agent's side: **19 wins, 0 losses, 1 draw**. Every victory is the reference agent destroying Varek's command center. The draw is seed 24318 with the agent on seat 2: the match reaches the 12000 tick cap with our command center intact. In that game the enemy command center is reduced to a sliver, then the ore extractor is destroyed and the engineers die with less than a rifle's cost in ore, so the remaining squad never finishes the building. Fallback decisions and invalid actions were zero. Duration of the wins runs from 4038 to 7919 ticks.
+
 ### Ollama agent (optional, not in CI)
 
 `examples/ollama.ts` asks a local [Ollama](https://ollama.ai) model for one JSON action and submits it through the same `clientView` / `enqueue` path as any other external agent. Tests never start Ollama. They pass a fake client into `decide`.
@@ -245,7 +285,7 @@ console.log(result);
 
 ```bash
 pnpm arena              # Run a single match
-pnpm arena:bench        # Run benchmark suite
+pnpm arena:bench        # Reference agent vs Varek, 20 seeded matches
 pnpm arena:ollama       # Ollama example vs Varek (needs a local daemon; not CI)
 pnpm arena:replay       # Replay from trace
 ```

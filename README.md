@@ -126,7 +126,7 @@ pnpm dev        # http://localhost:5173
 | `pnpm bench` | Times every step of those seeds and prints the speed table (`docs/BENCHMARKS.md`) |
 | `pnpm bench:view` | Measures the view a multiplayer host sends its guest (`docs/BENCHMARKS.md`) |
 | `pnpm arena` | Run a single Agent Arena match |
-| `pnpm arena:bench` | Run Agent Arena benchmark suite |
+| `pnpm arena:bench` | Reference agent vs Varek, 20 seeded matches |
 | `pnpm arena:ollama` | Ollama example vs Varek (local daemon, not CI) |
 | `pnpm arena:replay` | Replay an Agent Arena match from trace |
 | `pnpm build` | Static build in `apps/game/dist` |
