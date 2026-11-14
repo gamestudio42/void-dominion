@@ -6,7 +6,7 @@ export { findPath, gatherSlots } from './path.ts';
 export type { Cell } from './path.ts';
 export { createBlocked, isWalkable, cellIndex } from './grid.ts';
 export { createWorld, hashWorld, makeBuilding, makeUnit, rebake } from './world.ts';
-export type { Building, Marker, ResourceNode, TrainJob, Unit, World, Waypoint } from './world.ts';
+export type { Building, Marker, ResourceNode, ScenarioVariation, TrainJob, Unit, World, Waypoint } from './world.ts';
 export { canSee, canSeeFootprint, footprintSeen } from './vision.ts';
 export { clientView, decodeRuns, encodeRuns } from './view.ts';
 export type { ClientView, ViewBuilding, ViewNode, ViewUnit } from './view.ts';

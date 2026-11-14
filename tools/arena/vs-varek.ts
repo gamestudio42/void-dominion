@@ -32,6 +32,7 @@ for (let index = 0; index < count; index++) {
     ...DEFAULT_ARENA_CONFIG,
     maxTicks,
     strategicPeriodTicks: 100,
+    variation: 'seeded',
     seats: [
       { ...DEFAULT_SEAT_CONFIG, agentId: externalSeat === 1 ? 'deterministic' : 'varek', decisionTimeoutMs: 5000 },
       { ...DEFAULT_SEAT_CONFIG, agentId: externalSeat === 2 ? 'deterministic' : 'varek', decisionTimeoutMs: 5000 },

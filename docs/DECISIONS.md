@@ -41,3 +41,11 @@ Record significant choices that differ from the original plan or resolve ambigui
 **Decision**: The Arena writes a separate JSONL trace file with `decision`, `timeout`, `fallback`, and `match_end` events. Each event includes `schemaVersion` for forward compatibility. Replay v2 remains unchanged.
 
 **Consequences**: Replays are still reproducible without the trace. The trace provides observability for debugging, benchmarking, and analysis, but is not required to reproduce the match outcome.
+
+## 6. Seeded variation is opt-in and is not the skirmish
+
+**Context**: The world seed is stored and mixed into `hashState()`, but no match rule reads it. Every benchmark seed therefore plays the same two games, one per seat.
+
+**Decision**: `Simulation.create(seed, seats, variation)` accepts `variation: 'seeded'`. The Arena sets that only when its config says `variation: 'seeded'`. The variation adds the same ore and aether bonus to both seats and shifts their nodes by opposite one-cell offsets chosen from the seed. The default argument is `'none'`, which is the published layout. Replay v2 does not grow a field; a seeded match is reproduced by creating the world with the same seed and `'seeded'`.
+
+**Consequences**: The client, multiplayer, and the pinned skirmish checksum never take the new path. A benchmark can ask for it and get a different opening per seed without giving either seat more resources than the other.

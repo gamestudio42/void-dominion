@@ -37,7 +37,7 @@ After commands, one tick steers, moves, gathers and builds, refreshes vision, re
 
 ## Determinism
 
-Same seed, same commands, same `hashState()`. Random draws go through `Rng`. No match rule draws from it yet, so two seeds currently share the unattended result and differ in the checksum. `runArena(seed, commands, cap)` is the headless report. Replay files record the seed. A version 1 file replays on `MATCH.seed`. `clientView(world, seat, full)` builds what one seat may know, for a multiplayer guest. It never includes anything that seat's fog hides. `Simulation.enqueue` returns a number, and `results` holds each command's reason after the step that applied it, so a host can acknowledge every guest command.
+Same seed, same commands, same `hashState()`. Random draws go through `Rng`. The published skirmish still ignores the seed, so two seeds share the unattended result and differ only in the checksum. `Simulation.create(seed, seats, 'seeded')` is the opt-in that does read it: both seats' resource nodes take the same amount bonus and opposite one-cell offsets. Callers that omit the argument, including the client, multiplayer and `runArena`, stay on the published layout. `runArena(seed, commands, cap)` is the headless report. Replay files record the seed. A version 1 file replays on `MATCH.seed`. `clientView(world, seat, full)` builds what one seat may know, for a multiplayer guest. It never includes anything that seat's fog hides. `Simulation.enqueue` returns a number, and `results` holds each command's reason after the step that applied it, so a host can acknowledge every guest command.
 
 `packages/protocol` defines the multiplayer messages and validates them. It does no I/O.
 
