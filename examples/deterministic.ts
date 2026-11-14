@@ -7,10 +7,7 @@
  */
 
 import { MAP_SIZE } from '../packages/content/src/index.ts';
-import { createJsonlReader, createJsonlWriter, SCHEMA_VERSION, validateObserveRequest, type ObserveRequest } from '../packages/agent-sdk/src/index.ts';
-
-const reader = createJsonlReader(process.stdin);
-const writer = createJsonlWriter(process.stdout);
+import { createJsonlReader, createJsonlWriter, SCHEMA_VERSION, validateObserveRequest, type Action, type ObserveRequest } from '../packages/agent-sdk/src/index.ts';
 
 interface GameState {
   seat: number;
@@ -51,8 +48,8 @@ function attackTarget(state: GameState, ownBase: { x: number; y: number }): { x:
   return { x: MAP_SIZE - 1 - ownBase.x, y: MAP_SIZE - 1 - ownBase.y };
 }
 
-function decide(state: GameState) {
-  const actions = [];
+function decide(state: GameState): Action[] {
+  const actions: Action[] = [];
 
   const engineers = state.ownUnits.filter((u) => u.kind === 'engineer');
   const riflemen = state.ownUnits.filter((u) => u.kind === 'rifleman');
@@ -176,7 +173,14 @@ function decide(state: GameState) {
   return actions;
 }
 
+/** The same decisions the CLI agent writes, for a seat the page drives in-process. */
+export function actionsForObservation(request: ObserveRequest): Action[] {
+  return decide(parseState(request));
+}
+
 async function main() {
+  const reader = createJsonlReader(process.stdin);
+  const writer = createJsonlWriter(process.stdout);
   while (true) {
     const message = await reader.read();
     if (message === null) break;
@@ -199,7 +203,10 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('Deterministic agent error:', err);
-  process.exit(1);
-});
+const invoked = typeof process !== 'undefined' && (process.argv[1]?.endsWith('deterministic.ts') || process.argv[1]?.endsWith('deterministic.js'));
+if (invoked) {
+  main().catch((err) => {
+    console.error('Deterministic agent error:', err);
+    process.exit(1);
+  });
+}

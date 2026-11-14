@@ -405,7 +405,7 @@ async function main(): Promise<void> {
   }
 }
 
-const invoked = process.argv[1]?.endsWith('reference.ts') || process.argv[1]?.endsWith('reference.js');
+const invoked = typeof process !== 'undefined' && (process.argv[1]?.endsWith('reference.ts') || process.argv[1]?.endsWith('reference.js'));
 if (invoked) {
   main().catch((err: unknown) => {
     console.error('Reference agent error:', err);

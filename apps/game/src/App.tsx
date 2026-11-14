@@ -1,6 +1,8 @@
 import { BUILDING_KINDS, BUILDINGS } from '@void-dominion/content';
 import { deserializeReplay } from '@void-dominion/simulation';
 import { useEffect, useRef, useState } from 'react';
+import { decodeReplayLink } from '../../../packages/arena/src/sandbox.ts';
+import { ArenaPanel } from './arena.tsx';
 import { startField, type FieldActions, type FieldMode, type FieldUi } from './field.ts';
 import { messagesFor } from './locales.ts';
 import { forgetJoinLink, hostOnline, joinOnline, joinSecret, OnlineError, type OnlineFailure } from './online.ts';
@@ -13,6 +15,7 @@ export const EXAMPLE_REPLAY = 'replays/reference-varek.json';
 
 type Screen =
   | { kind: 'menu' }
+  | { kind: 'arena' }
   | { kind: 'hosting'; link: string | null }
   | { kind: 'joining' }
   | { kind: 'loading-replay' }
@@ -21,6 +24,11 @@ type Screen =
 
 function replayRequest(): string | null {
   const value = new URLSearchParams(location.search).get('replay');
+  return value && value.length > 0 ? value : null;
+}
+
+function replayDataRequest(): string | null {
+  const value = new URLSearchParams(location.search).get('replay-data');
   return value && value.length > 0 ? value : null;
 }
 
@@ -59,7 +67,7 @@ export function App() {
   const [replayError, setReplayError] = useState(false);
   const [screen, setScreen] = useState<Screen>(() => {
     if (joinSecret()) return { kind: 'joining' };
-    if (replayRequest()) return { kind: 'loading-replay' };
+    if (replayDataRequest() || replayRequest()) return { kind: 'loading-replay' };
     return { kind: 'menu' };
   });
 
@@ -105,6 +113,16 @@ export function App() {
 
   useEffect(() => {
     if (joinSecret()) return;
+    const packed = replayDataRequest();
+    if (packed) {
+      void decodeReplayLink(packed)
+        .then((body) => openReplay(body))
+        .catch(() => {
+          setReplayError(true);
+          setScreen({ kind: 'menu' });
+        });
+      return;
+    }
     const url = replayRequest();
     if (!url) return;
     loadReplayUrl(url);
@@ -123,7 +141,7 @@ export function App() {
     <>
       <Poster />
       <main className="menu">
-        <section className="menu-card">
+        <section className={screen.kind === 'arena' ? 'menu-card wide' : 'menu-card'}>
           <p className="eyebrow">{text.frontier}</p>
           <h1>{text.title}</h1>
           <p className="tagline">{text.tagline}</p>
@@ -134,6 +152,9 @@ export function App() {
               </button>
               <button type="button" onClick={host}>
                 {text.host_match}
+              </button>
+              <button type="button" onClick={() => setScreen({ kind: 'arena' })}>
+                {text.arena}
               </button>
               <button type="button" onClick={() => loadReplayUrl(EXAMPLE_REPLAY)}>
                 {text.replay_watch}
@@ -156,6 +177,7 @@ export function App() {
               />
             </>
           )}
+          {screen.kind === 'arena' && <ArenaPanel onBack={() => setScreen({ kind: 'menu' })} onWatch={openReplay} />}
           {screen.kind === 'loading-replay' && <p>{text.replay_loading}</p>}
           {screen.kind === 'hosting' && (
             <>
