@@ -177,47 +177,43 @@ The table below replaces the earlier run, which had no rule reading the seed and
 
 Totals, from the example agent's side: **0 wins, 10 losses, 0 draws**. Every match ended in `victory` for Varek before the tick cap. Tick counts now move with the seed (3851 through 4156) instead of repeating one number per seat. Fallback decisions and invalid actions were zero. The army still does not destroy Varek's command center before his march destroys its own. The CI test covers three of these seeds for 400 ticks only, on the default layout, so it stays on `tick_cap` and checks that Varek's seat records no decisions.
 
-### Ollama Agent (Optional, not in CI)
+### Ollama agent (optional, not in CI)
 
-Install [Ollama](https://ollama.ai), start it, and pull a model. The example reads two environment variables and blocks on each `agent.observe`, calling the local API once per decision. It is never started by tests or by the benchmark script.
+`examples/ollama.ts` asks a local [Ollama](https://ollama.ai) model for one JSON action and submits it through the same `clientView` / `enqueue` path as any other external agent. Tests never start Ollama. They pass a fake client into `decide`.
+
+The measured model is `qwen2.5:1.5b`. It is about one gigabyte, runs on CPU, and follows a short JSON verb more reliably than `llama3.2:3b`, which is larger and slower on the same machine. The prompt lists only the verbs that fit the current observation and names one preferred verb (extractor, then barracks, then riflemen until eight exist, then attack). The process binds that verb to ids from the observation. A full command with legal ids is also accepted. If the call exceeds `OLLAMA_TIMEOUT_MS` or the text is not usable JSON, the process answers `noop`. That is still its own decision. The Arena fallback runs only when the process misses `decisionTimeoutMs` or breaks the protocol.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `OLLAMA_API` | `http://localhost:11434` | Generate endpoint, without `/api/generate` |
-| `OLLAMA_MODEL` | `llama3.2` | Model name already pulled |
+| `OLLAMA_API` | `http://127.0.0.1:11434` | Generate endpoint, without `/api/generate` |
+| `OLLAMA_MODEL` | `qwen2.5:1.5b` | Model name already pulled |
+| `OLLAMA_TIMEOUT_MS` | `20000` | Abort the HTTP call and answer noop |
+| `OLLAMA_TRACE` | unset | Append one JSON line per decision |
+| `ARENA_MATCHES` | `6` | Matches in `pnpm arena:ollama` |
+| `ARENA_PERIOD` | `200` | `strategicPeriodTicks` for that script |
+| `ARENA_MAX_TICKS` | `8000` | Cap for that script |
 
 ```bash
-ollama pull llama3.2
-OLLAMA_MODEL=llama3.2 node --experimental-transform-types --no-warnings examples/ollama.ts
+ollama serve
+ollama pull qwen2.5:1.5b
+OLLAMA_MODEL=qwen2.5:1.5b node --experimental-transform-types --no-warnings examples/ollama.ts
+ARENA_MATCHES=8 ARENA_PERIOD=100 pnpm arena:ollama
 ```
 
-The Arena, not the example, owns the clock. `strategicPeriodTicks` (default 100) is the match config: one observation every 100 ticks, with `decisionTimeoutMs` (default 10 seconds) as the wait. A local match against Varek passes `variation: 'seeded'` when the openings should differ by seed:
+`pnpm arena:ollama` seats the example against Varek with `variation: 'seeded'`. Even indexes use seat 1, odd indexes seat 2. The Arena deadline is five seconds above `OLLAMA_TIMEOUT_MS`. The run below used period 100, cap 8000, and eight seeds (`24301`–`24308`) on a 4-core CPU.
 
-```typescript
-const factory = new ScriptAgentFactory('node', [
-  '--experimental-transform-types',
-  '--no-warnings',
-  'examples/ollama.ts',
-]);
-const config = {
-  ...DEFAULT_ARENA_CONFIG,
-  variation: 'seeded' as const,
-  strategicPeriodTicks: 100,
-  maxTicks: 8000,
-  seats: [
-    { ...DEFAULT_SEAT_CONFIG, agentId: 'ollama', decisionTimeoutMs: 10_000 },
-    { ...DEFAULT_SEAT_CONFIG, agentId: 'varek' },
-  ],
-};
-await runMatch({
-  seed: 24301,
-  engineSeats: ['human', 'varek'],
-  agentFactories: [factory, factory],
-  config,
-});
-```
+| seed | external seat | winner | end reason | ticks | ownDecisions | fallbackDecisions | invalidActions | latency mean ms | latency p95 ms |
+|---|---|---|---|---|---|---|---|---|---|
+| 24301 | 1 | 2 | victory | 5171 | 52 | 0 | 0 | 271 | 320 |
+| 24302 | 2 | 1 | victory | 7025 | 71 | 0 | 0 | 276 | 320 |
+| 24303 | 1 | 0 | tick_cap | 8000 | 80 | 0 | 0 | 946 | 1051 |
+| 24304 | 2 | 1 | victory | 4826 | 49 | 0 | 0 | 814 | 999 |
+| 24305 | 1 | 0 | tick_cap | 8000 | 80 | 0 | 0 | 959 | 1091 |
+| 24306 | 2 | 1 | victory | 5261 | 53 | 0 | 0 | 851 | 1049 |
+| 24307 | 1 | 0 | tick_cap | 8000 | 80 | 0 | 0 | 1006 | 1162 |
+| 24308 | 2 | 1 | victory | 3771 | 38 | 0 | 0 | 811 | 958 |
 
-The second factory is not spawned, because that seat is `varek`.
+Totals, from the model's side: **0 wins, 5 losses, 3 draws**. Across 503 decisions the fallback rate and the invalid-action rate were both 0. The mean of the per-match latency means is 742 ms, and every p95 is under 1.2 s. The trace of those decisions is 29 gather, 29 build, 280 produce, 115 attack_move, and 50 noop. The army does march, and three matches with the model on seat 1 are still undecided at the cap. The five losses are Varek destroying the model's command center, between tick 3771 and 7025. All four matches with the model on seat 2 are in that loss group. The model does not destroy Varek's command center in this sample.
 
 ## Running Matches
 
@@ -250,6 +246,7 @@ console.log(result);
 ```bash
 pnpm arena              # Run a single match
 pnpm arena:bench        # Run benchmark suite
+pnpm arena:ollama       # Ollama example vs Varek (needs a local daemon; not CI)
 pnpm arena:replay       # Replay from trace
 ```
 
