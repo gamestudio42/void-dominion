@@ -83,12 +83,19 @@ export interface FieldUi {
   banner: 'victory' | 'defeat' | 'draw' | null;
   /** Which side of an online match this window plays, or null offline. */
   online: 'host' | 'guest' | null;
-  /** The guest's round trip to the host, in milliseconds. */
+  /** Round trip to the other player, in milliseconds. */
   latency: number | null;
   /** The other player's connection closed. */
   peerGone: boolean;
-  /** The guest's check of the host's replay, once the match ended. */
+  /** The guest's check of the host's replay, once the match ended. Both sides show it. */
   audit: 'ok' | 'failed' | null;
+  /** Why the audit failed, for the copied note. */
+  auditReason: string | null;
+  /** Selected ICE candidate types. Null until stats exist, and on an in-memory pipe. */
+  iceLocal: string | null;
+  iceRemote: string | null;
+  /** Times the connection reported disconnected or failed. */
+  drops: number;
   /** Set while a recorded match is playing. Null in a live match. */
   playback: {
     playing: boolean;
@@ -109,6 +116,19 @@ export type FieldMode =
   | { kind: 'host'; channels: Channels }
   | { kind: 'guest'; session: GuestSession }
   | { kind: 'replay'; file: ReplayFile };
+
+/** Localhost only. The field-test session uses it to issue ordinary commands. */
+interface DevDrive {
+  order(cmd: Command): void;
+  read(): {
+    tick: number;
+    winner: number;
+    ore: number;
+    reason: string | null;
+    units: { id: number; owner: number; kind: string; x: number; y: number }[];
+    buildings: { id: number; owner: number; kind: string; x: number; y: number }[];
+  };
+}
 
 export interface FieldActions {
   stop(): void;
@@ -161,7 +181,8 @@ export function startField(
   const mirror = guest ? createMirror(guest.seed, me) : null;
   if (mirror && guest?.view) mirror.apply(guest.view, guest.explored);
   let world: World = sim ? sim.world : mirror!.world;
-  const host = sim && fieldMode.kind === 'host' ? new HostSession(sim, ENEMY_ID, fieldMode.channels) : null;
+  const channels = fieldMode.kind === 'host' ? fieldMode.channels : null;
+  const host = sim && channels ? new HostSession(sim, ENEMY_ID, channels, () => performance.now()) : null;
   const home = MATCH.bases[me - 1]!;
   const view = createField(canvas, MAP_SIZE, { x: home.cc.x + 6, z: home.cc.y + 2 });
   view.setRocks(world.rocks);
@@ -186,6 +207,17 @@ export function startField(
   let peerGone = false;
   let viewAt = performance.now();
   let pingAt = 0;
+  let iceAt = 0;
+  let iceLocal: string | null = null;
+  let iceRemote: string | null = null;
+  let reported: 'ok' | 'failed' | null = null;
+  let reportedReason: string | null = null;
+  if (host) {
+    host.onReport = (audit) => {
+      reported = audit.ok ? 'ok' : 'failed';
+      reportedReason = audit.ok ? null : audit.reason;
+    };
+  }
   let note: string | null = null;
   let debug = false;
   let box: Box | null = null;
@@ -353,6 +385,11 @@ export function startField(
       .map((node) => ({ id: node.id, x: node.x, y: node.y, kind: node.kind }));
   }
 
+  function roundTrip(): number | null {
+    const value = guest ? guest.latency : host?.latency;
+    return value === null || value === undefined ? null : Math.round(value);
+  }
+
   function banner(): FieldUi['banner'] {
     if (world.winner === 0) return null;
     if (world.winner === me) return 'victory';
@@ -455,9 +492,13 @@ export function startField(
       contact: enemyVisible(),
       banner: banner(),
       online: fieldMode.kind === 'host' || fieldMode.kind === 'guest' ? fieldMode.kind : null,
-      latency: guest?.latency === null || !guest ? null : Math.round(guest.latency),
+      latency: roundTrip(),
       peerGone,
-      audit: guest?.audit ? (guest.audit.ok ? 'ok' : 'failed') : null,
+      audit: guest?.audit ? (guest.audit.ok ? 'ok' : 'failed') : reported,
+      auditReason: guest?.audit ? (guest.audit.ok ? null : guest.audit.reason) : reportedReason,
+      iceLocal,
+      iceRemote,
+      drops: channels?.drops() ?? guest?.drops() ?? 0,
       playback: replayFile
         ? { playing: replayPlaying, speed: replaySpeed, tick: world.tick, length: replayFile.ticks, outcome: replayOutcome() }
         : null,
@@ -927,9 +968,19 @@ export function startField(
       current = capture();
       forget();
     }
-    if (guest && now - pingAt >= PING_MS) {
+    if ((guest || host) && now - pingAt >= PING_MS) {
       pingAt = now;
-      guest.ping(now);
+      if (guest) guest.ping(now);
+      else host?.ping(now);
+    }
+    if ((channels || guest) && now - iceAt >= PING_MS) {
+      iceAt = now;
+      const readIce = channels ? channels.ice() : guest!.ice();
+      void readIce.then((ends) => {
+        if (!ends) return;
+        iceLocal = ends.local;
+        iceRemote = ends.remote;
+      });
     }
     lastAlpha = guest ? Math.min(1, (now - viewAt) / VIEW_MS) : stepped.alpha;
     paint(lastAlpha);
@@ -957,8 +1008,11 @@ export function startField(
       forget();
     };
     guest.onAck = (ack) => settle(ack.seq, ack.reason);
+    guest.onEnd = (end) => {
+      mirror.world.winner = end.winner;
+      if (end.tick > mirror.world.tick) mirror.world.tick = end.tick;
+    };
   }
-  const channels = fieldMode.kind === 'host' ? fieldMode.channels : null;
   if (channels) channels.reliable.onClose(() => (peerGone = true));
   if (guest) guest.onClose(() => (peerGone = true));
 
@@ -976,6 +1030,29 @@ export function startField(
     window.addEventListener('keyup', keyUp);
   }
   window.addEventListener('resize', view.resize);
+
+  const dev = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+  const devWindow = window as Window & { __vd?: DevDrive; __vdToken?: object };
+  const devToken = {};
+  if (dev && !poster) {
+    devWindow.__vdToken = devToken;
+    devWindow.__vd = {
+      order(cmd) {
+        issue(cmd, null);
+      },
+      read() {
+        const stock = world.players.find((player) => player.id === me);
+        return {
+          tick: world.tick,
+          winner: world.winner,
+          ore: stock?.ore ?? 0,
+          reason: lastReason,
+          units: world.units.filter((unit) => unit.hp > 0).map((unit) => ({ id: unit.id, owner: unit.owner, kind: unit.kind, x: unit.x, y: unit.y })),
+          buildings: world.buildings.filter((building) => building.hp > 0).map((building) => ({ id: building.id, owner: building.owner, kind: building.kind, x: building.x, y: building.y })),
+        };
+      },
+    };
+  }
 
   paint(0);
   publish();
@@ -995,6 +1072,8 @@ export function startField(
     window.removeEventListener('keyup', keyUp);
     window.removeEventListener('resize', view.resize);
     host?.close();
+    // Development runs this effect twice. A stale cleanup must not drop the live hook.
+    if (devWindow.__vdToken === devToken) delete devWindow.__vd;
     view.dispose();
   };
 }

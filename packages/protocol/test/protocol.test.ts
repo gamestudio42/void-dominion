@@ -34,6 +34,8 @@ describe('messages', () => {
       { t: 'hello', v, build: 'abc123' },
       { t: 'cmd', v, seq: 3, cmd: { type: 'move', unitIds: [1, 2], to: { x: 30, y: 90 } } },
       { t: 'ping', v, at: 12.5 },
+      { t: 'report', v, ok: true, reason: null },
+      { t: 'report', v, ok: false, reason: 'checksum' },
     ];
     const fromHost: Message[] = [
       { t: 'seated', v, seat: 2, seed: 0x5eed, tick: 0 },
@@ -56,6 +58,7 @@ describe('messages', () => {
     expect(guest({ t: 'view', v, view: clientView(Simulation.create().world, PLAYER_ID) })).toEqual({ ok: false, error: 'direction' });
     expect(guest({ t: 'end', v, winner: 2, tick: 1, hash: 1, replay: '' })).toEqual({ ok: false, error: 'direction' });
     expect(host({ t: 'cmd', v, seq: 0, cmd: { type: 'stop', unitIds: [1] } })).toEqual({ ok: false, error: 'direction' });
+    expect(host({ t: 'report', v, ok: true, reason: null })).toEqual({ ok: false, error: 'direction' });
   });
 
   it('refuses malformed and oversized input without throwing', () => {
@@ -64,6 +67,9 @@ describe('messages', () => {
     expect(decode('null', 'host')).toEqual({ ok: false, error: 'shape' });
     expect(guest({ t: 'teleport', v })).toEqual({ ok: false, error: 'direction' });
     expect(guest({ t: 'hello', v, build: 'x'.repeat(65) })).toEqual({ ok: false, error: 'shape' });
+    expect(guest({ t: 'report', v, ok: false, reason: null })).toEqual({ ok: false, error: 'shape' });
+    expect(guest({ t: 'report', v, ok: false, reason: 'because' })).toEqual({ ok: false, error: 'shape' });
+    expect(guest({ t: 'report', v, ok: true, reason: 'checksum' })).toEqual({ ok: false, error: 'shape' });
     expect(guest({ t: 'cmd', v, seq: -1, cmd: { type: 'stop', unitIds: [1] } })).toEqual({ ok: false, error: 'shape' });
     expect(guest({ t: 'cmd', v, seq: 0, cmd: { type: 'teleport', unitIds: [1] } })).toEqual({ ok: false, error: 'shape' });
     expect(guest({ t: 'cmd', v, seq: 0, cmd: { type: 'move', unitIds: ['1'], to: { x: 1, y: 1 } } })).toEqual({ ok: false, error: 'shape' });

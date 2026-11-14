@@ -1,4 +1,5 @@
 export {
+  AUDIT_REASONS,
   decode,
   encode,
   MAX_GUEST_MESSAGE,
@@ -8,6 +9,7 @@ export {
 } from './messages.ts';
 export type {
   AckMessage,
+  AuditReason,
   CommandBody,
   CommandMessage,
   DecodeError,
@@ -18,6 +20,7 @@ export type {
   HostMessage,
   Message,
   PingMessage,
+  ReportMessage,
   SeatedMessage,
   Side,
   ViewMessage,

@@ -75,7 +75,19 @@ export interface PingMessage {
   at: number;
 }
 
-export type GuestMessage = HelloMessage | CommandMessage | PingMessage;
+/** Why `auditMatch` refused the host's replay. The guest sends this back so the host can show it. */
+export const AUDIT_REASONS = ['replay_unreadable', 'seat', 'checksum', 'winner', 'missing_order', 'extra_order'] as const;
+export type AuditReason = (typeof AUDIT_REASONS)[number];
+
+export interface ReportMessage {
+  t: 'report';
+  v: number;
+  ok: boolean;
+  /** Null when the audit passed. */
+  reason: AuditReason | null;
+}
+
+export type GuestMessage = HelloMessage | CommandMessage | PingMessage | ReportMessage;
 export type HostMessage = SeatedMessage | AckMessage | ViewMessage | EndMessage | PingMessage;
 export type Message = GuestMessage | HostMessage;
 
@@ -85,7 +97,7 @@ export type Decoded<M> = { ok: true; message: M } | { ok: false; error: DecodeEr
 
 /** Which messages each side may send. A message from the wrong side is refused, whatever it says. */
 const SENDS: Record<Side, ReadonlySet<string>> = {
-  guest: new Set(['hello', 'cmd', 'ping', 'pong']),
+  guest: new Set(['hello', 'cmd', 'ping', 'pong', 'report']),
   host: new Set(['seated', 'ack', 'view', 'end', 'ping', 'pong']),
 };
 
@@ -148,6 +160,15 @@ function readMessage(value: Record<string, unknown>): Message | null {
     case 'pong':
       if (typeof value.at !== 'number' || !Number.isFinite(value.at)) return null;
       return { t: value.t, v, at: value.at };
+    case 'report': {
+      if (typeof value.ok !== 'boolean') return null;
+      if (value.ok) {
+        if (value.reason !== null) return null;
+        return { t: 'report', v, ok: true, reason: null };
+      }
+      if (typeof value.reason !== 'string' || !AUDIT_REASONS.includes(value.reason as AuditReason)) return null;
+      return { t: 'report', v, ok: false, reason: value.reason as AuditReason };
+    }
     default:
       return null;
   }

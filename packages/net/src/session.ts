@@ -16,7 +16,7 @@ import {
 } from '@void-dominion/protocol';
 import { clientView, decodeRuns, serializeReplay, type ClientView, type Simulation } from '@void-dominion/simulation';
 import { deflate, inflate } from './compress.ts';
-import type { Channels } from './peer.ts';
+import type { Channels, IceEnds } from './peer.ts';
 
 const v = PROTOCOL_VERSION;
 const HELLO_MS = 1000;
@@ -39,6 +39,11 @@ export class HostSession {
   /** Guest messages refused by `decode` or past the command budget. */
   refused = 0;
   dropped = 0;
+  /** Round trip of the latest answered ping, in milliseconds. */
+  latency: number | null = null;
+  /** The guest's audit of this match, once it has reported it. */
+  report: Audit | null = null;
+  onReport: (audit: Audit) => void = () => {};
   private readonly budget = new CommandBudget();
   private pending: Pending[] = [];
   private seated = false;
@@ -73,13 +78,11 @@ export class HostSession {
       this.channels.reliable.send(encode(ack));
     }
     this.pending = [];
-    if (!this.seated) return;
-    if (this.wantFull) {
-      this.wantFull = false;
-      this.sendView(true);
-    } else if (world.tick % 2 === 0) this.sendView(false);
-    if (world.winner !== 0 && !this.ended) {
+    if (!this.seated || this.ended) return;
+    if (world.winner !== 0) {
       this.ended = true;
+      /** The winning tick may be odd, so the regular every-other-tick view would never name the winner. */
+      this.sendView(true);
       const end: EndMessage = {
         t: 'end',
         v,
@@ -89,7 +92,17 @@ export class HostSession {
         replay: serializeReplay(this.sim.log, world.tick, { seed: world.seed, seats: this.sim.seats }),
       };
       this.channels.reliable.send(encode(end));
+      return;
     }
+    if (this.wantFull) {
+      this.wantFull = false;
+      this.sendView(true);
+    } else if (world.tick % 2 === 0) this.sendView(false);
+  }
+
+  /** Ask the guest for a pong. `latency` updates when it comes back. */
+  ping(nowMs: number): void {
+    this.channels.reliable.send(encode({ t: 'ping', v, at: nowMs }));
   }
 
   private receive(raw: string): void {
@@ -112,6 +125,16 @@ export class HostSession {
       this.pending.push({ seq: message.seq, queued, tick: this.sim.world.tick });
     } else if (message.t === 'ping') {
       this.channels.reliable.send(encode({ t: 'pong', v, at: message.at }));
+    } else if (message.t === 'pong') {
+      this.latency = Math.max(0, this.now() - message.at);
+    } else if (message.t === 'report') {
+      const audit: Audit | null = message.ok ? { ok: true } : message.reason ? { ok: false, reason: message.reason } : null;
+      if (!audit) {
+        this.refused += 1;
+        return;
+      }
+      this.report = audit;
+      this.onReport(audit);
     }
   }
 
@@ -237,10 +260,27 @@ export class GuestSession {
       this.onAck(message);
     } else if (message.t === 'pong') {
       this.latency = Math.max(0, this.now() - message.at);
+    } else if (message.t === 'ping') {
+      this.channels.reliable.send(encode({ t: 'pong', v, at: message.at }));
     } else if (message.t === 'end') {
       this.end = message;
       this.audit = auditMatch(message, this.seat, this.acked);
       this.onEnd(message, this.audit);
+      this.channels.reliable.send(encode({
+        t: 'report',
+        v,
+        ok: this.audit.ok,
+        reason: this.audit.ok ? null : this.audit.reason,
+      }));
     }
+  }
+
+  /** The pair carrying this match, for the field-test note. */
+  ice(): Promise<IceEnds | null> {
+    return this.channels.ice();
+  }
+
+  drops(): number {
+    return this.channels.drops();
   }
 }
