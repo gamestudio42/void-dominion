@@ -267,6 +267,30 @@ On the published run the reference agent is 59 wins, 0 losses, and 1 draw across
 
 Ollama stays off that board. `ARENA_LEADERBOARD_OLLAMA=1` adds `examples/ollama.ts` for one local run, prints the table, and does not rewrite the versioned files. CI does not set the variable. The determinism test replays two short seeds and checks the published JSON. It does not start Ollama.
 
+## Write an agent
+
+The published game has an **Arena** button on the title screen. The text area starts with an example. Paste a script or load a `.js` file. The script defines `function act(observe)` and returns `{ actions }`. `observe` is the `agent.observe` message for that seat: `units`, `buildings`, `nodes`, `ore`, `aether`, `tick` and `seat`. An action is `command`, `strategic_plan` or `noop`, the same shapes the SDK validates. Leave `playerId` out. The adapter adds the seat when it calls `Simulation.enqueue`.
+
+```javascript
+function act(observe) {
+  const engineers = observe.units.filter((unit) => unit.owner === observe.seat && unit.kind === 'engineer');
+  const ore = observe.nodes.find((node) => node.kind === 'ore');
+  if (engineers.length === 0 || !ore) return { actions: [{ type: 'noop' }] };
+  return {
+    actions: [{
+      type: 'command',
+      command: { type: 'gather', unitIds: engineers.map((unit) => unit.id), nodeId: ore.id },
+    }],
+  };
+}
+```
+
+The script runs in a Web Worker. It has no page and no DOM. `fetch`, `XMLHttpRequest`, `WebSocket` and `importScripts` throw. Each decision has one second. A timeout or a thrown error becomes a noop, the message stays on the Arena screen, and a timeout restarts the worker, which drops variables the script kept. The page keeps running.
+
+The opponent is General Varek, the reference agent, or the example agent. The seed and the seat are chosen on that screen. The match uses the published layout, so the exported file is replay version 2 and the viewer can resimulate it. A `seeded` layout is not stored in that file.
+
+When the match ends, the screen shows the winner, the tick and the checksum. **Export replay** downloads the version-2 JSON with that checksum. **Watch replay** opens the same file in the viewer. **Copy link** puts the gzip-compressed file in `?replay-data=` as base64url when that value is at most 16384 characters. A longer match says the file is the way to share it. Opening the link loads the viewer.
+
 ## Replay viewer
 
 The browser plays a version-2 replay in the same renderer as a skirmish. On the title screen, **Watch a replay** loads the example, and **Open a replay file** reads a file from disk. A `?replay=` query loads a URL next to the page, which is how GitHub Pages serves the example:
@@ -274,6 +298,8 @@ The browser plays a version-2 replay in the same renderer as a skirmish. On the 
 [Reference agent vs General Varek](https://gamestudio42.github.io/void-dominion/?replay=replays/reference-varek.json)
 
 The file is `apps/game/public/replays/reference-varek.json`. Seed `24301`, published layout (not `seeded`), reference agent on seat 1, Varek on seat 2. It ends at tick 6826 with seat 1 winning. Playback can pause, run at 1×, 2× or 4×, and jump to a tick. The bar names the winner from the end of the file. Varek is simulated again; his orders are not in the file. An extra `checksum` field is the arena's `hashState()` and is ignored by `deserializeReplay`. `tools/arena/export-example-replay.ts` rewrites the file. The skirmish, the host and the guest do not use this mode.
+
+A `?replay-data=` query carries the same JSON, gzip-compressed and encoded as base64url. The Arena copies that link when the value fits. The viewer decodes it before it looks at `?replay=`.
 
 ## Running Matches
 

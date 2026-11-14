@@ -45,7 +45,7 @@ export function validateObserveRequest(value: unknown): ObserveRequest | null {
   if (!Array.isArray(value.units)) return null;
   if (!Array.isArray(value.buildings)) return null;
   if (!Array.isArray(value.nodes)) return null;
-  return value as ObserveRequest;
+  return value as unknown as ObserveRequest;
 }
 
 export function validateResetRequest(value: unknown): ResetRequest | null {
@@ -54,7 +54,7 @@ export function validateResetRequest(value: unknown): ResetRequest | null {
   if (value.type !== 'agent.reset') return null;
   if (!isInteger(value.seed)) return null;
   if (!isInteger(value.seat)) return null;
-  return value as ResetRequest;
+  return value as unknown as ResetRequest;
 }
 
 export function validateStepRequest(value: unknown): StepRequest | null {
@@ -62,7 +62,7 @@ export function validateStepRequest(value: unknown): StepRequest | null {
   if (value.schemaVersion !== SCHEMA_VERSION) return null;
   if (value.type !== 'agent.step') return null;
   if (!isInteger(value.tick)) return null;
-  return value as StepRequest;
+  return value as unknown as StepRequest;
 }
 
 function validateStrategicPlan(value: unknown): StrategicPlan | null {
@@ -70,16 +70,16 @@ function validateStrategicPlan(value: unknown): StrategicPlan | null {
   if (value.type === 'produce') {
     if (!isInteger(value.buildingId)) return null;
     if (!isString(value.kind)) return null;
-    return value as StrategicPlan;
+    return value as unknown as StrategicPlan;
   }
   if (value.type === 'group') {
     if (!isIntegerArray(value.unitIds)) return null;
     if (!isCell(value.to)) return null;
-    return value as StrategicPlan;
+    return value as unknown as StrategicPlan;
   }
   if (value.type === 'defend') {
     if (!isCell(value.at)) return null;
-    return value as StrategicPlan;
+    return value as unknown as StrategicPlan;
   }
   return null;
 }
@@ -89,32 +89,32 @@ function validateCommand(value: unknown): Command | null {
   if (value.type === 'move' || value.type === 'attack_move') {
     if (!isIntegerArray(value.unitIds)) return null;
     if (!isCell(value.to)) return null;
-    return value as Command;
+    return value as unknown as Command;
   }
   if (value.type === 'stop') {
     if (!isIntegerArray(value.unitIds)) return null;
-    return value as Command;
+    return value as unknown as Command;
   }
   if (value.type === 'attack') {
     if (!isIntegerArray(value.unitIds)) return null;
     if (!isInteger(value.targetId)) return null;
-    return value as Command;
+    return value as unknown as Command;
   }
   if (value.type === 'gather') {
     if (!isIntegerArray(value.unitIds)) return null;
     if (!isInteger(value.nodeId)) return null;
-    return value as Command;
+    return value as unknown as Command;
   }
   if (value.type === 'build') {
     if (!isIntegerArray(value.unitIds)) return null;
     if (!isString(value.kind)) return null;
     if (!isCell(value.at)) return null;
-    return value as Command;
+    return value as unknown as Command;
   }
   if (value.type === 'produce') {
     if (!isInteger(value.buildingId)) return null;
     if (!isString(value.kind)) return null;
-    return value as Command;
+    return value as unknown as Command;
   }
   return null;
 }
@@ -124,15 +124,15 @@ function validateAction(value: unknown): Action | null {
   if (value.type === 'strategic_plan') {
     const plan = validateStrategicPlan(value.plan);
     if (!plan) return null;
-    return value as Action;
+    return value as unknown as Action;
   }
   if (value.type === 'command') {
     const command = validateCommand(value.command);
     if (!command) return null;
-    return value as Action;
+    return value as unknown as Action;
   }
   if (value.type === 'noop') {
-    return value as Action;
+    return value as unknown as Action;
   }
   return null;
 }
@@ -146,5 +146,5 @@ export function validateActResponse(value: unknown): ActResponse | null {
   for (const action of value.actions) {
     if (!validateAction(action)) return null;
   }
-  return value as ActResponse;
+  return value as unknown as ActResponse;
 }

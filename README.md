@@ -106,6 +106,7 @@ A refused order leaves its reason on screen and spends nothing.
 | Tick and frames per second | `F3` |
 | Save / load a replay | `Salvar replay` / `Carregar replay` (JSON file) |
 | Watch a recorded match | title screen, or `?replay=` |
+| Run your own agent | title screen, Arena |
 
 A replay file is version 2: the seed, the seats, the tick count and the human orders. Loading it
 resimulates General Varek; his decisions are never stored. The build is a static site with relative
@@ -115,6 +116,9 @@ The title screen can also **watch** a replay in that same view: pause, play at 1
 the bar to a tick. The bar names who won.
 [Reference agent vs General Varek](https://gamestudio42.github.io/void-dominion/?replay=replays/reference-varek.json)
 is the short example (seed 24301, published layout, seat 1). **Open a replay file** loads any version-2 file.
+A `?replay-data=` link carries a gzip-compressed replay. The title screen's **Arena** button
+runs a script you paste or load: it plays in a worker against General Varek, the reference agent
+or the example agent, then exports that same version-2 file. See [Write an agent](docs/AGENT_ARENA.md#write-an-agent).
 
 ## Develop
 
