@@ -18,6 +18,7 @@ import {
   canSeeFootprint,
   deserializeReplay,
   isWalkable,
+  type ReplayFile,
   powerGive,
   powerTake,
   serializeReplay,
@@ -88,6 +89,14 @@ export interface FieldUi {
   peerGone: boolean;
   /** The guest's check of the host's replay, once the match ended. */
   audit: 'ok' | 'failed' | null;
+  /** Set while a recorded match is playing. Null in a live match. */
+  playback: {
+    playing: boolean;
+    speed: 1 | 2 | 4;
+    tick: number;
+    length: number;
+    outcome: string;
+  } | null;
 }
 
 /**
@@ -98,7 +107,8 @@ export type FieldMode =
   | { kind: 'offline' }
   | { kind: 'poster' }
   | { kind: 'host'; channels: Channels }
-  | { kind: 'guest'; session: GuestSession };
+  | { kind: 'guest'; session: GuestSession }
+  | { kind: 'replay'; file: ReplayFile };
 
 export interface FieldActions {
   stop(): void;
@@ -110,6 +120,9 @@ export interface FieldActions {
   cancel(): void;
   saveReplay(): void;
   loadReplay(text: string): void;
+  togglePlayback(): void;
+  setPlaybackSpeed(speed: 1 | 2 | 4): void;
+  seekPlayback(tick: number): void;
 }
 
 interface Point {
@@ -138,7 +151,13 @@ export function startField(
   const guest = fieldMode.kind === 'guest' ? fieldMode.session : null;
   /** The seat this window plays. */
   const me = guest ? guest.seat : PLAYER_ID;
-  let sim: Simulation | null = guest ? null : Simulation.create(MATCH.seed, fieldMode.kind === 'host' ? ['human', 'human'] : undefined);
+  const replayFile = fieldMode.kind === 'replay' ? fieldMode.file : null;
+  const replayFinal = replayFile ? Simulation.replay(replayFile.commands, replayFile.ticks, replayFile) : null;
+  let sim: Simulation | null = guest
+    ? null
+    : replayFile
+      ? Simulation.replay(replayFile.commands, 0, replayFile)
+      : Simulation.create(MATCH.seed, fieldMode.kind === 'host' ? ['human', 'human'] : undefined);
   const mirror = guest ? createMirror(guest.seed, me) : null;
   if (mirror && guest?.view) mirror.apply(guest.view, guest.explored);
   let world: World = sim ? sim.world : mirror!.world;
@@ -182,6 +201,46 @@ export function startField(
   let frames = 0;
   let lastAlpha = 0;
   let stopped = false;
+  let replayPlaying = true;
+  let replaySpeed: 1 | 2 | 4 = 1;
+  let replayCursor = 0;
+
+  function replayOutcome(): string {
+    if (!replayFinal || !replayFile) return '';
+    const winner = replayFinal.world.winner;
+    if (winner === 0) return messages.replay_undecided;
+    if (winner < 0) return messages.replay_draw;
+    const name = replayFile.seats[winner - 1] === 'varek' ? messages.replay_varek : messages.replay_seat(winner);
+    return messages.replay_winner(name);
+  }
+
+  function replayCursorAt(tick: number): number {
+    if (!replayFile) return 0;
+    let index = 0;
+    while (index < replayFile.commands.length && replayFile.commands[index]!.tick < tick) index += 1;
+    return index;
+  }
+
+  function applyReplayCommands(): void {
+    if (!replayFile || !sim) return;
+    while (replayCursor < replayFile.commands.length && replayFile.commands[replayCursor]!.tick === world.tick) {
+      sim.enqueue(replayFile.commands[replayCursor]!.cmd);
+      replayCursor += 1;
+    }
+  }
+
+  function adoptReplay(next: Simulation): void {
+    sim = next;
+    world = next.world;
+    replayCursor = replayCursorAt(world.tick);
+    watchCombat = combatWatcher(me);
+    watchCombat(world);
+    previous = capture();
+    current = capture();
+    selected.clear();
+    selectedBuilding = null;
+    stepper.reset();
+  }
 
   function capture(): Map<number, Point> {
     const positions = new Map<number, Point>();
@@ -202,7 +261,7 @@ export function startField(
   }
 
   function issue(cmd: Command, mark: Point | null): void {
-    if (!playing() || peerGone) return;
+    if (replayFile || !playing() || peerGone) return;
     hideRejection = false;
     note = null;
     pendingMark = mark;
@@ -399,6 +458,9 @@ export function startField(
       latency: guest?.latency === null || !guest ? null : Math.round(guest.latency),
       peerGone,
       audit: guest?.audit ? (guest.audit.ok ? 'ok' : 'failed') : null,
+      playback: replayFile
+        ? { playing: replayPlaying, speed: replaySpeed, tick: world.tick, length: replayFile.ticks, outcome: replayOutcome() }
+        : null,
     };
     const key = JSON.stringify(next);
     if (key === lastUi) return;
@@ -677,6 +739,33 @@ export function startField(
       link.click();
       URL.revokeObjectURL(url);
     },
+    togglePlayback() {
+      if (!replayFile) return;
+      if (!replayPlaying && (world.tick >= replayFile.ticks || world.winner !== 0)) adoptReplay(Simulation.replay(replayFile.commands, 0, replayFile));
+      replayPlaying = !replayPlaying;
+      publish();
+    },
+    setPlaybackSpeed(speed) {
+      if (!replayFile) return;
+      replaySpeed = speed;
+      publish();
+    },
+    seekPlayback(tick) {
+      if (!replayFile || !sim) return;
+      const target = Math.max(0, Math.min(replayFile.ticks, Math.floor(tick)));
+      if (target < world.tick || world.winner !== 0) adoptReplay(Simulation.replay(replayFile.commands, target, replayFile));
+      else {
+        while (world.tick < target && world.winner === 0) {
+          applyReplayCommands();
+          sim.step();
+        }
+        replayCursor = replayCursorAt(world.tick);
+        previous = capture();
+        current = previous;
+        stepper.reset();
+      }
+      publish();
+    },
     loadReplay(text) {
       if (fieldMode.kind !== 'offline') return;
       const file = deserializeReplay(text);
@@ -819,10 +908,17 @@ export function startField(
     if (keys.has('KeyS')) view.pan(0, -pan);
 
     /** A host waits for a guest who dropped; a guest only draws. */
-    const stepped = stepper.advance(sim && !poster && !(host && peerGone) ? elapsed : 0);
-    if (sim && stepped.steps > 0) {
+    const stepping = Boolean(sim) && !poster && !(host && peerGone) && (!replayFile || (replayPlaying && world.winner === 0 && world.tick < replayFile.ticks));
+    const stepped = stepper.advance(stepping ? elapsed : 0);
+    const steps = replayFile ? stepped.steps * replaySpeed : stepped.steps;
+    if (sim && steps > 0) {
       previous = current;
-      for (let i = 0; i < stepped.steps; i++) {
+      for (let i = 0; i < steps; i++) {
+        if (replayFile && (world.winner !== 0 || world.tick >= replayFile.ticks)) {
+          replayPlaying = false;
+          break;
+        }
+        if (replayFile) applyReplayCommands();
         sim.step();
         host?.afterStep();
         hear(watchCombat(world));

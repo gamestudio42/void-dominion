@@ -267,6 +267,14 @@ On the published run the reference agent is 59 wins, 0 losses, and 1 draw across
 
 Ollama stays off that board. `ARENA_LEADERBOARD_OLLAMA=1` adds `examples/ollama.ts` for one local run, prints the table, and does not rewrite the versioned files. CI does not set the variable. The determinism test replays two short seeds and checks the published JSON. It does not start Ollama.
 
+## Replay viewer
+
+The browser plays a version-2 replay in the same renderer as a skirmish. On the title screen, **Watch a replay** loads the example, and **Open a replay file** reads a file from disk. A `?replay=` query loads a URL next to the page, which is how GitHub Pages serves the example:
+
+[Reference agent vs General Varek](https://gamestudio42.github.io/void-dominion/?replay=replays/reference-varek.json)
+
+The file is `apps/game/public/replays/reference-varek.json`. Seed `24301`, published layout (not `seeded`), reference agent on seat 1, Varek on seat 2. It ends at tick 6826 with seat 1 winning. Playback can pause, run at 1×, 2× or 4×, and jump to a tick. The bar names the winner from the end of the file. Varek is simulated again; his orders are not in the file. An extra `checksum` field is the arena's `hashState()` and is ignored by `deserializeReplay`. `tools/arena/export-example-replay.ts` rewrites the file. The skirmish, the host and the guest do not use this mode.
+
 ## Running Matches
 
 ### Programmatic

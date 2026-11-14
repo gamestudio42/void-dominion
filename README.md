@@ -105,10 +105,16 @@ A refused order leaves its reason on screen and spends nothing.
 | Stop, mine, attack, build, train | the command card |
 | Tick and frames per second | `F3` |
 | Save / load a replay | `Salvar replay` / `Carregar replay` (JSON file) |
+| Watch a recorded match | title screen, or `?replay=` |
 
 A replay file is version 2: the seed, the seats, the tick count and the human orders. Loading it
 resimulates General Varek; his decisions are never stored. The build is a static site with relative
 paths, so it runs from any folder, and the field is a 128×128 grid played at a fixed 20 steps per second.
+
+The title screen can also **watch** a replay in that same view: pause, play at 1×, 2× or 4×, and drag
+the bar to a tick. The bar names who won.
+[Reference agent vs General Varek](https://gamestudio42.github.io/void-dominion/?replay=replays/reference-varek.json)
+is the short example (seed 24301, published layout, seat 1). **Open a replay file** loads any version-2 file.
 
 ## Develop
 
