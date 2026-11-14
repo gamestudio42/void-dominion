@@ -255,6 +255,18 @@ ARENA_MATCHES=8 ARENA_PERIOD=100 pnpm arena:ollama
 
 Totals, from the model's side: **0 wins, 5 losses, 3 draws**. Across 503 decisions the fallback rate and the invalid-action rate were both 0. The mean of the per-match latency means is 742 ms, and every p95 is under 1.2 s. The trace of those decisions is 29 gather, 29 build, 280 produce, 115 attack_move, and 50 noop. The army does march, and three matches with the model on seat 1 are still undecided at the cap. The five losses are Varek destroying the model's command center, between tick 3771 and 7025. All four matches with the model on seat 2 are in that loss group. The model does not destroy Varek's command center in this sample.
 
+## Leaderboard
+
+`pnpm arena:leaderboard` plays every agent in `tools/arena/roster.ts` against Varek and against each other. The set is fixed: seeds `MATCH.seed + 0..19` (24301 through 24320), `variation: 'seeded'`, cap 12000 ticks, strategic period 100. Even indexes seat the home agent on seat 1 and odd indexes seat it on seat 2. Home is the earlier roster entry when two registered agents play.
+
+The default roster is the reference agent, the deterministic example, and an in-process noop. The noop is the floor. An unseeded random policy would make the table unreproducible, so it is not on the board. To add an agent, append `{ id, script }` to `LEADERBOARD_ROSTER` and run the command again. An entry without `script` is another noop.
+
+The command rewrites `docs/leaderboard.json` and `docs/LEADERBOARD.md`. Win rate is wins divided by matches, with draws left in the denominator. A match between two registered agents counts for both standings. Varek is an opponent, not a row.
+
+On the published run the reference agent is 59 wins, 0 losses, and 1 draw across 60 matches (win rate 0.9833, mean 3712.9 ticks). The example is 20-40-0. The noop is 0-60-0. Against Varek alone the reference agent is 19-0-1 over the same 20 seeds as `pnpm arena:bench`, including the draw on seed 24318. The example and the noop lose all 20 of those.
+
+Ollama stays off that board. `ARENA_LEADERBOARD_OLLAMA=1` adds `examples/ollama.ts` for one local run, prints the table, and does not rewrite the versioned files. CI does not set the variable. The determinism test replays two short seeds and checks the published JSON. It does not start Ollama.
+
 ## Running Matches
 
 ### Programmatic
@@ -286,6 +298,7 @@ console.log(result);
 ```bash
 pnpm arena              # Run a single match
 pnpm arena:bench        # Reference agent vs Varek, 20 seeded matches
+pnpm arena:leaderboard  # Fixed board of the roster; rewrites docs/LEADERBOARD.md
 pnpm arena:ollama       # Ollama example vs Varek (needs a local daemon; not CI)
 pnpm arena:replay       # Replay from trace
 ```
