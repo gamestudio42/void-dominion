@@ -18,6 +18,8 @@ export interface MatchSetup {
    * and is not given a process or an observation. Default is two external seats.
    */
   engineSeats?: Seats;
+  /** Called with the finished simulation, so a caller can copy the replay log. */
+  onFinished?: (sim: Simulation) => void;
 }
 
 function determineEndReason(sim: Simulation, ticks: number, maxTicks: number, seat1Forfeited: boolean, seat2Forfeited: boolean): EndReason {
@@ -101,6 +103,8 @@ export async function runMatch(setup: MatchSetup): Promise<MatchResult> {
   const fallbackShare1 = seat1Metrics.decisions > 0 ? seat1Metrics.fallbackDecisions / seat1Metrics.decisions : 0;
   const fallbackShare2 = seat2Metrics.decisions > 0 ? seat2Metrics.fallbackDecisions / seat2Metrics.decisions : 0;
   const validForBenchmark = fallbackShare1 <= setup.config.fallbackInvalidThreshold && fallbackShare2 <= setup.config.fallbackInvalidThreshold;
+
+  setup.onFinished?.(sim);
 
   const endReason = determineEndReason(
     sim,

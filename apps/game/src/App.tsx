@@ -1,4 +1,5 @@
 import { BUILDING_KINDS, BUILDINGS } from '@void-dominion/content';
+import { deserializeReplay } from '@void-dominion/simulation';
 import { useEffect, useRef, useState } from 'react';
 import { startField, type FieldActions, type FieldMode, type FieldUi } from './field.ts';
 import { messagesFor } from './locales.ts';
@@ -7,12 +8,21 @@ import { forgetJoinLink, hostOnline, joinOnline, joinSecret, OnlineError, type O
 /** Sent in `hello`, so a host can tell which build a guest runs. */
 const BUILD = 'web';
 
+/** The versioned example, served next to the page on GitHub Pages and in dev. */
+export const EXAMPLE_REPLAY = 'replays/reference-varek.json';
+
 type Screen =
   | { kind: 'menu' }
   | { kind: 'hosting'; link: string | null }
   | { kind: 'joining' }
+  | { kind: 'loading-replay' }
   | { kind: 'failed'; reason: OnlineFailure }
   | { kind: 'playing'; mode: FieldMode };
+
+function replayRequest(): string | null {
+  const value = new URLSearchParams(location.search).get('replay');
+  return value && value.length > 0 ? value : null;
+}
 
 const EMPTY: FieldUi = {
   selectedLabel: '',
@@ -39,12 +49,45 @@ const EMPTY: FieldUi = {
   latency: null,
   peerGone: false,
   audit: null,
+  playback: null,
 };
 
 export function App() {
   const text = messagesFor(navigator.language);
   const joining = useRef(false);
-  const [screen, setScreen] = useState<Screen>(() => (joinSecret() ? { kind: 'joining' } : { kind: 'menu' }));
+  const menuFile = useRef<HTMLInputElement>(null);
+  const [replayError, setReplayError] = useState(false);
+  const [screen, setScreen] = useState<Screen>(() => {
+    if (joinSecret()) return { kind: 'joining' };
+    if (replayRequest()) return { kind: 'loading-replay' };
+    return { kind: 'menu' };
+  });
+
+  function openReplay(body: string): void {
+    const file = deserializeReplay(body);
+    if (!file) {
+      setReplayError(true);
+      setScreen({ kind: 'menu' });
+      return;
+    }
+    setReplayError(false);
+    setScreen({ kind: 'playing', mode: { kind: 'replay', file } });
+  }
+
+  function loadReplayUrl(url: string): void {
+    setReplayError(false);
+    setScreen({ kind: 'loading-replay' });
+    void fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error('missing');
+        return response.text();
+      })
+      .then((body) => openReplay(body))
+      .catch(() => {
+        setReplayError(true);
+        setScreen({ kind: 'menu' });
+      });
+  }
 
   /** A `#join=` link joins at once. The ref keeps React's double effect in development from joining twice. */
   useEffect(() => {
@@ -58,6 +101,13 @@ export function App() {
       },
       (error: unknown) => setScreen({ kind: 'failed', reason: error instanceof OnlineError ? error.reason : 'connection_failed' }),
     );
+  }, []);
+
+  useEffect(() => {
+    if (joinSecret()) return;
+    const url = replayRequest();
+    if (!url) return;
+    loadReplayUrl(url);
   }, []);
 
   function host(): void {
@@ -85,8 +135,28 @@ export function App() {
               <button type="button" onClick={host}>
                 {text.host_match}
               </button>
+              <button type="button" onClick={() => loadReplayUrl(EXAMPLE_REPLAY)}>
+                {text.replay_watch}
+              </button>
+              <button type="button" onClick={() => menuFile.current?.click()}>
+                {text.replay_open}
+              </button>
+              {replayError && <p className="failure">{text.replay_invalid}</p>}
+              <input
+                ref={menuFile}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = '';
+                  if (!file) return;
+                  void file.text().then((body) => openReplay(body));
+                }}
+              />
             </>
           )}
+          {screen.kind === 'loading-replay' && <p>{text.replay_loading}</p>}
           {screen.kind === 'hosting' && (
             <>
               <p>{text.host_waiting}</p>
@@ -201,6 +271,37 @@ function Field({ mode }: { mode: FieldMode }) {
         />
       )}
       <canvas ref={mapRef} className="minimap" width={168} height={168} />
+      {ui.playback && (
+        <section className="playback">
+          <button type="button" onClick={() => actions.current?.togglePlayback()}>
+            {ui.playback.playing ? text.replay_pause : text.replay_play}
+          </button>
+          {([1, 2, 4] as const).map((speed) => (
+            <button
+              key={speed}
+              type="button"
+              className={ui.playback?.speed === speed ? 'active' : undefined}
+              onClick={() => actions.current?.setPlaybackSpeed(speed)}
+            >
+              {text.replay_speed(speed)}
+            </button>
+          ))}
+          <input
+            type="range"
+            min={0}
+            max={ui.playback.length}
+            value={Math.min(ui.playback.tick, ui.playback.length)}
+            aria-label={text.tick(ui.playback.tick)}
+            onChange={(event) => actions.current?.seekPlayback(Number(event.target.value))}
+          />
+          <span className="outcome">{ui.playback.outcome}</span>
+          <span className="clock">{text.tick(ui.playback.tick)}</span>
+          <button type="button" onClick={() => location.assign(location.pathname)}>
+            {text.replay_back}
+          </button>
+        </section>
+      )}
+      {!ui.playback && (
       <section className="commands">
         <button type="button" onClick={() => actions.current?.stop()}>
           <Glyph name="stop" />
@@ -251,6 +352,7 @@ function Field({ mode }: { mode: FieldMode }) {
           }}
         />
       </section>
+      )}
     </div>
   );
 }
