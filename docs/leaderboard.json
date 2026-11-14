@@ -1,0 +1,1331 @@
+{
+  "variation": "seeded",
+  "strategicPeriodTicks": 100,
+  "maxTicks": 12000,
+  "seeds": [
+    24301,
+    24302,
+    24303,
+    24304,
+    24305,
+    24306,
+    24307,
+    24308,
+    24309,
+    24310,
+    24311,
+    24312,
+    24313,
+    24314,
+    24315,
+    24316,
+    24317,
+    24318,
+    24319,
+    24320
+  ],
+  "agents": [
+    "reference",
+    "example",
+    "noop"
+  ],
+  "standings": [
+    {
+      "agent": "reference",
+      "matches": 60,
+      "wins": 59,
+      "losses": 0,
+      "draws": 1,
+      "winRate": 0.9833,
+      "averageTicks": 3712.9
+    },
+    {
+      "agent": "example",
+      "matches": 60,
+      "wins": 20,
+      "losses": 40,
+      "draws": 0,
+      "winRate": 0.3333,
+      "averageTicks": 3045.5
+    },
+    {
+      "agent": "noop",
+      "matches": 60,
+      "wins": 0,
+      "losses": 60,
+      "draws": 0,
+      "winRate": 0,
+      "averageTicks": 2781.1
+    }
+  ],
+  "matchups": [
+    {
+      "home": "reference",
+      "away": "varek",
+      "agent": "reference",
+      "matches": 20,
+      "wins": 19,
+      "losses": 0,
+      "draws": 1,
+      "winRate": 0.95,
+      "averageTicks": 5760.5
+    },
+    {
+      "home": "example",
+      "away": "varek",
+      "agent": "example",
+      "matches": 20,
+      "wins": 0,
+      "losses": 20,
+      "draws": 0,
+      "winRate": 0,
+      "averageTicks": 3973.2
+    },
+    {
+      "home": "noop",
+      "away": "varek",
+      "agent": "noop",
+      "matches": 20,
+      "wins": 0,
+      "losses": 20,
+      "draws": 0,
+      "winRate": 0,
+      "averageTicks": 3350.8
+    },
+    {
+      "home": "reference",
+      "away": "example",
+      "agent": "reference",
+      "matches": 20,
+      "wins": 20,
+      "losses": 0,
+      "draws": 0,
+      "winRate": 1,
+      "averageTicks": 2774.4
+    },
+    {
+      "home": "reference",
+      "away": "noop",
+      "agent": "reference",
+      "matches": 20,
+      "wins": 20,
+      "losses": 0,
+      "draws": 0,
+      "winRate": 1,
+      "averageTicks": 2603.9
+    },
+    {
+      "home": "example",
+      "away": "noop",
+      "agent": "example",
+      "matches": 20,
+      "wins": 20,
+      "losses": 0,
+      "draws": 0,
+      "winRate": 1,
+      "averageTicks": 2388.8
+    }
+  ],
+  "matches": [
+    {
+      "seed": 24301,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 4038,
+      "checksum": 1382428872
+    },
+    {
+      "seed": 24302,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 4401,
+      "checksum": 839265886
+    },
+    {
+      "seed": 24303,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 5509,
+      "checksum": 1990780365
+    },
+    {
+      "seed": 24304,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 7919,
+      "checksum": 536681875
+    },
+    {
+      "seed": 24305,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 4326,
+      "checksum": 1425542252
+    },
+    {
+      "seed": 24306,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 7213,
+      "checksum": 1285410933
+    },
+    {
+      "seed": 24307,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 4487,
+      "checksum": 2429537777
+    },
+    {
+      "seed": 24308,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 7048,
+      "checksum": 3946469537
+    },
+    {
+      "seed": 24309,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 4038,
+      "checksum": 2925031899
+    },
+    {
+      "seed": 24310,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 4375,
+      "checksum": 2055285642
+    },
+    {
+      "seed": 24311,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 5507,
+      "checksum": 4289616713
+    },
+    {
+      "seed": 24312,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 6101,
+      "checksum": 210899907
+    },
+    {
+      "seed": 24313,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 4326,
+      "checksum": 4210583712
+    },
+    {
+      "seed": 24314,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 5735,
+      "checksum": 156509523
+    },
+    {
+      "seed": 24315,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 4487,
+      "checksum": 768614786
+    },
+    {
+      "seed": 24316,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 6974,
+      "checksum": 4283560998
+    },
+    {
+      "seed": 24317,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 4038,
+      "checksum": 3571984081
+    },
+    {
+      "seed": 24318,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 0,
+      "endReason": "tick_cap",
+      "ticks": 12000,
+      "checksum": 741545245
+    },
+    {
+      "seed": 24319,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 5499,
+      "checksum": 370562370
+    },
+    {
+      "seed": 24320,
+      "home": "reference",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 7189,
+      "checksum": 2375402065
+    },
+    {
+      "seed": 24301,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3988,
+      "checksum": 1888516751
+    },
+    {
+      "seed": 24302,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3996,
+      "checksum": 62257106
+    },
+    {
+      "seed": 24303,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3851,
+      "checksum": 3833041529
+    },
+    {
+      "seed": 24304,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3957,
+      "checksum": 2625540808
+    },
+    {
+      "seed": 24305,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 4156,
+      "checksum": 736737117
+    },
+    {
+      "seed": 24306,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3885,
+      "checksum": 3865287443
+    },
+    {
+      "seed": 24307,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 4015,
+      "checksum": 2144268410
+    },
+    {
+      "seed": 24308,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3988,
+      "checksum": 4220871735
+    },
+    {
+      "seed": 24309,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3988,
+      "checksum": 1095620789
+    },
+    {
+      "seed": 24310,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3996,
+      "checksum": 968549630
+    },
+    {
+      "seed": 24311,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3851,
+      "checksum": 2081497824
+    },
+    {
+      "seed": 24312,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3957,
+      "checksum": 502608846
+    },
+    {
+      "seed": 24313,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 4156,
+      "checksum": 2249839613
+    },
+    {
+      "seed": 24314,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3885,
+      "checksum": 1580845864
+    },
+    {
+      "seed": 24315,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 4015,
+      "checksum": 2169466095
+    },
+    {
+      "seed": 24316,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3988,
+      "checksum": 446503270
+    },
+    {
+      "seed": 24317,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3988,
+      "checksum": 354446822
+    },
+    {
+      "seed": 24318,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3996,
+      "checksum": 2539017382
+    },
+    {
+      "seed": 24319,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3851,
+      "checksum": 2197924389
+    },
+    {
+      "seed": 24320,
+      "home": "example",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3957,
+      "checksum": 2165245948
+    },
+    {
+      "seed": 24301,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3336,
+      "checksum": 612955255
+    },
+    {
+      "seed": 24302,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3364,
+      "checksum": 2648042633
+    },
+    {
+      "seed": 24303,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3332,
+      "checksum": 2037226421
+    },
+    {
+      "seed": 24304,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3367,
+      "checksum": 962767008
+    },
+    {
+      "seed": 24305,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3334,
+      "checksum": 4268571594
+    },
+    {
+      "seed": 24306,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3368,
+      "checksum": 2280815349
+    },
+    {
+      "seed": 24307,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3346,
+      "checksum": 3463627586
+    },
+    {
+      "seed": 24308,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3361,
+      "checksum": 1457720259
+    },
+    {
+      "seed": 24309,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3336,
+      "checksum": 2949642777
+    },
+    {
+      "seed": 24310,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3364,
+      "checksum": 484045515
+    },
+    {
+      "seed": 24311,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3332,
+      "checksum": 2692031766
+    },
+    {
+      "seed": 24312,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3367,
+      "checksum": 3821264170
+    },
+    {
+      "seed": 24313,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3334,
+      "checksum": 1610653294
+    },
+    {
+      "seed": 24314,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3368,
+      "checksum": 349502669
+    },
+    {
+      "seed": 24315,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3346,
+      "checksum": 1912531962
+    },
+    {
+      "seed": 24316,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3361,
+      "checksum": 172218163
+    },
+    {
+      "seed": 24317,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3336,
+      "checksum": 241853023
+    },
+    {
+      "seed": 24318,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3364,
+      "checksum": 3652850114
+    },
+    {
+      "seed": 24319,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 1,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 3332,
+      "checksum": 3095658762
+    },
+    {
+      "seed": 24320,
+      "home": "noop",
+      "away": "varek",
+      "homeSeat": 2,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 3367,
+      "checksum": 3782075733
+    },
+    {
+      "seed": 24301,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2647,
+      "checksum": 2921919776
+    },
+    {
+      "seed": 24302,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2936,
+      "checksum": 3141509317
+    },
+    {
+      "seed": 24303,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2772,
+      "checksum": 1625833391
+    },
+    {
+      "seed": 24304,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2764,
+      "checksum": 2178212110
+    },
+    {
+      "seed": 24305,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2722,
+      "checksum": 1279389100
+    },
+    {
+      "seed": 24306,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2790,
+      "checksum": 1282090706
+    },
+    {
+      "seed": 24307,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2662,
+      "checksum": 2274815289
+    },
+    {
+      "seed": 24308,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2891,
+      "checksum": 210633910
+    },
+    {
+      "seed": 24309,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2647,
+      "checksum": 461745088
+    },
+    {
+      "seed": 24310,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2936,
+      "checksum": 349394173
+    },
+    {
+      "seed": 24311,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2772,
+      "checksum": 1677497352
+    },
+    {
+      "seed": 24312,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2764,
+      "checksum": 3847531107
+    },
+    {
+      "seed": 24313,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2722,
+      "checksum": 3251024800
+    },
+    {
+      "seed": 24314,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2790,
+      "checksum": 61511433
+    },
+    {
+      "seed": 24315,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2662,
+      "checksum": 1542567041
+    },
+    {
+      "seed": 24316,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2891,
+      "checksum": 3145306679
+    },
+    {
+      "seed": 24317,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2647,
+      "checksum": 1851484771
+    },
+    {
+      "seed": 24318,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2936,
+      "checksum": 536964157
+    },
+    {
+      "seed": 24319,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2772,
+      "checksum": 682450959
+    },
+    {
+      "seed": 24320,
+      "home": "reference",
+      "away": "example",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2764,
+      "checksum": 2357806036
+    },
+    {
+      "seed": 24301,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2619,
+      "checksum": 81830042
+    },
+    {
+      "seed": 24302,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2598,
+      "checksum": 2117359801
+    },
+    {
+      "seed": 24303,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2600,
+      "checksum": 1851348360
+    },
+    {
+      "seed": 24304,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2596,
+      "checksum": 2108115141
+    },
+    {
+      "seed": 24305,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2625,
+      "checksum": 1181646376
+    },
+    {
+      "seed": 24306,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2599,
+      "checksum": 282935974
+    },
+    {
+      "seed": 24307,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2597,
+      "checksum": 4099639866
+    },
+    {
+      "seed": 24308,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2598,
+      "checksum": 156665372
+    },
+    {
+      "seed": 24309,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2619,
+      "checksum": 4038488319
+    },
+    {
+      "seed": 24310,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2598,
+      "checksum": 2032572737
+    },
+    {
+      "seed": 24311,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2600,
+      "checksum": 2853737312
+    },
+    {
+      "seed": 24312,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2596,
+      "checksum": 4114523876
+    },
+    {
+      "seed": 24313,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2625,
+      "checksum": 379928823
+    },
+    {
+      "seed": 24314,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2599,
+      "checksum": 1214718849
+    },
+    {
+      "seed": 24315,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2597,
+      "checksum": 2759910233
+    },
+    {
+      "seed": 24316,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2598,
+      "checksum": 3939631974
+    },
+    {
+      "seed": 24317,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2619,
+      "checksum": 3667981458
+    },
+    {
+      "seed": 24318,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2598,
+      "checksum": 207035761
+    },
+    {
+      "seed": 24319,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2600,
+      "checksum": 54930705
+    },
+    {
+      "seed": 24320,
+      "home": "reference",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2596,
+      "checksum": 1249862422
+    },
+    {
+      "seed": 24301,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2365,
+      "checksum": 2211605388
+    },
+    {
+      "seed": 24302,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2365,
+      "checksum": 2877001757
+    },
+    {
+      "seed": 24303,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2282,
+      "checksum": 2457063495
+    },
+    {
+      "seed": 24304,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2592,
+      "checksum": 4153400325
+    },
+    {
+      "seed": 24305,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2483,
+      "checksum": 2819398244
+    },
+    {
+      "seed": 24306,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2365,
+      "checksum": 2397658058
+    },
+    {
+      "seed": 24307,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2270,
+      "checksum": 3690511035
+    },
+    {
+      "seed": 24308,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2364,
+      "checksum": 2579388433
+    },
+    {
+      "seed": 24309,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2365,
+      "checksum": 1871495173
+    },
+    {
+      "seed": 24310,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2365,
+      "checksum": 1187445493
+    },
+    {
+      "seed": 24311,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2282,
+      "checksum": 1750325851
+    },
+    {
+      "seed": 24312,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2592,
+      "checksum": 24434637
+    },
+    {
+      "seed": 24313,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2483,
+      "checksum": 495527560
+    },
+    {
+      "seed": 24314,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2365,
+      "checksum": 600512235
+    },
+    {
+      "seed": 24315,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2270,
+      "checksum": 1301468047
+    },
+    {
+      "seed": 24316,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2364,
+      "checksum": 303200997
+    },
+    {
+      "seed": 24317,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2365,
+      "checksum": 2071777541
+    },
+    {
+      "seed": 24318,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2365,
+      "checksum": 1103223309
+    },
+    {
+      "seed": 24319,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 1,
+      "winner": 1,
+      "endReason": "victory",
+      "ticks": 2282,
+      "checksum": 1786473431
+    },
+    {
+      "seed": 24320,
+      "home": "example",
+      "away": "noop",
+      "homeSeat": 2,
+      "winner": 2,
+      "endReason": "victory",
+      "ticks": 2592,
+      "checksum": 3108776555
+    }
+  ]
+}

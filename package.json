@@ -16,6 +16,7 @@
     "bench:view": "node --experimental-transform-types --no-warnings tools/bench/view.ts",
     "arena": "node --experimental-transform-types --no-warnings tools/arena/match.ts",
     "arena:bench": "node --experimental-transform-types --no-warnings tools/arena/benchmark.ts",
+    "arena:leaderboard": "node --experimental-transform-types --no-warnings tools/arena/leaderboard.ts",
     "arena:ollama": "node --experimental-transform-types --no-warnings tools/arena/ollama-bench.ts",
     "arena:replay": "node --experimental-transform-types --no-warnings tools/arena/replay.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm test"
