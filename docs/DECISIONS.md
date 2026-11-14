@@ -4,11 +4,11 @@ Record significant choices that differ from the original plan or resolve ambigui
 
 ## 1. Agent Arena uses `clientView` instead of `observe`
 
-**Context**: The `observe()` function in `packages/simulation/src/commander.ts` leaks resource node `amount` even when explored but not visible. The `clientView()` function (used for multiplayer guests) correctly hides amounts until the node's cell is in sight.
+**Context**: `observe()` used to copy a resource node's current `amount` whenever the cell had been explored, including cells no longer in sight. `clientView()` (the multiplayer guest view, and the view the Arena sends) includes `amount` only while `canSee` is true and omits it otherwise.
 
-**Decision**: External agents receive observations built from `clientView`. The `observe()` leak remains unfixed in this PR to minimize engine changes, but is documented as a known issue.
+**Decision**: External agents receive observations built from `clientView`. `observe()` now follows the same rule: a visible node carries its current amount, and an explored-but-not-visible node is listed without `amount`. There is no last-seen stock, because `clientView` does not store one.
 
-**Consequences**: External agents never receive information hidden by fog. The Arena adapter is correctly isolated from the leak.
+**Consequences**: A commander that calls `observe()` cannot read a hidden node's current stock. The function is a read, so pinned checksums and Varek's `stepAi` path are unchanged. The Arena still builds agent observations from `clientView`.
 
 ## 2. CommanderAdapter submits via `Simulation.enqueue()`
 

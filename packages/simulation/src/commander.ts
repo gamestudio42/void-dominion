@@ -56,7 +56,8 @@ export interface CommanderNode {
   kind: 'ore' | 'aether';
   x: number;
   y: number;
-  amount: number;
+  /** Current stock. Present only while the cell is in sight, matching `clientView`. */
+  amount?: number;
 }
 
 /** What one player is allowed to know. Hidden units and nodes are omitted. */
@@ -164,7 +165,9 @@ export function observe(world: World, playerId: number): CommanderView {
   if (index !== null) {
     for (const node of world.nodes) {
       if (world.explored[index]![cellIndex(node.x, node.y)] !== 1) continue;
-      nodes.push({ id: node.id, kind: node.kind, x: node.x, y: node.y, amount: node.amount });
+      const drawn: CommanderNode = { id: node.id, kind: node.kind, x: node.x, y: node.y };
+      if (canSee(world, playerId, node.x, node.y)) drawn.amount = node.amount;
+      nodes.push(drawn);
     }
   }
   return {

@@ -14,7 +14,7 @@ examples/               deterministic.ts, ollama.ts (optional)
 ### Key Principles
 
 1. **Arena owns the clock.** `reset` and `step` are privileged operations never exposed to agent processes.
-2. **Observations use `clientView`.** External agents never receive information hidden by fog (unlike `observe()`, which leaks resource amounts).
+2. **Observations use `clientView`.** External agents never receive information hidden by fog. `observe()` follows the same rule for resource amounts: the current stock is included only while the node is in sight.
 3. **Commands go through `Simulation.enqueue()`.** The CommanderAdapter injects `playerId` from the seat and submits commands that appear in replay v2.
 4. **Varek is unchanged.** The conventional opponent continues to use `stepAi` and is not an external agent. A match passes `engineSeats` of `'human' | 'varek'`. A `varek` seat gets no child process and no observation.
 5. **Failure policies are configurable.** Timeouts, crashes, and malformed JSON trigger fallback, noop, or forfeit policies.
@@ -271,10 +271,6 @@ All tests run without Ollama, network, or external APIs.
 - Response arrival order does not change outcome
 - Benchmark records W/L/D and per-agent metrics
 - Win rate over seed pairs with swapped seats
-
-## Known Issues
-
-1. **observe() leak**: The `observe()` function in `packages/simulation/src/commander.ts` includes resource node `amount` even when the node is explored but not visible. This is NOT used by the Arena (which uses `clientView` instead), but remains unfixed in this PR to minimize engine changes.
 
 ## Future Work
 
