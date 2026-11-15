@@ -11,9 +11,21 @@ export interface Channel {
  * The two pipes of a match: commands, acks and the end message must all arrive in
  * order; a view is replaced 100 ms later, so a lost one is not resent.
  */
+export type IceKind = 'host' | 'srflx' | 'prflx' | 'relay' | 'unknown';
+
+/** The candidate pair that is carrying the match. `relay` would be a TURN server; this build has none. */
+export interface IceEnds {
+  local: IceKind;
+  remote: IceKind;
+}
+
 export interface Channels {
   reliable: Channel;
   views: Channel;
+  /** The selected pair, or null when this pipe is not WebRTC. */
+  ice(): Promise<IceEnds | null>;
+  /** Times the connection reported `disconnected` or `failed`. */
+  drops(): number;
 }
 
 /**
@@ -45,6 +57,11 @@ export function rtcPeer(stun: readonly string[] = STUN_SERVERS): Peer {
   connection.addEventListener('connectionstatechange', () => {
     if (connection.connectionState === 'failed') fail(new Error('connection_failed'));
   });
+  let drops = 0;
+  connection.addEventListener('connectionstatechange', () => {
+    const state = connection.connectionState;
+    if (state === 'disconnected' || state === 'failed') drops += 1;
+  });
   const pending = new Map<string, RTCDataChannel>();
   const adopt = (channel: RTCDataChannel) => {
     channel.binaryType = 'arraybuffer';
@@ -52,7 +69,14 @@ export function rtcPeer(stun: readonly string[] = STUN_SERVERS): Peer {
       pending.set(channel.label, channel);
       const reliable = pending.get('reliable');
       const views = pending.get('views');
-      if (reliable && views) settle({ reliable: wrap(reliable, connection), views: wrap(views, connection) });
+      if (reliable && views) {
+        settle({
+          reliable: wrap(reliable, connection),
+          views: wrap(views, connection),
+          ice: () => selectedIce(connection),
+          drops: () => drops,
+        });
+      }
     });
   };
   return {
@@ -200,7 +224,46 @@ interface MemoryChannel extends Channel {
 }
 
 function memoryChannels(): Channels & { reliable: MemoryChannel; views: MemoryChannel } {
-  return { reliable: memoryChannel(), views: memoryChannel() };
+  return { reliable: memoryChannel(), views: memoryChannel(), ice: async () => null, drops: () => 0 };
+}
+
+function iceKind(value: unknown): IceKind {
+  if (value === 'host' || value === 'srflx' || value === 'prflx' || value === 'relay') return value;
+  return 'unknown';
+}
+
+async function selectedIce(connection: RTCPeerConnection): Promise<IceEnds | null> {
+  const stats = await connection.getStats();
+  const chosen: { localId?: string; remoteId?: string; pinned: boolean } = { pinned: false };
+  stats.forEach((report) => {
+    if (report.type === 'transport' && 'selectedCandidatePairId' in report && typeof report.selectedCandidatePairId === 'string') {
+      const pair = stats.get(report.selectedCandidatePairId);
+      if (pair && pair.type === 'candidate-pair' && 'localCandidateId' in pair && 'remoteCandidateId' in pair) {
+        chosen.localId = typeof pair.localCandidateId === 'string' ? pair.localCandidateId : undefined;
+        chosen.remoteId = typeof pair.remoteCandidateId === 'string' ? pair.remoteCandidateId : undefined;
+        chosen.pinned = true;
+      }
+    }
+  });
+  if (!chosen.pinned) {
+    stats.forEach((report) => {
+      if (chosen.pinned || report.type !== 'candidate-pair') return;
+      const pair = report as RTCIceCandidatePairStats;
+      const current = 'selected' in pair && pair.selected === true;
+      if (current || (pair.nominated && pair.state === 'succeeded')) {
+        chosen.localId = pair.localCandidateId;
+        chosen.remoteId = pair.remoteCandidateId;
+        chosen.pinned = current;
+      }
+    });
+  }
+  if (!chosen.localId && !chosen.remoteId) return null;
+  const local = chosen.localId ? stats.get(chosen.localId) : undefined;
+  const remote = chosen.remoteId ? stats.get(chosen.remoteId) : undefined;
+  return {
+    local: iceKind(local && 'candidateType' in local ? local.candidateType : null),
+    remote: iceKind(remote && 'candidateType' in remote ? remote.candidateType : null),
+  };
 }
 
 function memoryChannel(): MemoryChannel {

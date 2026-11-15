@@ -88,6 +88,10 @@ export const en = {
   peer_left: 'The other player disconnected',
   verified: 'Result verified',
   unverified: "Result not verified: the host's replay does not match this match",
+  audit_checking: 'Checking the replay…',
+  copy_diagnostics: 'Copy diagnostics',
+  diagnostics_copied: 'Diagnostics copied',
+  diagnostics: 'Match diagnostics',
   train: (name: string, ore: number, aether: number) => (aether > 0 ? `${name} ${ore}+${aether}` : `${name} ${ore}`),
   unitName: (kind: UnitKind) =>
     ({
@@ -198,6 +202,10 @@ export const ptBR: typeof en = {
   peer_left: 'O outro jogador desconectou',
   verified: 'Resultado verificado',
   unverified: 'Resultado não verificado: o replay do host não confere com esta partida',
+  audit_checking: 'Conferindo o replay…',
+  copy_diagnostics: 'Copiar diagnóstico',
+  diagnostics_copied: 'Diagnóstico copiado',
+  diagnostics: 'Diagnóstico da partida',
   train: (name: string, ore: number, aether: number) => (aether > 0 ? `${name} ${ore}+${aether}` : `${name} ${ore}`),
   unitName: (kind: UnitKind) =>
     ({

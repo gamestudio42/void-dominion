@@ -1,5 +1,5 @@
 import { deserializeReplay, Simulation, type Command } from '@void-dominion/simulation';
-import type { EndMessage } from './messages.ts';
+import type { AuditReason, EndMessage } from './messages.ts';
 
 /** Commands a guest may send in a burst, and per second after it. */
 export const COMMAND_BURST = 20;
@@ -31,9 +31,7 @@ export interface AckedOrder {
   cmd: Command;
 }
 
-export type Audit =
-  | { ok: true }
-  | { ok: false; reason: 'replay_unreadable' | 'seat' | 'checksum' | 'winner' | 'missing_order' | 'extra_order' };
+export type Audit = { ok: true } | { ok: false; reason: AuditReason };
 
 /**
  * The guest's check on the host after a match. The host's replay must:

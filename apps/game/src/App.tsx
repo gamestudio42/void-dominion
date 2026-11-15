@@ -1,4 +1,5 @@
 import { BUILDING_KINDS, BUILDINGS } from '@void-dominion/content';
+import { formatFieldReport } from '@void-dominion/net';
 import { deserializeReplay } from '@void-dominion/simulation';
 import { useEffect, useRef, useState } from 'react';
 import { decodeReplayLink } from '../../../packages/arena/src/sandbox.ts';
@@ -57,6 +58,10 @@ const EMPTY: FieldUi = {
   latency: null,
   peerGone: false,
   audit: null,
+  auditReason: null,
+  iceLocal: null,
+  iceRemote: null,
+  drops: 0,
   playback: null,
 };
 
@@ -248,6 +253,20 @@ function Field({ mode }: { mode: FieldMode }) {
   }, [mode]);
 
   const banner = ui.banner === 'victory' ? text.victory : ui.banner === 'defeat' ? text.defeat : ui.banner === 'draw' ? text.draw : null;
+  const [diagnosticsCopied, setDiagnosticsCopied] = useState(false);
+  const diagnostics = ui.online
+    ? formatFieldReport({
+        role: ui.online,
+        tick: ui.tick,
+        pingMs: ui.latency,
+        iceLocal: ui.iceLocal,
+        iceRemote: ui.iceRemote,
+        drops: ui.drops,
+        audit: ui.audit === 'ok' ? 'pass' : ui.audit === 'failed' ? 'fail' : 'pending',
+        auditReason: ui.auditReason,
+        result: ui.banner ?? 'playing',
+      })
+    : '';
 
   return (
     <div className="field">
@@ -261,6 +280,7 @@ function Field({ mode }: { mode: FieldMode }) {
         <span className="clock">{ui.clock}</span>
       </header>
       {ui.peerGone && !banner && <p className="contact">{text.peer_left}</p>}
+      {banner && ui.online && !ui.audit && <p className="audit">{text.audit_checking}</p>}
       {banner && ui.audit && <p className={ui.audit === 'ok' ? 'audit' : 'audit failed'}>{ui.audit === 'ok' ? text.verified : text.unverified}</p>}
       {ui.card && (
         <section className="card">
@@ -293,6 +313,17 @@ function Field({ mode }: { mode: FieldMode }) {
         />
       )}
       <canvas ref={mapRef} className="minimap" width={168} height={168} />
+      {ui.online && (
+        <section className="diagnostics">
+          <textarea readOnly aria-label={text.diagnostics} value={diagnostics} onFocus={(event) => event.target.select()} />
+          <button
+            type="button"
+            onClick={() => void navigator.clipboard?.writeText(diagnostics).then(() => setDiagnosticsCopied(true))}
+          >
+            {diagnosticsCopied ? text.diagnostics_copied : text.copy_diagnostics}
+          </button>
+        </section>
+      )}
       {ui.playback && (
         <section className="playback">
           <button type="button" onClick={() => actions.current?.togglePlayback()}>

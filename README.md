@@ -79,7 +79,7 @@ the only simulation, so the guest only ever receives what its fog allows. At the
 the host's replay and the result is shown as verified or not. There is no TURN relay, so two players
 both behind carrier-grade NAT cannot connect.
 
-Still open: the field test of online play across two networks, a campaign, the Mycelian and Aether
+Still open: the field test of online play across two networks ([how to run it](docs/FIELD_TEST.md)), a campaign, the Mycelian and Aether
 factions, and a language-model commander. The gateway for a plan is in the simulation; this client never
 calls it, and the conventional opponent keeps playing when no plan arrives.
 
