@@ -1,5 +1,9 @@
 import { BUILDING_KINDS, BUILDINGS } from '@void-dominion/content';
+import { formatFieldReport } from '@void-dominion/net';
+import { deserializeReplay } from '@void-dominion/simulation';
 import { useEffect, useRef, useState } from 'react';
+import { decodeReplayLink } from '../../../packages/arena/src/sandbox.ts';
+import { ArenaPanel } from './arena.tsx';
 import { startField, type FieldActions, type FieldMode, type FieldUi } from './field.ts';
 import { messagesFor } from './locales.ts';
 import { forgetJoinLink, hostOnline, joinOnline, joinSecret, OnlineError, type OnlineFailure } from './online.ts';
@@ -7,12 +11,27 @@ import { forgetJoinLink, hostOnline, joinOnline, joinSecret, OnlineError, type O
 /** Sent in `hello`, so a host can tell which build a guest runs. */
 const BUILD = 'web';
 
+/** The versioned example, served next to the page on GitHub Pages and in dev. */
+export const EXAMPLE_REPLAY = 'replays/reference-varek.json';
+
 type Screen =
   | { kind: 'menu' }
+  | { kind: 'arena' }
   | { kind: 'hosting'; link: string | null }
   | { kind: 'joining' }
+  | { kind: 'loading-replay' }
   | { kind: 'failed'; reason: OnlineFailure }
   | { kind: 'playing'; mode: FieldMode };
+
+function replayRequest(): string | null {
+  const value = new URLSearchParams(location.search).get('replay');
+  return value && value.length > 0 ? value : null;
+}
+
+function replayDataRequest(): string | null {
+  const value = new URLSearchParams(location.search).get('replay-data');
+  return value && value.length > 0 ? value : null;
+}
 
 const EMPTY: FieldUi = {
   selectedLabel: '',
@@ -39,12 +58,49 @@ const EMPTY: FieldUi = {
   latency: null,
   peerGone: false,
   audit: null,
+  auditReason: null,
+  iceLocal: null,
+  iceRemote: null,
+  drops: 0,
+  playback: null,
 };
 
 export function App() {
   const text = messagesFor(navigator.language);
   const joining = useRef(false);
-  const [screen, setScreen] = useState<Screen>(() => (joinSecret() ? { kind: 'joining' } : { kind: 'menu' }));
+  const menuFile = useRef<HTMLInputElement>(null);
+  const [replayError, setReplayError] = useState(false);
+  const [screen, setScreen] = useState<Screen>(() => {
+    if (joinSecret()) return { kind: 'joining' };
+    if (replayDataRequest() || replayRequest()) return { kind: 'loading-replay' };
+    return { kind: 'menu' };
+  });
+
+  function openReplay(body: string): void {
+    const file = deserializeReplay(body);
+    if (!file) {
+      setReplayError(true);
+      setScreen({ kind: 'menu' });
+      return;
+    }
+    setReplayError(false);
+    setScreen({ kind: 'playing', mode: { kind: 'replay', file } });
+  }
+
+  function loadReplayUrl(url: string): void {
+    setReplayError(false);
+    setScreen({ kind: 'loading-replay' });
+    void fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error('missing');
+        return response.text();
+      })
+      .then((body) => openReplay(body))
+      .catch(() => {
+        setReplayError(true);
+        setScreen({ kind: 'menu' });
+      });
+  }
 
   /** A `#join=` link joins at once. The ref keeps React's double effect in development from joining twice. */
   useEffect(() => {
@@ -60,6 +116,23 @@ export function App() {
     );
   }, []);
 
+  useEffect(() => {
+    if (joinSecret()) return;
+    const packed = replayDataRequest();
+    if (packed) {
+      void decodeReplayLink(packed)
+        .then((body) => openReplay(body))
+        .catch(() => {
+          setReplayError(true);
+          setScreen({ kind: 'menu' });
+        });
+      return;
+    }
+    const url = replayRequest();
+    if (!url) return;
+    loadReplayUrl(url);
+  }, []);
+
   function host(): void {
     setScreen({ kind: 'hosting', link: null });
     hostOnline((link) => setScreen({ kind: 'hosting', link })).then(
@@ -73,7 +146,7 @@ export function App() {
     <>
       <Poster />
       <main className="menu">
-        <section className="menu-card">
+        <section className={screen.kind === 'arena' ? 'menu-card wide' : 'menu-card'}>
           <p className="eyebrow">{text.frontier}</p>
           <h1>{text.title}</h1>
           <p className="tagline">{text.tagline}</p>
@@ -85,8 +158,32 @@ export function App() {
               <button type="button" onClick={host}>
                 {text.host_match}
               </button>
+              <button type="button" onClick={() => setScreen({ kind: 'arena' })}>
+                {text.arena}
+              </button>
+              <button type="button" onClick={() => loadReplayUrl(EXAMPLE_REPLAY)}>
+                {text.replay_watch}
+              </button>
+              <button type="button" onClick={() => menuFile.current?.click()}>
+                {text.replay_open}
+              </button>
+              {replayError && <p className="failure">{text.replay_invalid}</p>}
+              <input
+                ref={menuFile}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = '';
+                  if (!file) return;
+                  void file.text().then((body) => openReplay(body));
+                }}
+              />
             </>
           )}
+          {screen.kind === 'arena' && <ArenaPanel onBack={() => setScreen({ kind: 'menu' })} onWatch={openReplay} />}
+          {screen.kind === 'loading-replay' && <p>{text.replay_loading}</p>}
           {screen.kind === 'hosting' && (
             <>
               <p>{text.host_waiting}</p>
@@ -156,6 +253,20 @@ function Field({ mode }: { mode: FieldMode }) {
   }, [mode]);
 
   const banner = ui.banner === 'victory' ? text.victory : ui.banner === 'defeat' ? text.defeat : ui.banner === 'draw' ? text.draw : null;
+  const [diagnosticsCopied, setDiagnosticsCopied] = useState(false);
+  const diagnostics = ui.online
+    ? formatFieldReport({
+        role: ui.online,
+        tick: ui.tick,
+        pingMs: ui.latency,
+        iceLocal: ui.iceLocal,
+        iceRemote: ui.iceRemote,
+        drops: ui.drops,
+        audit: ui.audit === 'ok' ? 'pass' : ui.audit === 'failed' ? 'fail' : 'pending',
+        auditReason: ui.auditReason,
+        result: ui.banner ?? 'playing',
+      })
+    : '';
 
   return (
     <div className="field">
@@ -169,6 +280,7 @@ function Field({ mode }: { mode: FieldMode }) {
         <span className="clock">{ui.clock}</span>
       </header>
       {ui.peerGone && !banner && <p className="contact">{text.peer_left}</p>}
+      {banner && ui.online && !ui.audit && <p className="audit">{text.audit_checking}</p>}
       {banner && ui.audit && <p className={ui.audit === 'ok' ? 'audit' : 'audit failed'}>{ui.audit === 'ok' ? text.verified : text.unverified}</p>}
       {ui.card && (
         <section className="card">
@@ -201,6 +313,48 @@ function Field({ mode }: { mode: FieldMode }) {
         />
       )}
       <canvas ref={mapRef} className="minimap" width={168} height={168} />
+      {ui.online && (
+        <section className="diagnostics">
+          <textarea readOnly aria-label={text.diagnostics} value={diagnostics} onFocus={(event) => event.target.select()} />
+          <button
+            type="button"
+            onClick={() => void navigator.clipboard?.writeText(diagnostics).then(() => setDiagnosticsCopied(true))}
+          >
+            {diagnosticsCopied ? text.diagnostics_copied : text.copy_diagnostics}
+          </button>
+        </section>
+      )}
+      {ui.playback && (
+        <section className="playback">
+          <button type="button" onClick={() => actions.current?.togglePlayback()}>
+            {ui.playback.playing ? text.replay_pause : text.replay_play}
+          </button>
+          {([1, 2, 4] as const).map((speed) => (
+            <button
+              key={speed}
+              type="button"
+              className={ui.playback?.speed === speed ? 'active' : undefined}
+              onClick={() => actions.current?.setPlaybackSpeed(speed)}
+            >
+              {text.replay_speed(speed)}
+            </button>
+          ))}
+          <input
+            type="range"
+            min={0}
+            max={ui.playback.length}
+            value={Math.min(ui.playback.tick, ui.playback.length)}
+            aria-label={text.tick(ui.playback.tick)}
+            onChange={(event) => actions.current?.seekPlayback(Number(event.target.value))}
+          />
+          <span className="outcome">{ui.playback.outcome}</span>
+          <span className="clock">{text.tick(ui.playback.tick)}</span>
+          <button type="button" onClick={() => location.assign(location.pathname)}>
+            {text.replay_back}
+          </button>
+        </section>
+      )}
+      {!ui.playback && (
       <section className="commands">
         <button type="button" onClick={() => actions.current?.stop()}>
           <Glyph name="stop" />
@@ -251,6 +405,7 @@ function Field({ mode }: { mode: FieldMode }) {
           }}
         />
       </section>
+      )}
     </div>
   );
 }

@@ -50,8 +50,8 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
   2. the client view and a whole-match no-leak test (done);
   3. the protocol package (done);
   4. signaling and session, tested in memory (done);
-  5. host and guest modes (in review);
-  6. a field test across networks.
+  5. host and guest modes (done, on main since `4887ab5`);
+  6. a field test across networks (prepared, not run; `docs/FIELD_TEST.md`).
 - Done when:
   - two players on different networks finish a match;
   - the guest never receives a hidden entity;
@@ -60,4 +60,4 @@ Each milestone ends with automated tests. A player-facing milestone also ends wi
 
 ## Later milestones
 
-Milestones 2, 3 and 4 are the skirmish: economy, combat, fog, General Varek and a human replay file. The commander gateway lives in the simulation and this client does not consult it. The headless arena compares three seeds and publishes a speed table. Multiplayer is not in this build.
+Milestones 2, 3 and 4 are the skirmish: economy, combat, fog, General Varek and a human replay file. The commander gateway lives in the simulation and this client does not consult it. The headless arena compares three seeds and publishes a speed table. Two people can play online from the title screen. Milestone 7 stays open until the cross-network field test in `docs/FIELD_TEST.md` has been played.

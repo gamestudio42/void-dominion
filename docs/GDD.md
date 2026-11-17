@@ -25,6 +25,7 @@ The beat this build changes is the whole skirmish: gather ore, spend it, train s
 - Fights with hit points, armor and cooldown. A unit or turret only shoots what its player can see. Destroying every command center of a player ends the match. Both lost on the same tick is a draw.
 - Hides unexplored ground. Explored ground keeps a memory of enemy buildings, including a wreck if one falls out of sight.
 - Records the human's commands. Loading that file resimulates Varek; his orders are not stored.
+- The title screen opens an Arena. A pasted or loaded script issues the same commands, against Varek or another agent, and the match ends as a version-2 replay.
 - Holds Varek's first march until the opening can finish a building. Shows Contact when an enemy unit is visible.
 - Pins the unattended seed: `pnpm sim` checks that the same winner, tick and checksum come back.
 - Accepts one produce, group or defend plan between ticks. The plan becomes an ordinary command and cannot see hidden units. The client does not consult a model.

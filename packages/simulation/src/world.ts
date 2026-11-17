@@ -4,6 +4,7 @@ import {
   MAP_SIZE,
   UNITS,
   buildingDef,
+  inMap,
   type BuildingKind,
   type UnitKind,
 } from '@void-dominion/content';
@@ -197,7 +198,78 @@ function makeBuilding(world: World, owner: number, kind: BuildingKind, x: number
   };
 }
 
-export function createWorld(seed: number = MATCH.seed): World {
+/** `none` is the published skirmish. `seeded` is an opt-in mirrored nudge for benchmarks. */
+export type ScenarioVariation = 'none' | 'seeded';
+
+const NODE_SHIFTS: readonly (readonly [number, number])[] = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [1, 1],
+  [1, -1],
+  [-1, 1],
+  [-1, -1],
+];
+
+function scenarioCellBlocked(x: number, y: number): boolean {
+  if (!inMap(x, y)) return true;
+  for (const rock of MATCH.rocks) {
+    if (x >= rock.x && x < rock.x + rock.width && y >= rock.y && y < rock.y + rock.height) return true;
+  }
+  for (const base of MATCH.bases) {
+    const def = buildingDef('command_center');
+    if (x >= base.cc.x && x < base.cc.x + def.width && y >= base.cc.y && y < base.cc.y + def.height) return true;
+    for (const worker of base.workers) {
+      if (x === worker.x && y === worker.y) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Nudge both seats' nodes by the same amount and by opposite cell offsets.
+ * The seed picks the offset and the bonus. A shift that would land on a rock,
+ * a command center or a worker is skipped for the next shift in the fixed list.
+ */
+function applySeededVariation(world: World): void {
+  const seed = world.seed >>> 0;
+  const oreBonus = (seed % 5) * 50;
+  const aetherBonus = ((seed >>> 3) % 5) * 25;
+  let shift: readonly [number, number] | undefined;
+  for (let attempt = 0; attempt < NODE_SHIFTS.length; attempt++) {
+    const candidate = NODE_SHIFTS[(seed + attempt) % NODE_SHIFTS.length]!;
+    const clear = MATCH.bases.every((base, index) => {
+      const sign = index === 0 ? 1 : -1;
+      const oreX = base.ore.x + sign * candidate[0];
+      const oreY = base.ore.y + sign * candidate[1];
+      const aetherX = base.aether.x + sign * candidate[0];
+      const aetherY = base.aether.y + sign * candidate[1];
+      return !scenarioCellBlocked(oreX, oreY) && !scenarioCellBlocked(aetherX, aetherY);
+    });
+    if (clear) {
+      shift = candidate;
+      break;
+    }
+  }
+  for (let index = 0; index < MATCH.bases.length; index++) {
+    const base = MATCH.bases[index]!;
+    const sign = index === 0 ? 1 : -1;
+    const ore = world.nodes.find((node) => node.kind === 'ore' && node.x === base.ore.x && node.y === base.ore.y);
+    const aether = world.nodes.find((node) => node.kind === 'aether' && node.x === base.aether.x && node.y === base.aether.y);
+    if (!ore || !aether) continue;
+    if (shift) {
+      ore.x += sign * shift[0];
+      ore.y += sign * shift[1];
+      aether.x += sign * shift[0];
+      aether.y += sign * shift[1];
+    }
+    ore.amount += oreBonus;
+    aether.amount += aetherBonus;
+  }
+}
+
+export function createWorld(seed: number = MATCH.seed, variation: ScenarioVariation = 'none'): World {
   const explored = [new Uint8Array(MAP_SIZE * MAP_SIZE), new Uint8Array(MAP_SIZE * MAP_SIZE)] as [Uint8Array, Uint8Array];
   const visible = [new Uint8Array(MAP_SIZE * MAP_SIZE), new Uint8Array(MAP_SIZE * MAP_SIZE)] as [Uint8Array, Uint8Array];
   const world: World = {
@@ -222,6 +294,7 @@ export function createWorld(seed: number = MATCH.seed): World {
     world.nodes.push({ id: world.nextId++, kind: 'aether', x: base.aether.x, y: base.aether.y, amount: MATCH.aetherAmount });
     for (const worker of base.workers) world.units.push(makeUnit(world, base.id, 'engineer', worker.x, worker.y));
   }
+  if (variation === 'seeded') applySeededVariation(world);
   rebake(world);
   for (const unit of world.units) {
     const node = nearestNode(world, unit.x, unit.y, 'ore');

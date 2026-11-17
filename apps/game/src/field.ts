@@ -18,6 +18,7 @@ import {
   canSeeFootprint,
   deserializeReplay,
   isWalkable,
+  type ReplayFile,
   powerGive,
   powerTake,
   serializeReplay,
@@ -82,12 +83,27 @@ export interface FieldUi {
   banner: 'victory' | 'defeat' | 'draw' | null;
   /** Which side of an online match this window plays, or null offline. */
   online: 'host' | 'guest' | null;
-  /** The guest's round trip to the host, in milliseconds. */
+  /** Round trip to the other player, in milliseconds. */
   latency: number | null;
   /** The other player's connection closed. */
   peerGone: boolean;
-  /** The guest's check of the host's replay, once the match ended. */
+  /** The guest's check of the host's replay, once the match ended. Both sides show it. */
   audit: 'ok' | 'failed' | null;
+  /** Why the audit failed, for the copied note. */
+  auditReason: string | null;
+  /** Selected ICE candidate types. Null until stats exist, and on an in-memory pipe. */
+  iceLocal: string | null;
+  iceRemote: string | null;
+  /** Times the connection reported disconnected or failed. */
+  drops: number;
+  /** Set while a recorded match is playing. Null in a live match. */
+  playback: {
+    playing: boolean;
+    speed: 1 | 2 | 4;
+    tick: number;
+    length: number;
+    outcome: string;
+  } | null;
 }
 
 /**
@@ -98,7 +114,21 @@ export type FieldMode =
   | { kind: 'offline' }
   | { kind: 'poster' }
   | { kind: 'host'; channels: Channels }
-  | { kind: 'guest'; session: GuestSession };
+  | { kind: 'guest'; session: GuestSession }
+  | { kind: 'replay'; file: ReplayFile };
+
+/** Localhost only. The field-test session uses it to issue ordinary commands. */
+interface DevDrive {
+  order(cmd: Command): void;
+  read(): {
+    tick: number;
+    winner: number;
+    ore: number;
+    reason: string | null;
+    units: { id: number; owner: number; kind: string; x: number; y: number }[];
+    buildings: { id: number; owner: number; kind: string; x: number; y: number }[];
+  };
+}
 
 export interface FieldActions {
   stop(): void;
@@ -110,6 +140,9 @@ export interface FieldActions {
   cancel(): void;
   saveReplay(): void;
   loadReplay(text: string): void;
+  togglePlayback(): void;
+  setPlaybackSpeed(speed: 1 | 2 | 4): void;
+  seekPlayback(tick: number): void;
 }
 
 interface Point {
@@ -138,11 +171,18 @@ export function startField(
   const guest = fieldMode.kind === 'guest' ? fieldMode.session : null;
   /** The seat this window plays. */
   const me = guest ? guest.seat : PLAYER_ID;
-  let sim: Simulation | null = guest ? null : Simulation.create(MATCH.seed, fieldMode.kind === 'host' ? ['human', 'human'] : undefined);
+  const replayFile = fieldMode.kind === 'replay' ? fieldMode.file : null;
+  const replayFinal = replayFile ? Simulation.replay(replayFile.commands, replayFile.ticks, replayFile) : null;
+  let sim: Simulation | null = guest
+    ? null
+    : replayFile
+      ? Simulation.replay(replayFile.commands, 0, replayFile)
+      : Simulation.create(MATCH.seed, fieldMode.kind === 'host' ? ['human', 'human'] : undefined);
   const mirror = guest ? createMirror(guest.seed, me) : null;
   if (mirror && guest?.view) mirror.apply(guest.view, guest.explored);
   let world: World = sim ? sim.world : mirror!.world;
-  const host = sim && fieldMode.kind === 'host' ? new HostSession(sim, ENEMY_ID, fieldMode.channels) : null;
+  const channels = fieldMode.kind === 'host' ? fieldMode.channels : null;
+  const host = sim && channels ? new HostSession(sim, ENEMY_ID, channels, () => performance.now()) : null;
   const home = MATCH.bases[me - 1]!;
   const view = createField(canvas, MAP_SIZE, { x: home.cc.x + 6, z: home.cc.y + 2 });
   view.setRocks(world.rocks);
@@ -167,6 +207,17 @@ export function startField(
   let peerGone = false;
   let viewAt = performance.now();
   let pingAt = 0;
+  let iceAt = 0;
+  let iceLocal: string | null = null;
+  let iceRemote: string | null = null;
+  let reported: 'ok' | 'failed' | null = null;
+  let reportedReason: string | null = null;
+  if (host) {
+    host.onReport = (audit) => {
+      reported = audit.ok ? 'ok' : 'failed';
+      reportedReason = audit.ok ? null : audit.reason;
+    };
+  }
   let note: string | null = null;
   let debug = false;
   let box: Box | null = null;
@@ -182,6 +233,46 @@ export function startField(
   let frames = 0;
   let lastAlpha = 0;
   let stopped = false;
+  let replayPlaying = true;
+  let replaySpeed: 1 | 2 | 4 = 1;
+  let replayCursor = 0;
+
+  function replayOutcome(): string {
+    if (!replayFinal || !replayFile) return '';
+    const winner = replayFinal.world.winner;
+    if (winner === 0) return messages.replay_undecided;
+    if (winner < 0) return messages.replay_draw;
+    const name = replayFile.seats[winner - 1] === 'varek' ? messages.replay_varek : messages.replay_seat(winner);
+    return messages.replay_winner(name);
+  }
+
+  function replayCursorAt(tick: number): number {
+    if (!replayFile) return 0;
+    let index = 0;
+    while (index < replayFile.commands.length && replayFile.commands[index]!.tick < tick) index += 1;
+    return index;
+  }
+
+  function applyReplayCommands(): void {
+    if (!replayFile || !sim) return;
+    while (replayCursor < replayFile.commands.length && replayFile.commands[replayCursor]!.tick === world.tick) {
+      sim.enqueue(replayFile.commands[replayCursor]!.cmd);
+      replayCursor += 1;
+    }
+  }
+
+  function adoptReplay(next: Simulation): void {
+    sim = next;
+    world = next.world;
+    replayCursor = replayCursorAt(world.tick);
+    watchCombat = combatWatcher(me);
+    watchCombat(world);
+    previous = capture();
+    current = capture();
+    selected.clear();
+    selectedBuilding = null;
+    stepper.reset();
+  }
 
   function capture(): Map<number, Point> {
     const positions = new Map<number, Point>();
@@ -202,7 +293,7 @@ export function startField(
   }
 
   function issue(cmd: Command, mark: Point | null): void {
-    if (!playing() || peerGone) return;
+    if (replayFile || !playing() || peerGone) return;
     hideRejection = false;
     note = null;
     pendingMark = mark;
@@ -292,6 +383,11 @@ export function startField(
     return world.nodes
       .filter((node) => node.amount > 0 && explored[node.y * MAP_SIZE + node.x] === 1)
       .map((node) => ({ id: node.id, x: node.x, y: node.y, kind: node.kind }));
+  }
+
+  function roundTrip(): number | null {
+    const value = guest ? guest.latency : host?.latency;
+    return value === null || value === undefined ? null : Math.round(value);
   }
 
   function banner(): FieldUi['banner'] {
@@ -396,9 +492,16 @@ export function startField(
       contact: enemyVisible(),
       banner: banner(),
       online: fieldMode.kind === 'host' || fieldMode.kind === 'guest' ? fieldMode.kind : null,
-      latency: guest?.latency === null || !guest ? null : Math.round(guest.latency),
+      latency: roundTrip(),
       peerGone,
-      audit: guest?.audit ? (guest.audit.ok ? 'ok' : 'failed') : null,
+      audit: guest?.audit ? (guest.audit.ok ? 'ok' : 'failed') : reported,
+      auditReason: guest?.audit ? (guest.audit.ok ? null : guest.audit.reason) : reportedReason,
+      iceLocal,
+      iceRemote,
+      drops: channels?.drops() ?? guest?.drops() ?? 0,
+      playback: replayFile
+        ? { playing: replayPlaying, speed: replaySpeed, tick: world.tick, length: replayFile.ticks, outcome: replayOutcome() }
+        : null,
     };
     const key = JSON.stringify(next);
     if (key === lastUi) return;
@@ -677,6 +780,33 @@ export function startField(
       link.click();
       URL.revokeObjectURL(url);
     },
+    togglePlayback() {
+      if (!replayFile) return;
+      if (!replayPlaying && (world.tick >= replayFile.ticks || world.winner !== 0)) adoptReplay(Simulation.replay(replayFile.commands, 0, replayFile));
+      replayPlaying = !replayPlaying;
+      publish();
+    },
+    setPlaybackSpeed(speed) {
+      if (!replayFile) return;
+      replaySpeed = speed;
+      publish();
+    },
+    seekPlayback(tick) {
+      if (!replayFile || !sim) return;
+      const target = Math.max(0, Math.min(replayFile.ticks, Math.floor(tick)));
+      if (target < world.tick || world.winner !== 0) adoptReplay(Simulation.replay(replayFile.commands, target, replayFile));
+      else {
+        while (world.tick < target && world.winner === 0) {
+          applyReplayCommands();
+          sim.step();
+        }
+        replayCursor = replayCursorAt(world.tick);
+        previous = capture();
+        current = previous;
+        stepper.reset();
+      }
+      publish();
+    },
     loadReplay(text) {
       if (fieldMode.kind !== 'offline') return;
       const file = deserializeReplay(text);
@@ -819,10 +949,17 @@ export function startField(
     if (keys.has('KeyS')) view.pan(0, -pan);
 
     /** A host waits for a guest who dropped; a guest only draws. */
-    const stepped = stepper.advance(sim && !poster && !(host && peerGone) ? elapsed : 0);
-    if (sim && stepped.steps > 0) {
+    const stepping = Boolean(sim) && !poster && !(host && peerGone) && (!replayFile || (replayPlaying && world.winner === 0 && world.tick < replayFile.ticks));
+    const stepped = stepper.advance(stepping ? elapsed : 0);
+    const steps = replayFile ? stepped.steps * replaySpeed : stepped.steps;
+    if (sim && steps > 0) {
       previous = current;
-      for (let i = 0; i < stepped.steps; i++) {
+      for (let i = 0; i < steps; i++) {
+        if (replayFile && (world.winner !== 0 || world.tick >= replayFile.ticks)) {
+          replayPlaying = false;
+          break;
+        }
+        if (replayFile) applyReplayCommands();
         sim.step();
         host?.afterStep();
         hear(watchCombat(world));
@@ -831,9 +968,19 @@ export function startField(
       current = capture();
       forget();
     }
-    if (guest && now - pingAt >= PING_MS) {
+    if ((guest || host) && now - pingAt >= PING_MS) {
       pingAt = now;
-      guest.ping(now);
+      if (guest) guest.ping(now);
+      else host?.ping(now);
+    }
+    if ((channels || guest) && now - iceAt >= PING_MS) {
+      iceAt = now;
+      const readIce = channels ? channels.ice() : guest!.ice();
+      void readIce.then((ends) => {
+        if (!ends) return;
+        iceLocal = ends.local;
+        iceRemote = ends.remote;
+      });
     }
     lastAlpha = guest ? Math.min(1, (now - viewAt) / VIEW_MS) : stepped.alpha;
     paint(lastAlpha);
@@ -861,8 +1008,11 @@ export function startField(
       forget();
     };
     guest.onAck = (ack) => settle(ack.seq, ack.reason);
+    guest.onEnd = (end) => {
+      mirror.world.winner = end.winner;
+      if (end.tick > mirror.world.tick) mirror.world.tick = end.tick;
+    };
   }
-  const channels = fieldMode.kind === 'host' ? fieldMode.channels : null;
   if (channels) channels.reliable.onClose(() => (peerGone = true));
   if (guest) guest.onClose(() => (peerGone = true));
 
@@ -880,6 +1030,29 @@ export function startField(
     window.addEventListener('keyup', keyUp);
   }
   window.addEventListener('resize', view.resize);
+
+  const dev = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+  const devWindow = window as Window & { __vd?: DevDrive; __vdToken?: object };
+  const devToken = {};
+  if (dev && !poster) {
+    devWindow.__vdToken = devToken;
+    devWindow.__vd = {
+      order(cmd) {
+        issue(cmd, null);
+      },
+      read() {
+        const stock = world.players.find((player) => player.id === me);
+        return {
+          tick: world.tick,
+          winner: world.winner,
+          ore: stock?.ore ?? 0,
+          reason: lastReason,
+          units: world.units.filter((unit) => unit.hp > 0).map((unit) => ({ id: unit.id, owner: unit.owner, kind: unit.kind, x: unit.x, y: unit.y })),
+          buildings: world.buildings.filter((building) => building.hp > 0).map((building) => ({ id: building.id, owner: building.owner, kind: building.kind, x: building.x, y: building.y })),
+        };
+      },
+    };
+  }
 
   paint(0);
   publish();
@@ -899,6 +1072,8 @@ export function startField(
     window.removeEventListener('keyup', keyUp);
     window.removeEventListener('resize', view.resize);
     host?.close();
+    // Development runs this effect twice. A stale cleanup must not drop the live hook.
+    if (devWindow.__vdToken === devToken) delete devWindow.__vd;
     view.dispose();
   };
 }

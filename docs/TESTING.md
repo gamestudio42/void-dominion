@@ -1,66 +1,50 @@
 # Testing
 
-`pnpm check` is typecheck, lint and Vitest. Tests live in `packages/<package>/test/`.
+All tests run in Vitest. `pnpm test` or `pnpm check` runs the full suite.
 
-## Required for the simulation
+## Unit Tests
 
-- Two simulations with the same seed and the same human commands report the same `hashState()` after the same ticks, including Varek's resimulated orders.
-- A rejected command leaves the checksum equal to a run that did not receive it.
-- A path around `DEMO_OBSTACLE` does not cut corners, and a match unit never finishes a tick on a blocked cell.
-- Ore rises when the starting engineers mine. An unaffordable building, an aether gather without a refinery, a hidden attack and a supply overflow are refused.
-- Attacking your own unit answers `own_target`.
-- A refusal does not reveal hidden information: a hidden foreign unit, a missing target, an unseen building site, a hidden enemy building and an unexplored node each answer like something absent.
-- A replay file with an order for General Varek is unreadable.
-- With Varek off, seat 2 trains nothing on its own. Varek can drive seat 1. Two matches between people with the same orders share a checksum. Their version 2 file replays to that checksum. A version 1 file still replays as the skirmish. Unknown versions, bad seats and seeds outside 32 bits are refused.
-- The client view leaks nothing.
-  - Across a whole match, every view of both seats is checked against that seat's fog:
-    - foreign units and buildings are in sight, and carry no orders or queue;
-    - remembered ghosts are the seat's own memory;
-    - node amounts are present only in sight;
-    - the visible grid decodes to the world's.
-  - Changing only what the player cannot see leaves the player's view identical.
-  - Fog runs round-trip, and runs that do not cover the map are refused.
-- **Protocol.**
-  - Every message round-trips.
-  - These are refused without throwing:
-    - another version;
-    - a message from the wrong side;
-    - malformed or oversized input;
-    - a view that would not draw.
-  - A guest's `playerId` is dropped and replaced by its seat.
-  - The command budget allows a burst of 20, then 20 a second, and does not refill when the clock goes backwards.
-  - The guest audit accepts an honest host. It catches a changed checksum, a changed winner, an unreadable replay, the guest's seat given to Varek, a missing or extra order, and an order moved to another tick.
-- **Network, in memory.**
-  - The match link round-trips its secret.
-  - Sealed messages open only with their key and unaltered, and the topic does not contain the secret.
-  - View compression round-trips and refuses oversized or broken input.
-  - The handshake connects. It ignores a guest with another secret, noise and forged answers, and offers older than two minutes. A late guest still joins, and the match starts when one of two brokers is dead.
-  - Over in-memory channels, a host and a guest play a whole match with Varek on seat 1:
-    - the guest is seated, receives views and builds its explored grid;
-    - its order for the other seat's units is refused as `unknown_unit`;
-    - the audit passes.
-  - A flood past the command budget is dropped.
-  - A host that changes the world fails the audit with `checksum`.
-  - Junk from the guest is counted and never queued.
-  - A guest whose first `hello` reached a host session that then closed is still seated by the next one, and only the live session queues its orders.
-- A seen building that dies out of sight remains a wreck in memory. A replay file of human commands restores the checksum.
-- The player command center is intact when the march is allowed.
-- `pnpm sim` compares seeds `0x5eed`, `0x51eed` and `0xa11ce`. The unattended winner, tick, ore and living units match. The checksums stay pinned, and the three matches together finish in under 20 seconds. The same commands on the same seed return the same report.
-- A commander view hides the other base. A produce, group or defend plan matches the same command issued directly. A missing, malformed, throwing or foreign plan leaves the checksum on the conventional match.
+Every package under `packages/*/test/` has unit tests. The deterministic packages (`kernel`, `content`, `simulation`) have no DOM, no wall clock, and no `Math.random`, so they run identically in Node and the browser.
 
-## What a browser session must show
+## Simulation Tests
 
-When the skirmish is in the client: ore increasing, a refused build or train with a readable reason, and the enemy base hidden at the start. Contact stays off until an enemy unit is actually visible. Record what happened separately from why you think it happened. An agent session is not a player playtest.
+`packages/simulation/test/` verifies:
+- Same seed + same commands = same `hashState()`
+- Rejected commands do not change `hashState()`
+- Units never enter blocked cells
+- Unreachable orders leave units where they were
+- Replay v2 produces identical checksums
+- `clientView` leaks nothing hidden by fog
 
-For an online match, a session needs two windows: one hosts, the other opens the link. It must show:
-- both in the field with the same clock;
-- each side in amber on its own screen;
-- the guest's ping;
-- an order from the guest that takes effect on the host;
-- the disconnect banner when one window closes.
+## Arena Tests
 
-Milestone 7 step 5 recorded such a session in headless Chrome (`docs/MULTIPLAYER.md`). A session on two machines is step 6.
+`packages/arena/test/` verifies Agent Arena functionality:
 
-## Not in this stage
+### MVP1: External vs Varek
+- 100 consecutive headless matches without crash/deadlock/orphan process
+- Same replay+engine+seed produces identical final checksum
+- Invalid commands rejected without state change
+- Timeouts/crashed processes/malformed JSON trigger correct policy
+- Observations contain nothing hidden by fog
 
-Playwright is not set up. `pnpm bench` times the headless match outside Vitest, and `docs/BENCHMARKS.md` records the speed table with its machine. It is a measurement, not a test, and it never fails a run. The renderer is not benchmarked.
+### MVP2: Two External Agents
+- Two independent processes control seats 1 and 2
+- Seat alternation per seed
+- Replay reproducible without processes
+- Response arrival order does not change outcome
+- Benchmark records W/L/D and per-agent metrics
+- Win rate over seed pairs with swapped seats
+
+All Arena tests run without Ollama, network, or external APIs.
+
+## Running Tests
+
+```bash
+pnpm test                                      # all tests
+pnpm test packages/simulation/test/arena.test.ts  # specific file
+vitest run packages/arena/test/mvp1.test.ts    # Arena MVP1
+```
+
+## Coverage
+
+No coverage target yet. Focus on invariants and acceptance criteria from `docs/ROADMAP.md`.

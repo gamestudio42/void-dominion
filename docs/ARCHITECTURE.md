@@ -1,11 +1,14 @@
 # Architecture
 
 ```text
-apps/game            Vite + React shell: frame loop, input, locale
-packages/view3d      three.js renderer: field, camera, picking
-packages/simulation  world, commands, systems (pure, deterministic)
-packages/content     field size, costs, spawns
-packages/kernel      RNG, FNV-1a, fixed-step clock
+apps/game                   Vite + React shell: frame loop, input, locale
+packages/view3d             three.js renderer: field, camera, picking
+packages/simulation         world, commands, systems (pure, deterministic)
+packages/content            field size, costs, spawns
+packages/kernel             RNG, FNV-1a, fixed-step clock
+packages/arena              match orchestrator, scheduler, recorder (Node-only)
+packages/void-dominion-agent  observation builder, CommanderAdapter (Node-only)
+packages/agent-sdk          JSON contracts, validation, JSONL (Node-only)
 ```
 
 Dependencies point down only: `game` uses `view3d` and `simulation`; `view3d` does not import the simulation; `simulation` uses `content` and `kernel`. The deterministic packages have no DOM and no clock, so they run the same in the browser and in Vitest.
@@ -34,7 +37,7 @@ After commands, one tick steers, moves, gathers and builds, refreshes vision, re
 
 ## Determinism
 
-Same seed, same commands, same `hashState()`. Random draws go through `Rng`. No match rule draws from it yet, so two seeds currently share the unattended result and differ in the checksum. `runArena(seed, commands, cap)` is the headless report. Replay files record the seed. A version 1 file replays on `MATCH.seed`. `clientView(world, seat, full)` builds what one seat may know, for a multiplayer guest. It never includes anything that seat's fog hides. `Simulation.enqueue` returns a number, and `results` holds each command's reason after the step that applied it, so a host can acknowledge every guest command.
+Same seed, same commands, same `hashState()`. Random draws go through `Rng`. The published skirmish still ignores the seed, so two seeds share the unattended result and differ only in the checksum. `Simulation.create(seed, seats, 'seeded')` is the opt-in that does read it: both seats' resource nodes take the same amount bonus and opposite one-cell offsets. Callers that omit the argument, including the client, multiplayer and `runArena`, stay on the published layout. `runArena(seed, commands, cap)` is the headless report. Replay files record the seed. A version 1 file replays on `MATCH.seed`. `clientView(world, seat, full)` builds what one seat may know, for a multiplayer guest. It never includes anything that seat's fog hides. `Simulation.enqueue` returns a number, and `results` holds each command's reason after the step that applied it, so a host can acknowledge every guest command.
 
 `packages/protocol` defines the multiplayer messages and validates them. It does no I/O.
 
@@ -49,6 +52,10 @@ The plan is in `docs/MULTIPLAYER.md`. Transcendental `Math` functions are forbid
 ## What stays out of the loop
 
 Language-model calls, HTTP and network replication do not run inside a tick. Between ticks a host may call `considerCommander` with a produce, group or defend plan. The engine turns an accepted plan into ordinary commands and refuses hidden or foreign orders. If the source is absent, throws, or the plan is refused, General Varek's weights continue on the next tick. This client never calls the gateway. A plan is not stored in the human replay.
+
+## Agent Arena
+
+The Agent Arena (`packages/arena`) allows external agents to play matches via a JSON Lines protocol over child processes. External agents use `clientView` for observations. `observe()` includes a node's current `amount` only while that cell is in sight, matching `clientView`. Agents submit commands via `CommanderAdapter`, which injects `playerId` from the seat and goes through `Simulation.enqueue()` (not `considerCommander`). The Arena owns the clock, manages processes, applies failure policies, records decisions, and produces reproducible replays and benchmarks. See `docs/AGENT_ARENA.md` for details.
 
 ## Art
 

@@ -1,6 +1,6 @@
 # Multiplayer plan (milestone 7)
 
-Status: accepted by the owner on 2026-11-05. Steps 1 to 4 are merged: seats and replay v2, the client view, the protocol package, and signaling and session. Step 5 (host and guest modes) is in review. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
+Status: accepted by the owner on 2026-11-05. Steps 1 to 5 are on main. Step 5, host and guest modes, landed in `4887ab5`. Step 6 is the field test: the match can end on both screens, and the script is `docs/FIELD_TEST.md`. Milestone 7 is not done until two people on different networks play it. This document records the model, the protocol, the order of work and the owner's answers to the open questions.
 
 ## Goal
 
@@ -148,6 +148,9 @@ JSON messages, each carrying `v`, the protocol version. A peer with another vers
 | host → guest | `ack` | `seq`, tick applied, reason key or null |
 | host → guest | `view` | tick, client view |
 | host → guest | `end` | winner, final tick, checksum, replay v2 |
+| guest → host | `report` | whether the guest's audit passed, and the reason if it did not |
+
+`report` does not bump the protocol version. A peer that does not know the message refuses it as the wrong direction, which is not a misreading of an older one. Both players of a match use the same build.
 | both | `ping` / `pong` | timestamps for the latency readout |
 
 Rules, as built in `packages/protocol`:
@@ -200,7 +203,7 @@ Each step ends with tests, and the client steps end with a browser session, as t
    - A whole-match test: no view leaks a hidden entity.
    - A stress scenario with large armies added to `pnpm bench`.
 3. **Protocol package.** Types, version check and parsing, with tests for malformed, oversized and foreign-seat messages.
-4. **Signaling and session** (in review).
+4. **Signaling and session** (done).
    - `packages/net` contains:
      - the sealed handshake (`hostMatch`, `joinMatch`);
      - the brokers: MQTT, fan-out and in-memory;
@@ -214,7 +217,7 @@ Each step ends with tests, and the client steps end with a browser session, as t
      - a command flood;
      - a host that changed the world, which fails the audit.
    - The WebRTC peer is not exercised until step 5, because Node has no WebRTC.
-5. **Host and guest modes** (in review).
+5. **Host and guest modes** (done, `4887ab5`).
    - The title screen offers the skirmish against Varek or hosting a match, which shows the link to copy. Opening a `#join=` link joins at once and then drops the fragment.
    - **Host.** The field runs both seats and serves the guest through `HostSession`.
    - **Guest.** The guest runs no simulation. It draws the host's views through a mirror world (`apps/game/src/mirror.ts`), so the field code reads the same fields in every mode.
@@ -232,13 +235,17 @@ Each step ends with tests, and the client steps end with a browser session, as t
      - the guest repeats `hello` until a full view arrives, because React mounts the field twice in development and the first host session closes after seating it;
      - shots are read as a rising cooldown, so the guest's two-tick views still show them;
      - views name the entities that died, so a unit walking out of sight does not explode on the guest's screen.
-   - **Not in this step:**
+   - **Still out of scope:**
      - the guest cannot reconnect;
-     - an absent guest does not forfeit, because a forfeit is not a rule the simulation knows. The host only pauses;
-     - a whole match has not been played online, so the end and the guest audit have not run in a browser. They are covered in Vitest.
-6. **Field test.**
-   - Two machines on different networks, one of them on a mobile connection.
-   - Record connection success, latency and bandwidth in `docs/BENCHMARKS.md`.
+     - an absent guest does not forfeit, because a forfeit is not a rule the simulation knows. The host only pauses.
+   - The end of the match and the audit on both screens are step 6. They were covered in Vitest here and had not been played in a browser.
+6. **Field test** (prepared, not run across networks).
+   - Both browsers show victory or defeat, and both show whether the guest's replay audit passed.
+   - A diagnostics note on each screen can be copied: ping, ICE candidate types (`host`, `srflx`, `prflx`, `relay`), connection drops, and the audit.
+   - The script, and what to write down, is `docs/FIELD_TEST.md`.
+   - Two machines on different networks, one of them on a mobile connection. That session is still to be played. It is what closes milestone 7.
+   - Record connection success, latency and the ICE type in `docs/FIELD_TEST.md`. Bandwidth stays the figure in `docs/BENCHMARKS.md`; this test does not remeasure it.
+   - One machine, 2026-11-14: two headless Chrome windows finished a match through the public brokers and WebRTC. Both audits passed at tick 2053. The notes are in `docs/FIELD_TEST.md`. That session does not close the milestone.
 
 Milestone 7 is done when:
 

@@ -4,7 +4,7 @@ import { stepCombat, resolveCasualties } from './combat.ts';
 import { applyCommand, cloneCommand, parseLogged, type Command, type RejectReason } from './commands.ts';
 import { steerAll } from './commands.ts';
 import { stepEconomy } from './economy.ts';
-import { createWorld, hashWorld, stepMovement, type World } from './world.ts';
+import { createWorld, hashWorld, stepMovement, type ScenarioVariation, type World } from './world.ts';
 import { refreshMemory, updateVision } from './vision.ts';
 
 export interface LoggedCommand {
@@ -61,8 +61,8 @@ export class Simulation {
     this.seats = seats;
   }
 
-  static create(seed: number = MATCH.seed, seats: Seats = SKIRMISH_SEATS): Simulation {
-    const sim = new Simulation(createWorld(seed), [seats[0], seats[1]]);
+  static create(seed: number = MATCH.seed, seats: Seats = SKIRMISH_SEATS, variation: ScenarioVariation = 'none'): Simulation {
+    const sim = new Simulation(createWorld(seed, variation), [seats[0], seats[1]]);
     updateVision(sim.world);
     refreshMemory(sim.world);
     return sim;

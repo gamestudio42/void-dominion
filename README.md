@@ -79,9 +79,13 @@ the only simulation, so the guest only ever receives what its fog allows. At the
 the host's replay and the result is shown as verified or not. There is no TURN relay, so two players
 both behind carrier-grade NAT cannot connect.
 
-Still open: the field test of online play across two networks, a campaign, the Mycelian and Aether
+Still open: the field test of online play across two networks ([how to run it](docs/FIELD_TEST.md)), a campaign, the Mycelian and Aether
 factions, and a language-model commander. The gateway for a plan is in the simulation; this client never
-calls it, and the conventional opponent keeps playing when no plan arrives. See the
+calls it, and the conventional opponent keeps playing when no plan arrives.
+
+The **Agent Arena** (`packages/arena`) allows external agents to play matches via a JSON Lines protocol
+over child processes. It manages processes, applies failure policies, records decisions, and produces
+reproducible replays and benchmarks. See [docs/AGENT_ARENA.md](docs/AGENT_ARENA.md) and the
 [project roadmap](docs/ROADMAP.md).
 
 ## Play
@@ -101,10 +105,20 @@ A refused order leaves its reason on screen and spends nothing.
 | Stop, mine, attack, build, train | the command card |
 | Tick and frames per second | `F3` |
 | Save / load a replay | `Salvar replay` / `Carregar replay` (JSON file) |
+| Watch a recorded match | title screen, or `?replay=` |
+| Run your own agent | title screen, Arena |
 
 A replay file is version 2: the seed, the seats, the tick count and the human orders. Loading it
 resimulates General Varek; his decisions are never stored. The build is a static site with relative
 paths, so it runs from any folder, and the field is a 128×128 grid played at a fixed 20 steps per second.
+
+The title screen can also **watch** a replay in that same view: pause, play at 1×, 2× or 4×, and drag
+the bar to a tick. The bar names who won.
+[Reference agent vs General Varek](https://gamestudio42.github.io/void-dominion/?replay=replays/reference-varek.json)
+is the short example (seed 24301, published layout, seat 1). **Open a replay file** loads any version-2 file.
+A `?replay-data=` link carries a gzip-compressed replay. The title screen's **Arena** button
+runs a script you paste or load: it plays in a worker against General Varek, the reference agent
+or the example agent, then exports that same version-2 file. See [Write an agent](docs/AGENT_ARENA.md#write-an-agent).
 
 ## Develop
 
@@ -121,6 +135,11 @@ pnpm dev        # http://localhost:5173
 | `pnpm sim` | Plays the three pinned seeds headless and compares the reports |
 | `pnpm bench` | Times every step of those seeds and prints the speed table (`docs/BENCHMARKS.md`) |
 | `pnpm bench:view` | Measures the view a multiplayer host sends its guest (`docs/BENCHMARKS.md`) |
+| `pnpm arena` | Run a single Agent Arena match |
+| `pnpm arena:bench` | Reference agent vs Varek, 20 seeded matches |
+| `pnpm arena:leaderboard` | Fixed board: roster vs Varek and each other (`docs/LEADERBOARD.md`) |
+| `pnpm arena:ollama` | Ollama example vs Varek (local daemon, not CI) |
+| `pnpm arena:replay` | Replay an Agent Arena match from trace |
 | `pnpm build` | Static build in `apps/game/dist` |
 | `pnpm preview` | Serves the build |
 
@@ -128,8 +147,9 @@ The simulation is a pure TypeScript package with a fixed 20 Hz step and a seeded
 Three.js, React or the clock. The Three.js view and the React interface only send commands and read
 state. See the [architecture](docs/ARCHITECTURE.md), the [game design](docs/GDD.md), the
 [decisions](docs/DECISIONS.md), the [testing plan](docs/TESTING.md), the
-[multiplayer plan](docs/MULTIPLAYER.md), the [benchmarks](docs/BENCHMARKS.md), the
-[asset register](docs/assets.md) and the [rules for agents](AGENTS.md).
+[multiplayer plan](docs/MULTIPLAYER.md), the [Agent Arena](docs/AGENT_ARENA.md), the
+[benchmarks](docs/BENCHMARKS.md), the [asset register](docs/assets.md) and the
+[rules for agents](AGENTS.md).
 
 ## Licence
 

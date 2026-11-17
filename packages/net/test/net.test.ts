@@ -210,6 +210,8 @@ describe('host and guest sessions', () => {
     expect(sim.world.winner).toBe(PLAYER_ID);
     expect(guest.end?.winner).toBe(PLAYER_ID);
     expect(guest.audit).toEqual({ ok: true });
+    await settle();
+    expect(host.report).toEqual({ ok: true });
     expect([host.refused, host.dropped, guest.refused]).toEqual([0, 0, 0]);
   }, 30_000);
 
@@ -220,9 +222,29 @@ describe('host and guest sessions', () => {
   });
 
   it('fails the audit when the host changed the world', async () => {
-    const { guest } = await play({ tamperAt: 500 });
+    const { host, guest } = await play({ tamperAt: 500 });
     expect(guest.audit).toEqual({ ok: false, reason: 'checksum' });
+    await settle();
+    expect(host.report).toEqual({ ok: false, reason: 'checksum' });
   }, 30_000);
+
+  it('measures a ping from either side', async () => {
+    const { host: hostChannels, guest: guestChannels } = await connect();
+    let clock = 1000;
+    const sim = Simulation.create(0x5eed, ['human', 'human']);
+    const host = new HostSession(sim, ENEMY_ID, hostChannels, () => clock);
+    const guest = new GuestSession(guestChannels, 'test', () => clock);
+    guest.ping(1000);
+    clock = 1018;
+    await settle();
+    expect(guest.latency).toBe(18);
+    host.ping(2000);
+    clock = 2007;
+    await settle();
+    expect(host.latency).toBe(7);
+    sim.step();
+    host.afterStep();
+  });
 
   /** React mounts a field twice in development: the first host session is torn down after the guest's first hello. */
   it('seats a guest whose first hello reached a host session that closed', async () => {
