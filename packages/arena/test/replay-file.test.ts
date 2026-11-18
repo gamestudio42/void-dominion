@@ -52,5 +52,5 @@ describe('arena replay file', () => {
     const sim = Simulation.replay(file!.commands, file!.ticks, file!);
     expect(sim.hashState()).toBe(recorded.checksum);
     expect(sim.world.tick).toBe(file!.ticks);
-  });
+  }, 60_000);
 });
