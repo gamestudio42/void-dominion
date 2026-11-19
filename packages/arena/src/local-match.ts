@@ -70,7 +70,7 @@ export async function playLocalMatch(options: {
       for (const seat of [1, 2] as const) {
         const agent = bySeat.get(seat);
         if (!agent) continue;
-        pending.push({ seat, observe: buildObservation(sim, seat, `tick-${sim.world.tick}`), agent });
+        pending.push({ seat, observe: buildObservation(sim, seat, `tick-${sim.world.tick}`, adapters[seat].lastDecision()), agent });
       }
       const replies = await Promise.all(
         pending.map(async (item) => {
@@ -91,12 +91,18 @@ export async function playLocalMatch(options: {
       );
       for (const reply of replies) {
         const adapter = adapters[reply.seat];
+        adapter.beginDecision(`tick-${sim.world.tick}`, false);
         for (const action of reply.actions) adapter.applyAction(action);
       }
     }
     let stepped = 0;
     while (sim.world.winner === 0 && sim.world.tick < maxTicks && stepped < period) {
       sim.step();
+      /** The first step after a decision applies its commands; read their results once. */
+      if (stepped === 0) {
+        adapters[1].settle();
+        adapters[2].settle();
+      }
       stepped += 1;
     }
     if (options.onTick) await options.onTick(sim.world.tick);

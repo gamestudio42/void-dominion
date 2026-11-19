@@ -1,12 +1,14 @@
 export { SCHEMA_VERSION } from './contracts.ts';
 export type {
   Action,
+  ActionResult,
   ActResponse,
   AttackCommand,
   AttackMoveCommand,
   BuildCommand,
   Command,
   CommandAction,
+  DecisionFeedback,
   DefendPlan,
   GatherCommand,
   GroupPlan,
