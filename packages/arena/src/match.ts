@@ -29,6 +29,17 @@ function determineEndReason(sim: Simulation, ticks: number, maxTicks: number, se
   return 'draw';
 }
 
+/**
+ * A forfeit ends the match without a command, so the world never records a winner.
+ * The result gives it to the other seat; the simulation, its replay and checksum stay as played.
+ */
+function determineWinner(sim: Simulation, seat1Forfeited: boolean, seat2Forfeited: boolean): number {
+  if (seat1Forfeited && seat2Forfeited) return 0;
+  if (seat1Forfeited) return 2;
+  if (seat2Forfeited) return 1;
+  return sim.world.winner;
+}
+
 function calculateMetrics(decisions: DecisionResult[], agentId: string, seat: number): SeatMetrics {
   const seatDecisions = decisions.filter((d) => d.seat === seat);
   const latencies = seatDecisions.filter((d) => !d.fallbackUsed).map((d) => d.decisionMs);
@@ -114,11 +125,13 @@ export async function runMatch(setup: MatchSetup): Promise<MatchResult> {
     scheduler.isSeatForfeited(2),
   );
 
+  const winner = determineWinner(sim, scheduler.isSeatForfeited(1), scheduler.isSeatForfeited(2));
+
   return {
     matchId,
     seed,
     status: 'completed',
-    winner: sim.world.winner,
+    winner,
     ticks,
     finalChecksum: sim.hashState(),
     endReason,

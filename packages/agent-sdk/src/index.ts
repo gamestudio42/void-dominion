@@ -26,4 +26,11 @@ export type {
   UsageTokens,
 } from './contracts.ts';
 export { validateActResponse, validateObserveRequest, validateResetRequest, validateStepRequest } from './validation.ts';
-export { createJsonlReader, createJsonlWriter, type JsonlReader, type JsonlWriter } from './jsonl.ts';
+export {
+  createJsonlReader,
+  createJsonlWriter,
+  isMalformedLine,
+  type JsonlReader,
+  type JsonlWriter,
+  type MalformedLine,
+} from './jsonl.ts';

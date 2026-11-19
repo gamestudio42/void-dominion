@@ -71,16 +71,23 @@ Transport: **JSON Lines** over stdin/stdout. Each message is a single line of JS
 - **Strategic period**: Default 100 ticks between decisions
 - **Decision timeout**: Default 10 seconds per agent per decision
 - **Order**: Commands are applied by `(tick, seat, action index)`, never by arrival order
-- **Late responses**: Discarded and never affect future ticks
+- **Late responses**: Discarded and never affect future ticks. A reply to an earlier request that arrives during a later wait is dropped, and the wait continues.
 - **Max pending**: One decision per seat at a time
+- **Both seats wait at once**: Each seat's timeout and latency run from the moment its own observation was written. Seat 2 does not wait behind seat 1.
 
 ## Failure Policies
 
 Configured per seat. Applied on timeout, crashed process, or malformed JSON.
 
+Each failure is counted once, by kind:
+
+- **timeout**: no reply to this request before the deadline.
+- **malformed** (`invalidActions`): a line that is not JSON, or JSON that is not a valid `agent.act`. A stray print in an agent does not stop the Arena.
+- **crashed**: the agent exited, closed its output, or could not receive the observation.
+
 1. **fallback** (default): A simple defensive fallback agent takes over. It keeps engineers gathering ore and defends the base with available units. Results report own vs fallback decisions separately. The fallback agent is distinct from the example deterministic agent.
 2. **noop**: Skip this decision tick entirely.
-3. **forfeit**: After N consecutive failures (default 3), the seat forfeits the match.
+3. **forfeit**: After N consecutive failures (default 3), the seat forfeits the match. The result gives the win to the other seat (`endReason: 'forfeit'`). The world records no winner, so the replay and its checksum stay as played.
 
 A match is **invalid for benchmarking** when fallback share exceeds the threshold (default 20%). Results include `validForBenchmark` and `invalidReason`.
 

@@ -1,8 +1,21 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { SCHEMA_VERSION, createJsonlReader, createJsonlWriter, validateActResponse, type ActResponse } from '@void-dominion/agent-sdk';
 
+/** The agent answered, but the line is not JSON or is not a valid `agent.act`. */
+export class MalformedReplyError extends Error {
+  constructor(message = 'agent reply is not a valid agent.act') {
+    super(message);
+    this.name = 'MalformedReplyError';
+  }
+}
+
 export interface AgentProcess {
   send(request: unknown): Promise<void>;
+  /**
+   * The next reply, or null when none arrives within `timeoutMs`.
+   * Throws `MalformedReplyError` for a reply that fails validation, and any other
+   * error when the agent closed its output or died.
+   */
   receive(timeoutMs: number): Promise<ActResponse | null>;
   kill(): void;
   isAlive(): boolean;
@@ -29,6 +42,11 @@ export function spawnAgentProcess(command: string, args: string[]): AgentProcess
     alive = false;
   });
 
+  /** Writing to an agent that already exited raises EPIPE on stdin; unhandled, it would end the Arena. */
+  child.stdin.on('error', () => {
+    alive = false;
+  });
+
   child.stderr.on('data', (chunk: Buffer) => {
     // Log stderr for debugging but do not fail on it
     const message = chunk.toString('utf8').trim();
@@ -44,15 +62,21 @@ export function spawnAgentProcess(command: string, args: string[]): AgentProcess
     },
 
     async receive(timeoutMs: number): Promise<ActResponse | null> {
-      if (!alive) return null;
+      if (!alive) throw new Error('Agent process is not alive');
 
-      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs));
-      const message = reader.read();
-      const result = await Promise.race([message, timeout]);
+      const timedOut = Symbol('timeout');
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<typeof timedOut>((resolve) => {
+        timer = setTimeout(() => resolve(timedOut), timeoutMs);
+      });
+      const result = await Promise.race([reader.read(), timeout]);
+      clearTimeout(timer);
 
-      if (result === null) return null;
+      if (result === timedOut) return null;
+      if (result === null) throw new Error('Agent process closed its output');
 
       const validated = validateActResponse(result);
+      if (!validated) throw new MalformedReplyError();
       return validated;
     },
 
@@ -89,14 +113,17 @@ export class ScriptAgentFactory implements AgentFactory {
 
 export class DeterministicAgentFactory implements AgentFactory {
   create(_seat: number, _seed: number): AgentProcess {
+    /** Echo the last request id, or the scheduler reads every answer as malformed. */
+    let requestId = '';
     return {
-      async send(_request: unknown): Promise<void> {
-        // Deterministic agent ignores requests
+      async send(request: unknown): Promise<void> {
+        const id = (request as { requestId?: unknown } | null)?.requestId;
+        requestId = typeof id === 'string' ? id : '';
       },
       async receive(_timeoutMs: number): Promise<ActResponse | null> {
         return {
           schemaVersion: SCHEMA_VERSION,
-          requestId: 'fallback',
+          requestId,
           type: 'agent.act',
           actions: [{ type: 'noop' }],
         };
