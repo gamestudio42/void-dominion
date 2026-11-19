@@ -78,7 +78,7 @@ export class ArenaScheduler {
       if (this.pendingRequests.has(seat)) {
         throw new Error(`Seat ${seat} already has a pending decision`);
       }
-      const observation = buildObservation(this.sim, seat, requestId);
+      const observation = buildObservation(this.sim, seat, requestId, state.adapter.lastDecision());
       const sentAt = Date.now();
       try {
         await state.process.send(observation);
@@ -141,6 +141,7 @@ export class ArenaScheduler {
         state.consecutiveFailures = 0;
       }
 
+      state.adapter.beginDecision(pending.requestId, fallbackUsed);
       if (response) {
         for (const action of response.actions) {
           state.adapter.applyAction(action);
@@ -184,6 +185,11 @@ export class ArenaScheduler {
     }
     reply.decisionMs = Date.now() - pending.sentAt;
     return reply;
+  }
+
+  /** Call after each step: the first one after a decision tells each seat what its actions did. */
+  settle(): void {
+    for (const state of this.seats) state.adapter.settle();
   }
 
   isSeatForfeited(seat: number): boolean {

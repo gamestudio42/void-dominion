@@ -186,6 +186,22 @@ function ownBuilding(obs: ObserveRequest, kind: string): { id: number; x: number
   return building ? { id: building.id, x: building.x, y: building.y } : null;
 }
 
+/** A building that exists and is finished. An Arena older than the `complete` field counts any as finished. */
+function ownFinished(obs: ObserveRequest, kind: string): boolean {
+  return obs.buildings.some(
+    (entry) => entry.owner === obs.seat && !entry.wreck && entry.kind === kind && entry.complete !== false,
+  );
+}
+
+/** What the Arena said about the previous reply, in one line, or nothing before the first one. */
+function lastResultLine(obs: ObserveRequest): string | null {
+  const last = obs.lastDecision;
+  if (!last) return null;
+  if (last.fallback) return 'Last reply was not used: it was late or invalid.';
+  const refused = last.results.filter((result) => !result.accepted).map((result) => result.reason ?? 'refused');
+  return refused.length > 0 ? `Last actions refused: ${refused.join(', ')}.` : 'Last actions accepted.';
+}
+
 function rememberAttempt(memory: PlanMemory | undefined, kind: string, at: { x: number; y: number }): void {
   if (!memory) return;
   memory.attempt = { kind, x: at.x, y: at.y };
@@ -353,8 +369,10 @@ export function buildPrompt(obs: ObserveRequest): string {
   const ore = nearestOre(obs);
   const home = obs.buildings.find((building) => building.owner === obs.seat && building.kind === 'command_center' && !building.wreck);
   const far = home ? `${MAP_SIZE - 1 - home.x},${MAP_SIZE - 1 - home.y}` : '64,64';
+  const last = lastResultLine(obs);
   return [
     `Seat ${obs.seat} tick ${obs.tick}. Ore ${obs.ore}. Aether ${obs.aether}.`,
+    ...(last ? [last] : []),
     `Engineers: ${listUnits(obs, 'engineer')}`,
     `Buildings: ${listBuildings(obs)}`,
     ore ? `Nearest ore node #${ore.id} at ${ore.x},${ore.y}. Extractor hint ${extractorHint(ore.x, ore.y)} (costs ${BUILDINGS.ore_extractor.ore}).` : 'No ore node.',
@@ -370,7 +388,7 @@ function choices(obs: ObserveRequest): string[] {
   const open: string[] = [];
   if (engineers(obs).length > 0 && nearestOre(obs) && !ownBuilding(obs, 'ore_extractor')) open.push('build_extractor');
   if (engineers(obs).length > 0 && !ownBuilding(obs, 'barracks')) open.push('build_barracks');
-  if (ownBuilding(obs, 'barracks')) open.push('produce_rifle');
+  if (ownFinished(obs, 'barracks')) open.push('produce_rifle');
   if (rifles(obs).length > 0) open.push('attack');
   if (engineers(obs).length > 0 && nearestOre(obs)) open.push('gather');
   open.push('noop');
@@ -384,7 +402,7 @@ function preference(obs: ObserveRequest): string {
   if (!ownBuilding(obs, 'barracks') && obs.ore >= BUILDINGS.barracks.ore && choices(obs).includes('build_barracks')) {
     return 'build_barracks';
   }
-  if (ownBuilding(obs, 'barracks') && rifles(obs).length < 8 && obs.ore >= UNITS.rifleman.ore) return 'produce_rifle';
+  if (ownFinished(obs, 'barracks') && rifles(obs).length < 8 && obs.ore >= UNITS.rifleman.ore) return 'produce_rifle';
   if (rifles(obs).length >= 4) return 'attack';
   if (choices(obs).includes('gather')) return 'gather';
   return 'noop';

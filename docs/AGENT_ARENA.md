@@ -36,11 +36,35 @@ Transport: **JSON Lines** over stdin/stdout. Each message is a single line of JS
   "tick": 100,
   "ore": 250,
   "aether": 120,
-  "units": [{"id": 1, "owner": 1, "kind": "engineer", "x": 50, "y": 50, "hp": 100}],
-  "buildings": [],
-  "nodes": []
+  "supplyUsed": 5,
+  "supplyCap": 12,
+  "powerGive": 12,
+  "powerTake": 0,
+  "units": [{"id": 1, "owner": 1, "kind": "engineer", "x": 50, "y": 50, "hp": 100, "order": "gather", "carryOre": 4, "carryAether": 0}],
+  "buildings": [
+    {"id": 7, "owner": 1, "kind": "barracks", "x": 44, "y": 52, "hp": 600, "wreck": false, "progress": 0.4, "complete": false, "producing": null, "producingTicksLeft": 0, "queue": []},
+    {"id": 9, "owner": 2, "kind": "command_center", "x": 100, "y": 20, "hp": 1500, "wreck": false, "remembered": true}
+  ],
+  "nodes": [{"id": 2, "kind": "ore", "x": 48, "y": 49, "amount": 1460}],
+  "lastDecision": {
+    "requestId": "tick-0",
+    "fallback": false,
+    "results": [{"index": 0, "accepted": true}, {"index": 1, "accepted": false, "reason": "no_ore"}]
+  }
 }
 ```
+
+The required fields are the ones every 1.0.0 agent already reads. The rest were added later without a version bump. The Arena checks `schemaVersion` exactly on each reply, so a new version would refuse every agent written for 1.0.0. An agent must ignore fields it does not know.
+
+| Field | Who gets it | Meaning |
+|---|---|---|
+| `supplyUsed`, `supplyCap`, `powerGive`, `powerTake` | the seat | A unit is refused past the supply cap. Below its power draw, a base's turrets stop. |
+| unit `order`, `carryOre`, `carryAether` | own units only | The current order and what an engineer carries back. |
+| building `progress`, `complete` | own buildings and foreign ones in sight | Construction share from 0 to 1, and whether it is finished. |
+| building `producing`, `producingTicksLeft`, `queue` | own buildings only | The unit in production, the ticks it still needs, and the queue behind it. |
+| building `remembered` | foreign buildings out of sight | Shown as last seen. `hp` may be stale and `progress` is absent. |
+| node `amount` | nodes in sight | The current stock. An explored node out of sight has no `amount`. |
+| `lastDecision` | the seat, from its second decision on | What became of each action in the previous reply. `accepted: false` carries the engine's reason key, such as `no_ore`, or `unknown_unit` for a unit the seat does not own. `fallback: true` means the reply was late or invalid and the fallback decided instead. |
 
 #### Agent → Arena: `agent.act`
 

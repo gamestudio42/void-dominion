@@ -95,6 +95,7 @@ export async function runMatch(setup: MatchSetup): Promise<MatchResult> {
       }
 
       sim.step();
+      scheduler.settle();
       ticks = sim.world.tick;
 
       if (scheduler.isSeatForfeited(1) || scheduler.isSeatForfeited(2)) {

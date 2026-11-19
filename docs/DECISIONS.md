@@ -198,3 +198,12 @@ On 2026-11-12 the match was still a flat sheet, so the rock walls and the bases 
 **Decision**: `Simulation.create(seed, seats, variation)` accepts `variation: 'seeded'`. The Arena sets that only when its config says `variation: 'seeded'`. The variation adds the same ore and aether bonus to both seats and shifts their nodes by opposite one-cell offsets chosen from the seed. The default argument is `'none'`, which is the published layout. Replay v2 does not grow a field; a seeded match is reproduced by creating the world with the same seed and `'seeded'`.
 
 **Consequences**: The client, multiplayer, and the pinned skirmish checksum never take the new path. A benchmark can ask for it and get a different opening per seed without giving either seat more resources than the other.
+
+## 037. Agents learn what their last actions did, without a schema bump
+
+**Context**: An `agent.observe` message carried only position and hit points. An agent could not tell a finished barracks from a site, see its own queues, orders or cargo, or learn that its previous command was refused. Language-model agents repeated refused orders and trained from unfinished buildings.
+
+**Decision**: The observation adds supply and power, own units' order and cargo, building progress and completion, own production and queue, a `remembered` flag for foreign buildings out of sight, the stock of nodes in sight, and `lastDecision`. `lastDecision` holds one result per action of the previous reply, with the engine's reason key when an action is refused. `CommanderAdapter` reads that key from `Simulation.results` after the step that applied the commands. Every new field is optional and comes from `clientView`, so nothing hidden by fog is added. `schemaVersion` stays `1.0.0`, because the Arena checks it exactly on every reply.
+
+**Consequences**: Agents written for 1.0.0 keep working and ignore the new fields. Commands, replays, and checksums do not change. The reference agent still ignores the fields, so the published replay and the leaderboard stay valid. The Ollama example uses `complete` and `lastDecision`.
+
