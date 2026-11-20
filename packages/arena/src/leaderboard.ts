@@ -1,4 +1,4 @@
-import type { Seats } from '@void-dominion/simulation';
+import type { SeatControl, Seats } from '@void-dominion/simulation';
 import { DEFAULT_ARENA_CONFIG, DEFAULT_SEAT_CONFIG, type ArenaConfig } from './config.ts';
 import { runMatch } from './match.ts';
 import { DeterministicAgentFactory, type AgentFactory } from './process.ts';
@@ -9,6 +9,13 @@ export const LEADERBOARD_SEED_COUNT = 20;
 export const LEADERBOARD_MAX_TICKS = 12_000;
 export const LEADERBOARD_PERIOD_TICKS = 100;
 export const LEADERBOARD_DECISION_TIMEOUT_MS = 5_000;
+
+/** Varek at each level, easiest first. Each is an away opponent with the seat control as its id. */
+export const LEADERBOARD_VAREK_LEVELS: readonly SeatControl[] = ['varek_easy', 'varek', 'varek_hard'];
+
+function isVarekId(id: string): boolean {
+  return LEADERBOARD_VAREK_LEVELS.includes(id as SeatControl);
+}
 
 export function leaderboardSeeds(origin: number, count = LEADERBOARD_SEED_COUNT): number[] {
   const seeds: number[] = [];
@@ -29,6 +36,8 @@ export interface LeaderboardRunOptions {
   /** Roster order. The earlier id is home when two agents play each other. */
   agents: readonly LeaderboardContestant[];
   versusVarek?: boolean;
+  /** The Varek levels each agent meets. Default: all three. */
+  varekLevels?: readonly SeatControl[];
   pairwise?: boolean;
   onMatch?: (row: LeaderboardMatchRow) => void;
 }
@@ -76,7 +85,7 @@ interface Pairing {
   home: LeaderboardContestant;
   awayId: string;
   awayFactory: AgentFactory;
-  awayEngine: 'human' | 'varek';
+  awayEngine: SeatControl;
 }
 
 export function roundedRatio(numerator: number, denominator: number, places: number): number {
@@ -132,7 +141,7 @@ export function summarizeLeaderboard(
       addResult(home, outcome);
       ticksByAgent.set(row.home, (ticksByAgent.get(row.home) ?? 0) + row.ticks);
     }
-    if (row.away !== 'varek') {
+    if (!isVarekId(row.away)) {
       const away = byAgent.get(row.away);
       if (away) {
         const flipped = outcome === 'win' ? 'loss' : outcome === 'loss' ? 'win' : 'draw';
@@ -194,7 +203,9 @@ function pairings(options: LeaderboardRunOptions): Pairing[] {
   if (options.versusVarek !== false) {
     const varekFactory = new DeterministicAgentFactory();
     for (const agent of options.agents) {
-      pairs.push({ home: agent, awayId: 'varek', awayFactory: varekFactory, awayEngine: 'varek' });
+      for (const level of options.varekLevels ?? LEADERBOARD_VAREK_LEVELS) {
+        pairs.push({ home: agent, awayId: level, awayFactory: varekFactory, awayEngine: level });
+      }
     }
   }
   if (options.pairwise !== false) {

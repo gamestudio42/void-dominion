@@ -1,4 +1,4 @@
-import { ENEMY_ID, MATCH, PLAYER_ID } from '@void-dominion/content';
+import { ENEMY_ID, MATCH, PLAYER_ID, type VarekLevel } from '@void-dominion/content';
 import { stepAi } from './ai.ts';
 import { stepCombat, resolveCasualties } from './combat.ts';
 import { applyCommand, cloneCommand, parseLogged, type Command, type RejectReason } from './commands.ts';
@@ -12,8 +12,22 @@ export interface LoggedCommand {
   cmd: Command;
 }
 
-/** Who drives each seat, player 1 first. Varek is the conventional opponent in `ai.ts`. */
-export type SeatControl = 'human' | 'varek';
+/**
+ * Who drives each seat, player 1 first. Varek is the conventional opponent in `ai.ts`.
+ * `varek` is his normal level, the skirmish opponent; the other two pick another plan.
+ */
+export type SeatControl = 'human' | 'varek' | 'varek_easy' | 'varek_hard';
+
+const VAREK_SEATS: Readonly<Record<Exclude<SeatControl, 'human'>, VarekLevel>> = {
+  varek_easy: 'easy',
+  varek: 'normal',
+  varek_hard: 'hard',
+};
+
+/** Varek's level on a seat, or null when a human (or an external agent) drives it. */
+export function varekLevel(control: SeatControl): VarekLevel | null {
+  return control === 'human' ? null : VAREK_SEATS[control];
+}
 export type Seats = readonly [SeatControl, SeatControl];
 
 /** The skirmish: a human on seat 1 against General Varek on seat 2. */
@@ -92,7 +106,8 @@ export class Simulation {
     this.queue.length = 0;
     if (this.world.tick % MATCH.ai.period === 0) {
       for (let seat = 0; seat < SEAT_IDS.length; seat++) {
-        if (this.seats[seat] === 'varek') stepAi(this.world, SEAT_IDS[seat]!);
+        const level = varekLevel(this.seats[seat]!);
+        if (level) stepAi(this.world, SEAT_IDS[seat]!, level);
       }
     }
     steerAll(this.world);
@@ -144,7 +159,7 @@ export function serializeReplay(
 function parseSeats(value: unknown): Seats | null {
   if (!Array.isArray(value) || value.length !== 2) return null;
   const [first, second] = value as unknown[];
-  const control = (entry: unknown): entry is SeatControl => entry === 'human' || entry === 'varek';
+  const control = (entry: unknown): entry is SeatControl => entry === 'human' || (typeof entry === 'string' && Object.hasOwn(VAREK_SEATS, entry));
   return control(first) && control(second) ? [first, second] : null;
 }
 

@@ -1,4 +1,13 @@
-export { Simulation, deserializeReplay, humanSeat, REPLAY_VERSION, runArena, serializeReplay, SKIRMISH_SEATS } from './engine.ts';
+export {
+  Simulation,
+  deserializeReplay,
+  humanSeat,
+  REPLAY_VERSION,
+  runArena,
+  serializeReplay,
+  SKIRMISH_SEATS,
+  varekLevel,
+} from './engine.ts';
 export type { ArenaReport, LoggedCommand, MatchSetup, ReplayFile, SeatControl, Seats } from './engine.ts';
 export { applyCommand, parseCommand, RejectReason, siteRefusal } from './commands.ts';
 export type { Command, RejectReason as RejectReasonName } from './commands.ts';

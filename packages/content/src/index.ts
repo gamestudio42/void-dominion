@@ -5,13 +5,14 @@ export {
   ENEMY_ID,
   MAP_SIZE,
   MATCH,
+  VAREK_LEVELS,
   ORTHOGONAL_COST,
   PLAYER_ID,
   demoSpawns,
   inMap,
   rectContains,
 } from './field.ts';
-export type { CellRect, Spawn, StartBase } from './field.ts';
+export type { CellRect, Spawn, StartBase, VarekLevel, VarekPlan } from './field.ts';
 export {
   BUILDINGS,
   BUILDING_KINDS,

@@ -25,6 +25,7 @@ import {
   siteRefusal,
   supplyCap,
   supplyUsed,
+  varekLevel,
   type Command,
   type World,
 } from '@void-dominion/simulation';
@@ -242,7 +243,7 @@ export function startField(
     const winner = replayFinal.world.winner;
     if (winner === 0) return messages.replay_undecided;
     if (winner < 0) return messages.replay_draw;
-    const name = replayFile.seats[winner - 1] === 'varek' ? messages.replay_varek : messages.replay_seat(winner);
+    const name = varekLevel(replayFile.seats[winner - 1]!) ? messages.replay_varek : messages.replay_seat(winner);
     return messages.replay_winner(name);
   }
 

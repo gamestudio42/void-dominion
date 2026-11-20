@@ -1,5 +1,5 @@
 import { MATCH } from '@void-dominion/content';
-import { Simulation, type Seats } from '@void-dominion/simulation';
+import { Simulation, varekLevel, type Seats } from '@void-dominion/simulation';
 import { randomUUID } from 'node:crypto';
 import type { ArenaConfig } from './config.ts';
 import type { AgentFactory } from './process.ts';
@@ -71,8 +71,8 @@ export async function runMatch(setup: MatchSetup): Promise<MatchResult> {
   const seats: Seats = setup.engineSeats ?? ['human', 'human'];
   const sim = Simulation.create(seed, seats, setup.config.variation === 'seeded' ? 'seeded' : 'none');
 
-  const seat1Process = seats[0] === 'varek' ? null : setup.agentFactories[0].create(1, seed);
-  const seat2Process = seats[1] === 'varek' ? null : setup.agentFactories[1].create(2, seed);
+  const seat1Process = varekLevel(seats[0]) ? null : setup.agentFactories[0].create(1, seed);
+  const seat2Process = varekLevel(seats[1]) ? null : setup.agentFactories[1].create(2, seed);
 
   const scheduler = new ArenaScheduler(sim, setup.config, seat1Process, seat2Process);
   const recorder = setup.recordPath ? new DecisionRecorder(setup.recordPath, matchId) : null;
