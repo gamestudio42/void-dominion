@@ -6,9 +6,12 @@ packages/view3d             three.js renderer: field, camera, picking
 packages/simulation         world, commands, systems (pure, deterministic)
 packages/content            field size, costs, spawns
 packages/kernel             RNG, FNV-1a, fixed-step clock
-packages/arena              match orchestrator, scheduler, recorder (Node-only)
-packages/void-dominion-agent  observation builder, CommanderAdapter (Node-only)
-packages/agent-sdk          JSON contracts, validation, JSONL (Node-only)
+packages/protocol           multiplayer messages, guest audit (pure)
+packages/net                broker transport, compression, match keys (browser and Node)
+packages/agent-sdk          Arena JSON contracts, validation, JSONL transport
+packages/void-dominion-agent  observation builder, CommanderAdapter (browser and Node)
+packages/arena              match orchestrator, scheduler, recorder; index is Node-only,
+                            local-match.ts and sandbox.ts also run in the browser
 ```
 
 Dependencies point down only: `game` uses `view3d` and `simulation`; `view3d` does not import the simulation; `simulation` uses `content` and `kernel`. The deterministic packages have no DOM and no clock, so they run the same in the browser and in Vitest.
