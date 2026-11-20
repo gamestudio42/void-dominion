@@ -1,14 +1,18 @@
-import { ENEMY_ID, MATCH, PLAYER_ID, buildingDef, unitDef } from '@void-dominion/content';
+import { ENEMY_ID, MATCH, PLAYER_ID, VAREK_LEVELS, buildingDef, unitDef, type VarekLevel } from '@void-dominion/content';
+import type { BuildingKind } from '@void-dominion/content';
 import { applyCommand } from './commands.ts';
 import { complete, findOpenSite, findTouchingSite, nearestEnemy } from './query.ts';
-import { nearestNode, type World } from './world.ts';
+import { nearestNode, type Building, type Unit, type World } from './world.ts';
 
 /**
  * Conventional opponent. Personality weights only: no language model, no hidden positions.
  * The enemy start cell is public scenario data. Units still have to be seen to be shot.
+ * `level` picks a plan from `VAREK_LEVELS`; `normal` is the skirmish opponent, and its
+ * orders come out in the same sequence as before levels existed, so pinned checksums hold.
  */
-export function stepAi(world: World, playerId: number = ENEMY_ID): void {
+export function stepAi(world: World, playerId: number = ENEMY_ID, level: VarekLevel = 'normal'): void {
   if (MATCH.ai.aggression <= 0) return;
+  const plan = VAREK_LEVELS[level];
   const cc = world.buildings.find(
     (building) => building.owner === playerId && building.kind === 'command_center' && complete(building),
   );
@@ -26,7 +30,7 @@ export function stepAi(world: World, playerId: number = ENEMY_ID): void {
     applyCommand(world, { type: 'gather', playerId, unitIds: [unit.id], nodeId: node.id });
   }
   const engineers = world.units.filter((unit) => unit.owner === playerId && unit.kind === 'engineer');
-  if (engineers.length < 5) {
+  if (engineers.length < plan.engineers) {
     applyCommand(world, { type: 'produce', playerId, buildingId: cc.id, kind: 'engineer' });
   }
   const oreNode = nearestNode(world, cc.x, cc.y, 'ore');
@@ -44,9 +48,10 @@ export function stepAi(world: World, playerId: number = ENEMY_ID): void {
       });
     }
   }
-  const hasBarracks = world.buildings.some((building) => building.owner === playerId && building.kind === 'barracks');
-  if (hasExtractor && !hasBarracks) {
-    const site = findOpenSite(world, 'barracks', cc.x - 6, cc.y, playerId);
+  const halls = owned(world, playerId, 'barracks');
+  /** The next barracks waits until every earlier one is finished, so one engineer builds at a time. */
+  if (hasExtractor && halls.length < plan.barracks && halls.every(complete)) {
+    const site = findOpenSite(world, 'barracks', cc.x - 6, cc.y + halls.length * 5, playerId);
     const builder = world.units.find(
       (unit) => unit.owner === playerId && unit.kind === 'engineer' && unit.order !== 'build',
     );
@@ -54,15 +59,30 @@ export function stepAi(world: World, playerId: number = ENEMY_ID): void {
       applyCommand(world, { type: 'build', playerId, unitIds: [builder.id], kind: 'barracks', at: site });
     }
   }
+  const firstHall = halls.find(complete);
+  if (firstHall) {
+    const rival = MATCH.bases.find((base) => base.id !== playerId);
+    const toward = rival && rival.cc.x < cc.x ? -1 : 1;
+    if (plan.turret) raise(world, playerId, 'defense_turret', cc.x + toward * 7, cc.y + 1);
+    if (plan.generator) raise(world, playerId, 'power_generator', cc.x - toward * 6, cc.y + 5);
+  }
   const rifles = world.units.filter((unit) => unit.owner === playerId && unit.kind === 'rifleman').length;
-  const barracks = world.buildings.find(
-    (building) => building.owner === playerId && building.kind === 'barracks' && complete(building),
-  );
-  if (barracks && rifles < MATCH.ai.army) {
-    applyCommand(world, { type: 'produce', playerId, buildingId: barracks.id, kind: 'rifleman' });
+  if (level === 'normal') {
+    /** The skirmish opponent as it always played: one order a period at the first finished hall. */
+    if (firstHall && rifles < plan.armyCap) {
+      applyCommand(world, { type: 'produce', playerId, buildingId: firstHall.id, kind: 'rifleman' });
+    }
+  } else {
+    /** Count queued riflemen too, so two halls do not both train past the cap. */
+    let planned = rifles + halls.reduce((sum, hall) => sum + queuedRifles(hall), 0);
+    for (const hall of halls) {
+      if (!complete(hall) || planned >= plan.armyCap) continue;
+      applyCommand(world, { type: 'produce', playerId, buildingId: hall.id, kind: 'rifleman' });
+      planned += 1;
+    }
   }
   /** First march waits so the opening can finish a building before the army is committed. */
-  if (!threat && world.tick >= MATCH.ai.marchTick && rifles >= MATCH.ai.army && MATCH.ai.aggression >= 0.5) {
+  if (!threat && world.tick >= plan.marchTick && rifles >= plan.wave && MATCH.ai.aggression >= 0.5) {
     const rival = playerId === PLAYER_ID ? ENEMY_ID : PLAYER_ID;
     const enemy = MATCH.bases.find((base) => base.id === rival);
     const soldiers = world.units.filter((unit) => unit.owner === playerId && unit.kind === 'rifleman');
@@ -78,4 +98,23 @@ export function stepAi(world: World, playerId: number = ENEMY_ID): void {
       }
     }
   }
+}
+
+function owned(world: World, playerId: number, kind: BuildingKind): Building[] {
+  return world.buildings.filter((building) => building.owner === playerId && building.kind === kind);
+}
+
+function queuedRifles(hall: Building): number {
+  const waiting = hall.queue.filter((job) => job.kind === 'rifleman').length;
+  return waiting + (hall.prod?.kind === 'rifleman' ? 1 : 0);
+}
+
+/** One building of `kind` near the origin, raised by an engineer not already building. */
+function raise(world: World, playerId: number, kind: BuildingKind, x: number, y: number): void {
+  if (owned(world, playerId, kind).length > 0) return;
+  const site = findOpenSite(world, kind, x, y, playerId);
+  const builder = world.units.find(
+    (unit: Unit) => unit.owner === playerId && unit.kind === 'engineer' && unit.order !== 'build',
+  );
+  if (site && builder) applyCommand(world, { type: 'build', playerId, unitIds: [builder.id], kind, at: site });
 }

@@ -5,6 +5,7 @@ export {
   LEADERBOARD_MAX_TICKS,
   LEADERBOARD_PERIOD_TICKS,
   LEADERBOARD_SEED_COUNT,
+  LEADERBOARD_VAREK_LEVELS,
   leaderboardSeeds,
   renderLeaderboardMarkdown,
   roundedRatio,

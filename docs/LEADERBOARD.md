@@ -10,9 +10,9 @@ Win rate is wins divided by matches, rounded to four decimals. Draws stay in the
 
 | agent | matches | wins | losses | draws | win rate | average ticks |
 |---|---|---|---|---|---|---|
-| reference | 60 | 59 | 0 | 1 | 0.9833 | 3712.9 |
-| example | 60 | 20 | 40 | 0 | 0.3333 | 3045.5 |
-| noop | 60 | 0 | 60 | 0 | 0.0000 | 2781.1 |
+| reference | 100 | 85 | 14 | 1 | 0.8500 | 4882.8 |
+| example | 100 | 20 | 70 | 10 | 0.2000 | 4299.5 |
+| noop | 100 | 0 | 100 | 0 | 0.0000 | 3372.0 |
 
 ## Matchups
 
@@ -20,9 +20,15 @@ Wins, losses, and the win rate are from the home agent's side.
 
 | home | away | matches | wins | losses | draws | win rate | average ticks |
 |---|---|---|---|---|---|---|---|
+| reference | varek_easy | 20 | 20 | 0 | 0 | 1.0000 | 3643.9 |
 | reference | varek | 20 | 19 | 0 | 1 | 0.9500 | 5760.5 |
+| reference | varek_hard | 20 | 6 | 14 | 0 | 0.3000 | 9635.7 |
+| example | varek_easy | 20 | 0 | 10 | 10 | 0.0000 | 8756.7 |
 | example | varek | 20 | 0 | 20 | 0 | 0.0000 | 3973.2 |
-| noop | varek | 20 | 0 | 20 | 0 | 0.0000 | 3350.8 |
+| example | varek_hard | 20 | 0 | 20 | 0 | 0.0000 | 3637.1 |
+| noop | varek_easy | 20 | 0 | 20 | 0 | 0.0000 | 5279.7 |
+| noop | varek | 20 | 0 | 20 | 0 | 0.0000 | 3352.6 |
+| noop | varek_hard | 20 | 0 | 20 | 0 | 0.0000 | 3271.8 |
 | reference | example | 20 | 20 | 0 | 0 | 1.0000 | 2774.4 |
-| reference | noop | 20 | 20 | 0 | 0 | 1.0000 | 2603.9 |
-| example | noop | 20 | 20 | 0 | 0 | 1.0000 | 2388.8 |
+| reference | noop | 20 | 20 | 0 | 0 | 1.0000 | 2599.7 |
+| example | noop | 20 | 20 | 0 | 0 | 1.0000 | 2356.4 |

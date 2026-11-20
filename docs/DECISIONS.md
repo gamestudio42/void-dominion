@@ -207,3 +207,11 @@ On 2026-11-12 the match was still a flat sheet, so the rock walls and the bases 
 
 **Consequences**: Agents written for 1.0.0 keep working and ignore the new fields. Commands, replays, and checksums do not change. The reference agent still ignores the fields, so the published replay and the leaderboard stay valid. The Ollama example uses `complete` and `lastDecision`.
 
+## 038. Varek has three levels, and `varek` stays the skirmish opponent
+
+**Context**: The reference agent beat Varek in 19 of 20 leaderboard matches and lost none. The board could not tell a good agent from a better one, and a weak agent had nothing between it and a loss. Decision 033 kept the seat controls to `human | varek`.
+
+**Decision**: `SeatControl` adds `varek_easy` and `varek_hard`. This extends 033 for Varek only; there is still no `agent` seat. `VAREK_LEVELS` in `packages/content` holds each level's plan: engineers, barracks, extra buildings, riflemen kept, wave size and first march. `stepAi` takes the level. `varek` is the normal level and issues its orders in the same sequence as before, so the skirmish, every pinned checksum and the published replay do not change. Hard was tuned until the reference agent won about a third of its matches. The leaderboard meets each agent with all three levels, and the Arena page offers them.
+
+**Consequences**: A replay v2 file may name any of the four seat controls. An older reader refuses `varek_easy` and `varek_hard` instead of playing the wrong opponent. The skirmish from the title screen is still the normal level. The leaderboard was regenerated: its matches against `varek` are the same games as before.
+

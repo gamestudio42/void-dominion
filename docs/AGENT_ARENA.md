@@ -16,7 +16,7 @@ examples/               deterministic.ts, reference.ts, ollama.ts (optional)
 1. **Arena owns the clock.** `reset` and `step` are privileged operations never exposed to agent processes.
 2. **Observations use `clientView`.** External agents never receive information hidden by fog. `observe()` follows the same rule for resource amounts: the current stock is included only while the node is in sight.
 3. **Commands go through `Simulation.enqueue()`.** The CommanderAdapter injects `playerId` from the seat and submits commands that appear in replay v2.
-4. **Varek is unchanged.** The conventional opponent continues to use `stepAi` and is not an external agent. A match passes `engineSeats` of `'human' | 'varek'`. A `varek` seat gets no child process and no observation.
+4. **Varek is not an external agent.** The conventional opponent uses `stepAi` in the engine. A match passes `engineSeats` of `'human'`, `'varek_easy'`, `'varek'` or `'varek_hard'`. A Varek seat gets no child process and no observation. `'varek'` is the normal level, the skirmish opponent, and plays exactly as before levels existed.
 5. **Failure policies are configurable.** Timeouts, crashes, and malformed JSON trigger fallback, noop, or forfeit policies.
 
 ## Protocol
@@ -286,15 +286,29 @@ ARENA_MATCHES=8 ARENA_PERIOD=100 pnpm arena:ollama
 
 Totals, from the model's side: **0 wins, 5 losses, 3 draws**. Across 503 decisions the fallback rate and the invalid-action rate were both 0. The mean of the per-match latency means is 742 ms, and every p95 is under 1.2 s. The trace of those decisions is 29 gather, 29 build, 280 produce, 115 attack_move, and 50 noop. The army does march, and three matches with the model on seat 1 are still undecided at the cap. The five losses are Varek destroying the model's command center, between tick 3771 and 7025. All four matches with the model on seat 2 are in that loss group. The model does not destroy Varek's command center in this sample.
 
+## Varek levels
+
+General Varek has three levels. The plans live in `VAREK_LEVELS` in `packages/content`. Every level issues the same commands a human can, and none sees through the fog or gets extra resources.
+
+| Seat control | Trains engineers up to | Barracks | Extra buildings | Riflemen kept | March with | First march |
+|---|---|---|---|---|---|---|
+| `varek_easy` | 3 | 1 | none | 4 | 4 | tick 3600 |
+| `varek` (normal) | 5 | 1 | none | 6 | 6 | tick 2400 |
+| `varek_hard` | 6 | 2 | power generator | 12 | 8 | tick 2400 |
+
+Easy never trains past the four engineers the scenario gives him. At hard, the second barracks waits until the first is finished, and both train riflemen up to the cap, counting the queue. Hard was tuned against the reference agent. Over seeds 24301–24320 with `variation: 'seeded'`, the reference agent wins 6 of 20, so the level has room to rank an agent above the reference. A first draft with a turret, 16 riflemen and waves of 10 beat the reference agent 10 of 10 and was too strong to rank anyone.
+
 ## Leaderboard
 
-`pnpm arena:leaderboard` plays every agent in `tools/arena/roster.ts` against Varek and against each other. The set is fixed: seeds `MATCH.seed + 0..19` (24301 through 24320), `variation: 'seeded'`, cap 12000 ticks, strategic period 100. Even indexes seat the home agent on seat 1 and odd indexes seat it on seat 2. Home is the earlier roster entry when two registered agents play.
+`pnpm arena:leaderboard` plays every agent in `tools/arena/roster.ts` against Varek at each level (`varek_easy`, `varek`, `varek_hard`) and against each other. The set is fixed: seeds `MATCH.seed + 0..19` (24301 through 24320), `variation: 'seeded'`, cap 12000 ticks, strategic period 100. Even indexes seat the home agent on seat 1 and odd indexes seat it on seat 2. Home is the earlier roster entry when two registered agents play.
 
 The default roster is the reference agent, the deterministic example, and an in-process noop. The noop is the floor. An unseeded random policy would make the table unreproducible, so it is not on the board. To add an agent, append `{ id, script }` to `LEADERBOARD_ROSTER` and run the command again. An entry without `script` is another noop.
 
 The command rewrites `docs/leaderboard.json` and `docs/LEADERBOARD.md`. Win rate is wins divided by matches, with draws left in the denominator. A match between two registered agents counts for both standings. Varek is an opponent, not a row.
 
-On the published run the reference agent is 59 wins, 0 losses, and 1 draw across 60 matches (win rate 0.9833, mean 3712.9 ticks). The example is 20-40-0. The noop is 0-60-0. Against Varek alone the reference agent is 19-0-1 over the same 20 seeds as `pnpm arena:bench`, including the draw on seed 24318. The example and the noop lose all 20 of those.
+On the published run the reference agent is 85 wins, 14 losses, and 1 draw across 100 matches (win rate 0.8500, mean 4882.8 ticks). The example is 20-70-10. The noop is 0-100-0. By level, the reference agent is 20-0-0 against easy, 19-0-1 against normal over the same 20 seeds as `pnpm arena:bench`, including the draw on seed 24318, and 6-14-0 against hard. The example never beats Varek: easy gives it 10 draws, normal and hard beat it in all 20. The noop loses every match.
+
+The matches against `varek` and between the reference and example agents are the same games as before the levels existed, checksum for checksum. The noop's matches changed once: before #25 its process answered with the wrong request id, so every decision fell back and the fallback agent played its seat. It now plays no actions at all.
 
 Ollama stays off that board. `ARENA_LEADERBOARD_OLLAMA=1` adds `examples/ollama.ts` for one local run, prints the table, and does not rewrite the versioned files. CI does not set the variable. The determinism test replays two short seeds and checks the published JSON. It does not start Ollama.
 
@@ -318,7 +332,7 @@ function act(observe) {
 
 The script runs in a Web Worker. It has no page and no DOM. `fetch`, `XMLHttpRequest`, `WebSocket` and `importScripts` throw. Each decision has one second. A timeout or a thrown error becomes a noop, the message stays on the Arena screen, and a timeout restarts the worker, which drops variables the script kept. The page keeps running.
 
-The opponent is General Varek, the reference agent, or the example agent. The seed and the seat are chosen on that screen. The match uses the published layout, so the exported file is replay version 2 and the viewer can resimulate it. A `seeded` layout is not stored in that file.
+The opponent is General Varek at easy, normal or hard, the reference agent, or the example agent. The seed and the seat are chosen on that screen. The match uses the published layout, so the exported file is replay version 2 and the viewer can resimulate it. A `seeded` layout is not stored in that file.
 
 When the match ends, the screen shows the winner, the tick and the checksum. **Export replay** downloads the version-2 JSON with that checksum. **Watch replay** opens the same file in the viewer. **Copy link** puts the gzip-compressed file in `?replay-data=` as base64url when that value is at most 16384 characters. A longer match says the file is the way to share it. Opening the link loads the viewer.
 

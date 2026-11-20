@@ -1,6 +1,6 @@
 import type { ObserveRequest } from '@void-dominion/agent-sdk';
 import { MATCH } from '@void-dominion/content';
-import type { Seats } from '@void-dominion/simulation';
+import { varekLevel, type SeatControl, type Seats } from '@void-dominion/simulation';
 import { useEffect, useRef, useState } from 'react';
 import { actionsForObservation } from '../../../examples/deterministic.ts';
 import { createMemory, decide as referenceDecide } from '../../../examples/reference.ts';
@@ -19,7 +19,12 @@ import { messagesFor, type Messages } from './locales.ts';
 /** The published doc. The game is a static page, so the markdown is not beside it. */
 const HOW_TO = 'https://github.com/gamestudio42/void-dominion/blob/main/docs/AGENT_ARENA.md#write-an-agent';
 
-type Opponent = 'varek' | 'reference' | 'example';
+type VarekOpponent = 'varek_easy' | 'varek' | 'varek_hard';
+type Opponent = VarekOpponent | 'reference' | 'example';
+
+function isVarek(kind: Opponent): kind is VarekOpponent {
+  return kind === 'varek_easy' || kind === 'varek' || kind === 'varek_hard';
+}
 
 function spawn(code: string): Worker {
   const url = URL.createObjectURL(new Blob([agentWorkerSource(code)], { type: 'text/javascript' }));
@@ -69,7 +74,7 @@ class PageAgent {
 }
 
 function opponentAgent(kind: Opponent, seat: 1 | 2): LocalSeatAgent | null {
-  if (kind === 'varek') return null;
+  if (isVarek(kind)) return null;
   if (kind === 'reference') {
     const memory = createMemory();
     return { seat, act: (observe) => Promise.resolve(referenceDecide(observe, memory)) };
@@ -81,7 +86,7 @@ function outcome(text: Messages, seats: Seats, winner: number, ticks: number): s
   const clock = text.tick(ticks);
   if (winner === 0) return `${text.replay_undecided} · ${clock}`;
   if (winner < 0) return `${text.replay_draw} · ${clock}`;
-  const name = seats[winner - 1] === 'varek' ? text.replay_varek : text.replay_seat(winner);
+  const name = varekLevel(seats[winner - 1]!) ? text.replay_varek : text.replay_seat(winner);
   return `${text.replay_winner(name)} · ${clock}`;
 }
 
@@ -110,8 +115,9 @@ export function ArenaPanel({ onBack, onWatch }: { onBack: () => void; onWatch: (
   }
 
   function seatsFor(kind: Opponent, playerSeat: 1 | 2): Seats {
-    if (kind !== 'varek') return ['human', 'human'];
-    return playerSeat === 1 ? ['human', 'varek'] : ['varek', 'human'];
+    if (!isVarek(kind)) return ['human', 'human'];
+    const varek: SeatControl = kind;
+    return playerSeat === 1 ? ['human', varek] : [varek, 'human'];
   }
 
   async function play(): Promise<void> {
@@ -225,7 +231,9 @@ export function ArenaPanel({ onBack, onWatch }: { onBack: () => void; onWatch: (
         <label>
           {text.arena_opponent}
           <select value={opponent} disabled={running} onChange={(event) => setOpponent(event.target.value as Opponent)}>
-            <option value="varek">{text.replay_varek}</option>
+            <option value="varek_easy">{text.arena_varek_easy}</option>
+            <option value="varek">{text.arena_varek_normal}</option>
+            <option value="varek_hard">{text.arena_varek_hard}</option>
             <option value="reference">{text.arena_reference}</option>
             <option value="example">{text.arena_example}</option>
           </select>

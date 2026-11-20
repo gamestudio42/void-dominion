@@ -69,6 +69,7 @@ describe('leaderboard', () => {
       maxTicks: 400,
       strategicPeriodTicks: 100,
       decisionTimeoutMs: 5_000,
+      varekLevels: ['varek'],
       agents: [
         { id: 'reference', factory: reference },
         { id: 'noop', factory: new DeterministicAgentFactory() },
@@ -91,5 +92,11 @@ describe('leaderboard', () => {
     const versusVarek = report.matchups.find((matchup: { home: string; away: string }) =>
       matchup.home === 'reference' && matchup.away === 'varek');
     expect(versusVarek).toMatchObject({ matches: 20, wins: 19, losses: 0, draws: 1 });
+    /** Hard is the level the reference agent does not always beat. */
+    const versusHard = report.matchups.find((matchup: { home: string; away: string }) =>
+      matchup.home === 'reference' && matchup.away === 'varek_hard');
+    expect(versusHard.matches).toBe(20);
+    expect(versusHard.wins).toBeGreaterThan(0);
+    expect(versusHard.losses).toBeGreaterThan(0);
   });
 });

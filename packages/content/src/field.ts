@@ -101,3 +101,33 @@ export const MATCH: {
   ],
   ai: { id: 'general_varek', aggression: 0.85, army: 6, period: 20, marchTick: 2400 },
 };
+
+export type VarekLevel = 'easy' | 'normal' | 'hard';
+
+/**
+ * How General Varek plays at each level. `normal` is the skirmish opponent, and its
+ * numbers repeat `MATCH.ai` so every pinned checksum stays. The levels differ in
+ * economy, buildings and army only: no level sees through the fog or gets resources.
+ */
+export interface VarekPlan {
+  /** Engineers he keeps training up to. */
+  engineers: number;
+  /** Barracks he raises, one after the other. */
+  barracks: number;
+  /** A defense turret on the side the rival comes from, once the first barracks stands. */
+  turret: boolean;
+  /** A power generator for the supply a bigger army needs. */
+  generator: boolean;
+  /** Riflemen he keeps up to. */
+  armyCap: number;
+  /** Riflemen needed before a march. */
+  wave: number;
+  /** No march before this tick. */
+  marchTick: number;
+}
+
+export const VAREK_LEVELS: Readonly<Record<VarekLevel, VarekPlan>> = {
+  easy: { engineers: 3, barracks: 1, turret: false, generator: false, armyCap: 4, wave: 4, marchTick: 3600 },
+  normal: { engineers: 5, barracks: 1, turret: false, generator: false, armyCap: 6, wave: 6, marchTick: 2400 },
+  hard: { engineers: 6, barracks: 2, turret: false, generator: true, armyCap: 12, wave: 8, marchTick: 2400 },
+};
