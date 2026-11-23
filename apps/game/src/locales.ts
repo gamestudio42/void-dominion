@@ -95,6 +95,10 @@ export const en = {
   copy_diagnostics: 'Copy diagnostics',
   diagnostics_copied: 'Diagnostics copied',
   diagnostics: 'Match diagnostics',
+  hint_touch: 'Drag to pan. Pinch to zoom. Tap to select. Hold to order.',
+  hint_touch_build: 'Drag to pan. Tap the ground to build.',
+  hint_touch_attack: 'Drag to pan. Tap the target to attack.',
+  hint_touch_watch: 'Drag to pan. Pinch to zoom.',
   train: (name: string, ore: number, aether: number) => (aether > 0 ? `${name} ${ore}+${aether}` : `${name} ${ore}`),
   unitName: (kind: UnitKind) =>
     ({
@@ -212,6 +216,10 @@ export const ptBR: typeof en = {
   copy_diagnostics: 'Copiar diagnóstico',
   diagnostics_copied: 'Diagnóstico copiado',
   diagnostics: 'Diagnóstico da partida',
+  hint_touch: 'Arraste para mover. Pinça para zoom. Toque para selecionar. Segure para ordenar.',
+  hint_touch_build: 'Arraste para mover. Toque no chão para construir.',
+  hint_touch_attack: 'Arraste para mover. Toque no alvo para atacar.',
+  hint_touch_watch: 'Arraste para mover. Pinça para zoom.',
   train: (name: string, ore: number, aether: number) => (aether > 0 ? `${name} ${ore}+${aether}` : `${name} ${ore}`),
   unitName: (kind: UnitKind) =>
     ({

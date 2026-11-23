@@ -112,7 +112,13 @@ export interface FieldView {
   setGhost(ghost: DrawGhost | null): void;
   setMarker(cell: { x: number; y: number } | null, accepted: boolean, raised?: boolean): void;
   pan(strafe: number, advance: number): void;
+  /** Move the look-at point in world x/z. Touch pan uses this so the ground stays under the finger. */
+  shift(dx: number, dz: number): void;
+  /** Pan by screen pixels when the ground ray misses. `dx` right and `dy` down follow the finger. */
+  panPixels(dx: number, dy: number): void;
   zoomBy(wheelDelta: number): void;
+  /** Multiply the orthographic zoom. The wheel uses 0.9 and 1.1; a pinch uses the finger ratio. */
+  zoomScale(factor: number): void;
   focus(x: number, z: number): void;
   groundAt(clientX: number, clientY: number): { x: number; y: number } | null;
   project(x: number, y: number, height?: number): { x: number; y: number };
@@ -394,7 +400,7 @@ export function createField(
       }
       void main() {
         vec2 xz = vWorld.xz;
-        // Soft patches, not a squared grit. A lattice of constant cells reads as tiles here.
+        // Soft mottling, not a squared grit. A lattice of constant cells reads as tiles here.
         vec2 diag = vec2(xz.x * 0.8 + xz.y, xz.x - xz.y * 1.3);
         float broad = mottle(xz * 0.09 + vec2(2.0, 7.0));
         float mid = mottle(diag * 0.2 + 4.0);
@@ -478,6 +484,34 @@ export function createField(
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(width, height, false);
+  }
+
+  function zoomScale(factor: number): void {
+    if (!Number.isFinite(factor) || factor <= 0) return;
+    camera.zoom = Math.min(4, Math.max(0.45, camera.zoom * factor));
+    camera.updateProjectionMatrix();
+  }
+
+  function shift(dx: number, dz: number): void {
+    target.x = Math.min(mapSize, Math.max(0, target.x + dx));
+    target.z = Math.min(mapSize, Math.max(0, target.z + dz));
+    placeCamera();
+  }
+
+  function panPixels(dx: number, dy: number): void {
+    const width = canvas.clientWidth || 1;
+    const height = canvas.clientHeight || 1;
+    const spanY = (camera.top - camera.bottom) / (camera.zoom || 1);
+    const spanX = spanY * (width / height);
+    right.setFromMatrixColumn(camera.matrixWorld, 0);
+    ahead.setFromMatrixColumn(camera.matrixWorld, 1);
+    right.y = 0;
+    ahead.y = 0;
+    if (right.lengthSq() > 0) right.normalize();
+    if (ahead.lengthSq() > 0) ahead.normalize();
+    target.addScaledVector(right, -(dx / width) * spanX);
+    target.addScaledVector(ahead, (dy / height) * spanY);
+    shift(0, 0);
   }
 
   function paintOwner(material: MeshStandardMaterial, owner: number, selected: boolean, hp: number, maxHp: number): void {
@@ -1034,11 +1068,12 @@ export function createField(
       target.z = Math.min(mapSize, Math.max(0, target.z));
       placeCamera();
     },
+    shift,
+    panPixels,
     zoomBy(wheelDelta) {
-      const factor = wheelDelta > 0 ? 0.9 : 1.1;
-      camera.zoom = Math.min(4, Math.max(0.45, camera.zoom * factor));
-      camera.updateProjectionMatrix();
+      zoomScale(wheelDelta > 0 ? 0.9 : 1.1);
     },
+    zoomScale,
     focus(x, z) {
       target.x = Math.min(mapSize, Math.max(0, x));
       target.z = Math.min(mapSize, Math.max(0, z));

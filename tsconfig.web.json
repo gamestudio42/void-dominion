@@ -9,6 +9,7 @@
     "packages/view3d",
     "packages/net",
     "apps/game/src",
+    "apps/game/test",
     "apps/game/vite.config.ts",
     "vitest.config.ts",
     "tools/bench",
