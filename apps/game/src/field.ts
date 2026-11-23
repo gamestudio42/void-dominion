@@ -32,6 +32,17 @@ import {
 import { createField } from '@void-dominion/view3d';
 import { createCues } from './audio.ts';
 import { combatWatcher, EFFECT_SHEETS, type CombatEffect } from './effects.ts';
+import {
+  emptyGesture,
+  fingerDown,
+  fingerHold,
+  fingerMove,
+  fingerUp,
+  groundShift,
+  HOLD_MS,
+  TOUCH_SLOP,
+  type Gesture,
+} from './gestures.ts';
 import { messagesFor, reasonText } from './locales.ts';
 import { createMirror } from './mirror.ts';
 import { BUILDING_MODELS, TERRAIN_MODELS, UNIT_MODELS } from './models.ts';
@@ -228,6 +239,8 @@ export function startField(
   let selectedBuilding: number | null = null;
   let hover: Point | null = null;
   let drag: { x: number; y: number; moved: boolean; pointerId: number } | null = null;
+  let gesture: Gesture = emptyGesture();
+  let holdTimer = 0;
   let lastUi = '';
   let fps = 0;
   let fpsStamp = performance.now();
@@ -835,7 +848,118 @@ export function startField(
     },
   };
 
+  function selectPoint(clientX: number, clientY: number, add: boolean): void {
+    const id = pick(clientX, clientY, lastAlpha, me);
+    if (id !== null) {
+      selectIds([id], add);
+      return;
+    }
+    const building = ownBuildingAt(clientX, clientY);
+    if (building !== null) {
+      if (!add) selected.clear();
+      selectedBuilding = building;
+      hideRejection = true;
+      return;
+    }
+    if (!add) {
+      selected.clear();
+      selectedBuilding = null;
+    }
+  }
+
+  /** Right-click order: leave build or attack mode, then move, attack or gather. */
+  function commandAt(clientX: number, clientY: number): void {
+    if (mode !== 'none') {
+      mode = 'none';
+      buildKind = null;
+      buildOpen = false;
+    }
+    orderAt(clientX, clientY);
+  }
+
+  function touchLike(event: PointerEvent): boolean {
+    return event.pointerType === 'touch' || event.pointerType === 'pen';
+  }
+
+  function clearHold(): void {
+    if (holdTimer === 0) return;
+    window.clearTimeout(holdTimer);
+    holdTimer = 0;
+  }
+
+  function armHold(): void {
+    clearHold();
+    holdTimer = window.setTimeout(() => {
+      holdTimer = 0;
+      if (stopped) return;
+      const step = fingerHold(gesture);
+      gesture = step.gesture;
+      if (step.order) commandAt(step.order.x, step.order.y);
+    }, HOLD_MS);
+  }
+
+  function panByScreen(x0: number, y0: number, x1: number, y1: number): void {
+    const shiftBy = groundShift(view.groundAt(x0, y0), view.groundAt(x1, y1));
+    if (shiftBy) {
+      view.shift(shiftBy.x, shiftBy.y);
+      return;
+    }
+    view.panPixels(x1 - x0, y1 - y0);
+  }
+
+  function zoomAbout(factor: number, x: number, y: number): void {
+    const before = view.groundAt(x, y);
+    view.zoomScale(factor);
+    const shiftBy = groundShift(before, view.groundAt(x, y));
+    if (shiftBy) view.shift(shiftBy.x, shiftBy.y);
+  }
+
+  function beginTouch(event: PointerEvent): void {
+    event.preventDefault();
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch {
+      // The pointer is already gone. The gesture still tracks the event.
+    }
+    const step = fingerDown(gesture, event.pointerId, { x: event.clientX, y: event.clientY });
+    gesture = step.gesture;
+    if (gesture.pinch !== null || gesture.primary !== event.pointerId) clearHold();
+    else armHold();
+  }
+
+  function moveTouch(event: PointerEvent): void {
+    event.preventDefault();
+    const wasStill = !gesture.moved;
+    const step = fingerMove(gesture, event.pointerId, { x: event.clientX, y: event.clientY }, TOUCH_SLOP);
+    gesture = step.gesture;
+    if (wasStill && gesture.moved) clearHold();
+    const at = gesture.pinch?.mid ?? gesture.last;
+    if (step.pan && at && (step.pan.x !== 0 || step.pan.y !== 0)) panByScreen(at.x - step.pan.x, at.y - step.pan.y, at.x, at.y);
+    if (step.zoom !== null && gesture.pinch && Math.abs(step.zoom - 1) > 0.0001) zoomAbout(step.zoom, gesture.pinch.mid.x, gesture.pinch.mid.y);
+  }
+
+  function endTouch(event: PointerEvent, commit: boolean): void {
+    clearHold();
+    const step = fingerUp(gesture, event.pointerId, commit);
+    gesture = step.gesture;
+    if (!step.tap) return;
+    if (mode === 'build') {
+      place(step.tap.x, step.tap.y);
+      return;
+    }
+    if (mode === 'attack') {
+      orderAt(step.tap.x, step.tap.y);
+      mode = 'none';
+      return;
+    }
+    selectPoint(step.tap.x, step.tap.y, false);
+  }
+
   function onPointerDown(event: PointerEvent): void {
+    if (touchLike(event)) {
+      beginTouch(event);
+      return;
+    }
     if (event.button !== 0) return;
     if (mode === 'build' || mode === 'attack') return;
     drag = { x: event.clientX, y: event.clientY, moved: false, pointerId: event.pointerId };
@@ -845,6 +969,10 @@ export function startField(
   function onPointerMove(event: PointerEvent): void {
     const cell = cellAt(event.clientX, event.clientY);
     hover = cell;
+    if (touchLike(event)) {
+      moveTouch(event);
+      return;
+    }
     if (!drag || event.pointerId !== drag.pointerId) return;
     const width = event.clientX - drag.x;
     const height = event.clientY - drag.y;
@@ -859,6 +987,10 @@ export function startField(
   }
 
   function onPointerUp(event: PointerEvent): void {
+    if (touchLike(event)) {
+      endTouch(event, true);
+      return;
+    }
     if (event.button === 2) {
       if (mode !== 'none') {
         mode = 'none';
@@ -879,21 +1011,7 @@ export function startField(
     }
     if (!drag || event.pointerId !== drag.pointerId) return;
     if (drag.moved && box) selectIds(unitsIn(box, lastAlpha), event.shiftKey);
-    else {
-      const id = pick(event.clientX, event.clientY, lastAlpha, me);
-      if (id !== null) selectIds([id], event.shiftKey);
-      else {
-        const building = ownBuildingAt(event.clientX, event.clientY);
-        if (building !== null) {
-          if (!event.shiftKey) selected.clear();
-          selectedBuilding = building;
-          hideRejection = true;
-        } else if (!event.shiftKey) {
-          selected.clear();
-          selectedBuilding = null;
-        }
-      }
-    }
+    else selectPoint(event.clientX, event.clientY, event.shiftKey);
     box = null;
     drag = null;
   }
@@ -1020,11 +1138,19 @@ export function startField(
   const keyDown = (event: KeyboardEvent) => onKey(event, true);
   const keyUp = (event: KeyboardEvent) => onKey(event, false);
   const onContextMenu = (event: Event) => event.preventDefault();
+  const onPointerCancel = (event: PointerEvent) => {
+    if (!touchLike(event)) return;
+    endTouch(event, false);
+  };
+  const preventGesture = (event: Event) => event.preventDefault();
   if (!poster) {
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
+    canvas.addEventListener('pointermove', onPointerMove, { passive: false });
     canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerCancel);
     canvas.addEventListener('contextmenu', onContextMenu);
+    canvas.addEventListener('gesturestart', preventGesture);
+    canvas.addEventListener('gesturechange', preventGesture);
     canvas.addEventListener('wheel', onWheel, { passive: false });
     minimap.addEventListener('pointerdown', onMap);
     window.addEventListener('keydown', keyDown);
@@ -1063,10 +1189,14 @@ export function startField(
     stopped = true;
     actions.current = null;
     cancelAnimationFrame(frame);
+    clearHold();
     canvas.removeEventListener('pointerdown', onPointerDown);
     canvas.removeEventListener('pointermove', onPointerMove);
     canvas.removeEventListener('pointerup', onPointerUp);
+    canvas.removeEventListener('pointercancel', onPointerCancel);
     canvas.removeEventListener('contextmenu', onContextMenu);
+    canvas.removeEventListener('gesturestart', preventGesture);
+    canvas.removeEventListener('gesturechange', preventGesture);
     canvas.removeEventListener('wheel', onWheel);
     minimap.removeEventListener('pointerdown', onMap);
     window.removeEventListener('keydown', keyDown);
