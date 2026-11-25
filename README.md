@@ -111,6 +111,10 @@ A refused order leaves its reason on screen and spends nothing.
 | Watch a recorded match | title screen, or `?replay=` |
 | Run your own agent | title screen, Arena |
 
+On a touch screen the same actions are gestures: drag one finger to pan, pinch to zoom,
+tap to select, and hold to move, attack or gather. Build and attack still finish with a tap.
+The mouse, the wheel and `W` `A` `S` `D` are unchanged.
+
 A replay file is version 2: the seed, the seats, the tick count and the human orders. Loading it
 resimulates General Varek; his decisions are never stored. The build is a static site with relative
 paths, so it runs from any folder, and the field is a 128×128 grid played at a fixed 20 steps per second.

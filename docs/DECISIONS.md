@@ -215,7 +215,15 @@ On 2026-11-12 the match was still a flat sheet, so the rock walls and the bases 
 
 **Consequences**: A replay v2 file may name any of the four seat controls. An older reader refuses `varek_easy` and `varek_hard` instead of playing the wrong opponent. The skirmish from the title screen is still the normal level. The leaderboard was regenerated: its matches against `varek` are the same games as before.
 
-## 039. Defer the external network evidence while completing the human match flow
+## 039. Touch pans with one finger and orders on a hold
+
+**Context**: The field treated every primary pointer drag as a selection box, and the wheel was the only zoom. A phone has no right click, no wheel and no WASD. The orders bar also started 200 px from the left, beside the minimap, so on a 360 px portrait the later actions sat off-screen. The invite link was a single-line field inside a 420 px card, so the URL was cut off even in landscape.
+
+**Decision**: A mouse drag still draws the selection box, and the wheel, WASD and right click stay as they are. A touch or pen drag pans, a pinch zooms, a tap selects, and a hold issues the order a right click would. On a narrow screen the orders bar spans the width, in two columns, and the minimap moves to the top corner. Buttons grow to 44 px when the primary pointer is coarse. The invite link wraps onto as many lines as it needs. The ground shader does not use the reserved word `patch`.
+
+**Consequences**: The simulation, commands and checksums do not change. Desktop mouse and keyboard input takes the same path as before. A coarse pointer sees a one-line hint that names the gestures.
+
+## 040. Defer the external network evidence while completing the human match flow
 
 **Context**: The 2026-11-25 review identifies session controls and production visibility as the next human-facing slice. The owner asked to proceed. Milestone 7 has implemented transport and local verification, but its remaining acceptance test needs two people on different networks, including a mobile connection. A local automated run cannot supply that evidence. Blocking all independent client work on that external session would prevent progress on the reviewed game flow.
 

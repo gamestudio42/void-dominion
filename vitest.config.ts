@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['packages/*/test/**/*.test.ts'],
+    include: ['packages/*/test/**/*.test.ts', 'apps/game/test/**/*.test.ts'],
     environment: 'node',
     /**
      * Many tests play a whole match. Alone they take 2–5 s, and on a loaded machine

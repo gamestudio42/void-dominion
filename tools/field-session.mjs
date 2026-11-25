@@ -118,8 +118,8 @@ try {
   })()`, 15_000, 'the host button');
   if (!clicked) throw new Error('host button was not clicked');
   const link = await waitFor(host, `(() => {
-    const input = document.querySelector('input[readonly]');
-    return input && String(input.value).includes('#join=') ? input.value : '';
+    const link = document.querySelector('.link-url')?.textContent.trim();
+    return link?.includes('#join=') ? link : '';
   })()`, 20_000, 'the match link');
   await guest.call('Page.navigate', { url: link });
   await waitFor(host, `Boolean(window.__vd && document.querySelector('.diagnostics textarea'))`, JOIN_MS, 'the host field');

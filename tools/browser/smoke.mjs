@@ -76,8 +76,9 @@ function connection(address) {
   };
 }
 
-async function run(language, width, height) {
+async function run(language, width, height, touch = false) {
   const name = `${language}-${width}x${height}`;
+  if (process.env.SMOKE_CASE && !name.includes(process.env.SMOKE_CASE)) return;
   console.log(`RUN ${name}`);
   const profile = join(work, name);
   const downloads = join(profile, 'downloads');
@@ -145,13 +146,65 @@ async function run(language, width, height) {
     };
     await page.call('Runtime.enable');
     await page.call('Page.enable');
-    await page.call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+    await page.call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: touch });
+    if (touch) await page.call('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
     const { userAgent } = await page.call('Browser.getVersion');
     await page.call('Network.setUserAgentOverride', { userAgent, acceptLanguage: language });
     await page.call('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads });
     await page.call('Page.navigate', { url });
     await button(label.start);
     await wait('window.__vd && window.__vd.read().tick > 2', 'skirmish starts');
+    if (touch) {
+      await wait('window.__vd.read().tick > 20', 'touch field has rendered');
+      assert.equal(await evaluate(`(() => {
+        const controls = document.querySelector('.session-controls').getBoundingClientRect();
+        return ['.topbar', '.minimap'].every(selector => {
+          const r = document.querySelector(selector).getBoundingClientRect();
+          return controls.right <= r.left || controls.left >= r.right || controls.bottom <= r.top || controls.top >= r.bottom;
+        });
+      })()`), true, 'session controls do not cover resources or the minimap');
+      const tap = async ({ x, y }) => {
+        assert.ok(x >= 0 && x <= width && y >= 0 && y <= height, 'touch target fits viewport');
+        // Queue both events without a rendering round trip that could turn a tap into a hold.
+        await Promise.all([
+          page.call('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] }),
+          page.call('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }),
+        ]);
+      };
+      const tapButton = async (text) => {
+        const target = await evaluate(`(() => {
+          const scope = document.querySelector('dialog[open]') ?? document;
+          const el = [...scope.querySelectorAll('button')].find(el => el.textContent.trim() === ${JSON.stringify(text)});
+          if (scope !== document) el.scrollIntoView({block: 'nearest'});
+          const r = el.getBoundingClientRect();
+          return {x: r.x + r.width / 2, y: r.y + r.height / 2};
+        })()`);
+        await tap(target);
+      };
+      await tap(await evaluate(`(() => {
+        const worker = window.__vd.read().units.find(u => u.owner === 1);
+        return window.__vd.project(worker.x, worker.y);
+      })()`));
+      await wait(`document.querySelector('.card')?.textContent.includes(${JSON.stringify(pt ? 'Engenheiro' : 'Engineer')})`, 'touch selects worker');
+      await screenshot('touch-selection');
+      await tapButton(label.pause);
+      await wait('document.querySelector("dialog[open]")', 'touch opens pause');
+      const paused = await evaluate('window.__vd.read()');
+      await delay(500);
+      assert.deepEqual(await evaluate('window.__vd.read()'), paused);
+      await screenshot('touch-paused');
+      await tapButton(label.resume);
+      await wait(`window.__vd.read().tick > ${paused.tick}`, 'touch resumes');
+      await tapButton(label.pause);
+      await tapButton(label.restart);
+      await wait('window.__vd.read().tick < 20 && !document.querySelector("dialog[open]")', 'touch restarts');
+      await tapButton(label.pause);
+      await tapButton(label.menu);
+      await wait('!window.__vd && document.querySelector(".menu")', 'touch returns to menu');
+      assert.deepEqual(page.errors, []);
+      console.log(`PASS ${name}: touch selection, pause, resume, restart, menu`);
+      return;
+    }
     await button(label.stop);
     await wait(`document.querySelector('.refusal')?.textContent.includes(${JSON.stringify(pt ? 'Selecione' : 'Select')})`, 'no-selection feedback');
     await wait('window.__vd.read().ore >= 250', 'ore for a barracks and two riflemen');
@@ -240,6 +293,7 @@ try {
   for (const language of ['en-US', 'pt-BR']) {
     for (const [width, height] of [[1280, 720], [1920, 1080]]) await run(language, width, height);
   }
+  for (const [width, height] of [[360, 800], [844, 390]]) await run('pt-BR', width, height, true);
 } finally {
   await stop(server);
   await rm(work, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

@@ -51,7 +51,7 @@ No coverage target yet. Focus on invariants and acceptance criteria from `docs/R
 
 ## Browser smoke gate
 
-Run `pnpm build && pnpm test:browser`. The script serves the production build on localhost, launches an isolated headless Chrome profile, and checks English and pt-BR at 1280×720 and 1920×1080. It requires Node 22 and Chrome (`CHROME` can override `/usr/bin/google-chrome-stable`). `SMOKE_URL` can target an already running local build. CI runs this after the build and keeps screenshots under the `browser-smoke` artifact.
+Run `pnpm build && pnpm test:browser`. The script serves the production build on localhost, launches an isolated headless Chrome profile, and checks English and pt-BR at 1280×720 and 1920×1080. Additional pt-BR touch checks at 360×800 and 844×390 cover selection and session controls. It requires Node 22 and Chrome (`CHROME` can override `/usr/bin/google-chrome-stable`). `SMOKE_URL` can target an already running local build. `SMOKE_CASE` filters scenario names by substring for a focused rerun (for example, `SMOKE_CASE=360x800 pnpm test:browser`). CI runs this after the build and keeps screenshots under the `browser-smoke` artifact.
 
 The checks select workers and place a building using pointer input, verify occupied placement rejection, finish a barracks and train two riflemen, inspect the current/waiting production, pause and compare state, export and independently replay the saved file, resume, restart and return to title. Complete deterministic victory and defeat files are loaded through the player's file input to exercise result/export/retry. This outcome coverage does not claim a human played those full matches live.
 
@@ -69,3 +69,9 @@ Validated the local milestone 8 working tree based on `1cf1f44`, before any comm
 - Screenshots were inspected for production, pause and result layout; final captures and the run log are in the ignored `test-results/browser/` directory.
 
 Initial smoke runs exposed a test click that selected a passing worker instead of the barracks and a wall-time limit too short for loaded software rendering. The final script clicks the building roof and uses bounded functional waits. The complete matrix was rerun successfully. This is not a frame-rate result, external-player playtest or remote CI result.
+
+### PR integration with touch controls — 2026-11-25
+
+Integrated `origin/main` at `efff2f6` (PR #31) before opening this PR. The existing touch decision 039 is preserved verbatim; the scheduling decision is appended as 040. `pnpm check` passed 214 tests across 34 files and the production build passed. The four desktop scenarios passed after integration. Focused final runs also passed touch selection, pause/resume, restart and menu at 360×800 and 844×390; assertions verify session controls do not cover resources or the minimap. Screenshots were inspected in both orientations.
+
+The touch harness queues press and release together so a slow software-rendering round trip cannot accidentally turn a tap into a hold. Result dialog buttons are scrolled into view before tapping. Portrait session controls sit below the minimap, landscape controls below the resource bar, and pause/restart clear pending touch gestures. The earlier one-machine multiplayer evidence is from before this integration; no new cross-network evidence is claimed.

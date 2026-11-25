@@ -66,8 +66,21 @@ const EMPTY: FieldUi = {
   playback: null,
 };
 
+function useCoarsePointer(): boolean {
+  const [coarse, setCoarse] = useState(() => window.matchMedia('(pointer: coarse)').matches);
+  useEffect(() => {
+    const query = window.matchMedia('(pointer: coarse)');
+    const apply = () => setCoarse(query.matches);
+    apply();
+    query.addEventListener('change', apply);
+    return () => query.removeEventListener('change', apply);
+  }, []);
+  return coarse;
+}
+
 export function App() {
   const text = messagesFor(navigator.language);
+  const coarse = useCoarsePointer();
   const joining = useRef(false);
   const menuFile = useRef<HTMLInputElement>(null);
   const [replayError, setReplayError] = useState(false);
@@ -159,6 +172,7 @@ export function App() {
           <p className="eyebrow">{text.frontier}</p>
           <h1>{text.title}</h1>
           <p className="tagline">{text.tagline}</p>
+          {coarse && screen.kind === 'menu' && <p className="hint">{text.hint_touch}</p>}
           {screen.kind === 'menu' && (
             <>
               <button type="button" onClick={() => setScreen({ kind: 'playing', mode: { kind: 'offline' } })}>
@@ -238,12 +252,22 @@ function Link({ link, copy, copied }: { link: string; copy: string; copied: stri
   const [done, setDone] = useState(false);
   return (
     <div className="link">
-      <input readOnly value={link} onFocus={(event) => event.target.select()} />
+      <p className="link-url" tabIndex={0} onFocus={(event) => selectContents(event.currentTarget)} onClick={(event) => selectContents(event.currentTarget)}>
+        {link}
+      </p>
       <button type="button" onClick={() => void navigator.clipboard?.writeText(link).then(() => setDone(true))}>
         {done ? copied : copy}
       </button>
     </div>
   );
+}
+
+function selectContents(node: HTMLElement): void {
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
 }
 
 function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
@@ -252,8 +276,10 @@ function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const actions = useRef<FieldActions | null>(null);
   const text = messagesFor(navigator.language);
+  const coarse = useCoarsePointer();
   const [ui, setUi] = useState<FieldUi>(EMPTY);
   const [leaving, setLeaving] = useState(false);
+  const touchHint = ui.mode === 'build' ? text.hint_touch_build : ui.mode === 'attack' ? text.hint_touch_attack : text.hint_touch;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -372,6 +398,7 @@ function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
       {ui.online && !result && <MatchDiagnostics note={diagnostics} />}
       {ui.playback && (
         <section className="playback">
+          {coarse && <p className="hint">{text.hint_touch_watch}</p>}
           <button type="button" onClick={() => actions.current?.togglePlayback()}>
             {ui.playback.playing ? text.replay_pause : text.replay_play}
           </button>
@@ -403,6 +430,7 @@ function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
       {!ui.playback && (
       <fieldset className="commands" disabled={ui.paused || result || leaving}>
         {!ui.card && <p className="selection-hint">{text.no_selection}</p>}
+        {coarse && <p className="hint">{touchHint}</p>}
         <button type="button" onClick={() => actions.current?.stop()}>
           <Glyph name="stop" />
           {text.stop}

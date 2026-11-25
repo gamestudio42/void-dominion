@@ -10,7 +10,7 @@ The skirmish has a working economy, construction, production and combat foundati
 
 `pnpm check` passed all 198 tests across 31 files outside the restricted execution environment; `pnpm build` passed. The browser session covered the opening, rejected and accepted construction, rifleman production, the published replay's final result and the Arena's difficulty choices. It did not complete a human-commanded skirmish or the cross-network field test.
 
-Work remains sequential under decision 039: milestone 7's external field session is deferred, and milestone 8 is complete. The two-network test remains incomplete and is still a release gate. Milestone 9 is next; subsequent milestones retain their order.
+Work remains sequential under decision 040: milestone 7's external field session is deferred, and milestone 8 is complete. The two-network test remains incomplete and is still a release gate. Milestone 9 is next; subsequent milestones retain their order.
 
 ## Milestone status
 
@@ -23,7 +23,7 @@ Work remains sequential under decision 039: milestone 7's external field session
 | 4 | Conventional opponent, fog of war, replay file | Done |
 | 5 | Optional commander gateway and deterministic fallback | Done |
 | 6 | Headless arena, benchmarks, comparable seeds | Done |
-| 7 | Authoritative multiplayer | Implemented; cross-network field test pending (decision 039) |
+| 7 | Authoritative multiplayer | Implemented; cross-network field test pending (decision 040) |
 | 8 | Complete the human match flow and show production | Done locally; validation recorded 2026-11-25 |
 | 9 | Teach the opening and expose Varek difficulty | Planned |
 | 10 | Make army and economy control practical | Planned |
@@ -115,6 +115,8 @@ Work remains sequential under decision 039: milestone 7's external field session
 **Owners:** `apps/game/src/App.tsx`, `field.ts`, `locales.ts`, `styles.css`, browser verification tooling and `.github/workflows/pages.yml`.
 
 **Validated 2026-11-25:** `pnpm check` passed 205 tests across 32 files; the production build passed. Browser smoke passed all four English/pt-BR and 1280×720/1920×1080 combinations. A separate one-machine multiplayer match verified online leave cancellation and accessible result diagnostics; both replay audits passed at tick 2045. See [TESTING.md](TESTING.md) and [FIELD_TEST.md](FIELD_TEST.md). This local working-tree validation does not claim a commit, publication, remote CI run or cross-network field test.
+
+**PR integration:** the updated main (`efff2f6`, touch controls) passed 214 tests and the build. All four desktop scenarios and focused touch checks at 360×800 and 844×390 passed; see [TESTING.md](TESTING.md).
 
 ## Milestone 9 — Teach the opening and expose Varek difficulty
 
