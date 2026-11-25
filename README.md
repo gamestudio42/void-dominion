@@ -42,15 +42,16 @@
 2. **Build in the order the base needs.** An extractor, a refinery, a generator, a barracks, a vehicle
    factory, a defense turret and a second command center are on the card, each with its ore and aether
    price. A site that does not fit, a missing refinery or a short wallet is refused by name, and nothing
-   is charged.
+   is charged. Start with one engineer building the barracks so the others keep mining.
 3. **Watch supply and power.** Every unit takes supply, and the generator has to cover what the base
    draws. Power that falls short turns red on the top bar, and the unit that would exceed supply is
    refused.
 4. **Scout, then commit.** Unexplored ground is black. Explored ground remembers enemy buildings, and
    keeps a wreck where one fell out of sight. A unit or turret only shoots what its player can see.
 5. **Break the command center.** Destroy every command center the opponent owns to win. Both lost on the
-   same tick is a draw. General Varek holds his first march until your opening has a finished building,
-   so the match opens on economy rather than on a rush.
+   same tick is a draw. Normal Varek may begin his first march at tick 2400 (120 seconds of simulation
+   time), once his army is ready. He does not wait for your first building. Easy permits its first
+   march at 180 seconds; hard at 120 seconds with a larger army.
 
 Every command is validated against ownership, bounds, path, cost and sight before it changes the world.
 The simulation is deterministic: the same seed and the same command list produce the same state and the
@@ -91,7 +92,10 @@ reproducible replays and benchmarks. See [docs/AGENT_ARENA.md](docs/AGENT_ARENA.
 ## Play
 
 Open **[gamestudio42.github.io/void-dominion](https://gamestudio42.github.io/void-dominion/)**. Choose
-**Escaramuça contra o General Varek** to play the skirmish, or **Hospedar partida online** to create a
+**Escaramuça contra o General Varek** to play the skirmish. Choose easy, normal (the default) or hard
+and optionally hide the opening goals before starting. The goals follow selection, construction and
+your first rifleman; they do not delay Varek. Controls and resource help are available on the title
+screen and in the offline pause menu. Choose **Hospedar partida online** to create a
 match and send the link to a friend. The interface follows the browser language: Portuguese and English.
 A refused order leaves its reason on screen and spends nothing.
 

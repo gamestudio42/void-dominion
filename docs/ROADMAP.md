@@ -10,7 +10,7 @@ The skirmish has a working economy, construction, production and combat foundati
 
 `pnpm check` passed all 198 tests across 31 files outside the restricted execution environment; `pnpm build` passed. The browser session covered the opening, rejected and accepted construction, rifleman production, the published replay's final result and the Arena's difficulty choices. It did not complete a human-commanded skirmish or the cross-network field test.
 
-Work remains sequential under decision 040: milestone 7's external field session is deferred, and milestone 8 is complete. The two-network test remains incomplete and is still a release gate. Milestone 9 is next; subsequent milestones retain their order.
+Work remains sequential under decision 040: milestone 7's external field session is deferred, and milestone 8 is complete. The two-network test remains incomplete and is still a release gate. Milestone 9 is in progress; subsequent milestones retain their order.
 
 ## Milestone status
 
@@ -25,7 +25,7 @@ Work remains sequential under decision 040: milestone 7's external field session
 | 6 | Headless arena, benchmarks, comparable seeds | Done |
 | 7 | Authoritative multiplayer | Implemented; cross-network field test pending (decision 040) |
 | 8 | Complete the human match flow and show production | Done locally; validation recorded 2026-11-25 |
-| 9 | Teach the opening and expose Varek difficulty | Planned |
+| 9 | Teach the opening and expose Varek difficulty | Implemented locally; five first-time-player sessions pending |
 | 10 | Make army and economy control practical | Planned |
 | 11 | Validate strategic variety within Helion | Planned |
 | 12 | Add replay-safe skirmish variation | Planned |
@@ -63,7 +63,7 @@ Work remains sequential under decision 040: milestone 7's external field session
 - General Varek uses validated commands, fog limits visible entities, and explored buildings retain memories.
 - Saved human commands reproduce the match with Varek simulated again.
 - The normal opening remains pinned at tick 3338 and checksum 3280354694 for the unattended default seed.
-- Easy and hard now exist in the engine and Arena (decision 038), but the human skirmish still starts normal. Exposing them belongs to milestone 9.
+- Easy and hard exist in the engine and Arena (decision 038), and milestone 9 now exposes them in human setup. Normal remains the default.
 
 ## Milestone 5
 
@@ -124,15 +124,19 @@ Work remains sequential under decision 040: milestone 7's external field session
 
 **Hypothesis:** a first-time player can complete a barracks and train a rifleman before first contact, then explain what to defend.
 
-- [ ] Let a human choose easy, normal or hard before starting. Reuse `VAREK_LEVELS`; keep normal as the existing default and preserve difficulty in replay seats.
-- [ ] Add short, dismissible opening goals driven by observed progress: select an engineer, build a barracks, select it and train a rifleman. Add discoverable camera, selection and attack-move help.
-- [ ] Explain supply, aether prerequisites and power consequences at the relevant action, using the engine's reason keys.
-- [ ] Clarify that normal Varek's first march is permitted at tick 2400 (120 simulation seconds); it does not wait for the human to finish a building. Update misleading README wording.
+- [x] Let a human choose easy, normal or hard before starting. Reuse `VAREK_LEVELS`; keep normal as the existing default and preserve difficulty in replay seats.
+- [x] Add short, dismissible opening goals driven by observed progress: select an engineer, build a barracks, select it and train a rifleman. Add discoverable camera, selection and attack-move help.
+- [x] Explain supply, aether prerequisites and power consequences at the relevant action, using the engine's reason keys.
+- [x] Clarify that normal Varek's first march is permitted at tick 2400 (120 simulation seconds); it does not wait for the human to finish a building. Update misleading README wording.
 - [ ] Run five first-time-player sessions, recording time to first completed barracks, first rifleman, first contact, outcome and the player's explanation of defeat. Keep agent benchmark results separate.
 
 **Acceptance:** tests cover all three human starts, replay round trips, skipped guidance and no guidance-induced world changes. Browser sessions cover each level and locale. As a proposed usability gate, at least four of five new players complete the opening before first contact without verbal coaching; if not, revise one cause at a time and repeat. Do not tune combat solely to match the reference agent's win rate.
 
 **Owners:** human setup and field UI, `packages/content/src/field.ts`, existing replay tests and playtest notes.
+
+**Technical validation — 2026-11-25:** `pnpm check` passed 223 tests across 35 files. Final typecheck, lint, build and browser checks passed. Ten browser scenarios cover easy/hard setup in both locales, the normal opening in both locales at both desktop resolutions, and touch session/guidance controls in portrait and landscape. The default normal checksum and replay format are unchanged. See [TESTING.md](TESTING.md).
+
+**Acceptance still pending:** zero of the five first-time-player sessions have been run. Use [OPENING_PLAYTEST.md](OPENING_PLAYTEST.md); do not infer learning or the four-of-five target from automated play. Milestone 9 remains open and milestone 10 has not started.
 
 ## Milestone 10 — Make army and economy control practical
 

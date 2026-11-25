@@ -1,10 +1,12 @@
-import { BUILDING_KINDS, BUILDINGS } from '@void-dominion/content';
+import { BUILDING_KINDS, BUILDINGS, VAREK_LEVELS, type VarekLevel } from '@void-dominion/content';
+import { SIMULATION_HZ } from '@void-dominion/kernel';
 import { formatFieldReport } from '@void-dominion/net';
 import { deserializeReplay } from '@void-dominion/simulation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { decodeReplayLink } from '../../../packages/arena/src/sandbox.ts';
 import { ArenaPanel } from './arena.tsx';
 import { startField, type FieldActions, type FieldMode, type FieldUi } from './field.ts';
+import { SKIRMISH_LEVELS } from './opening.ts';
 import { messagesFor } from './locales.ts';
 import { forgetJoinLink, hostOnline, joinOnline, joinSecret, OnlineError, type OnlineFailure } from './online.ts';
 
@@ -35,6 +37,9 @@ function replayDataRequest(): string | null {
 
 const EMPTY: FieldUi = {
   paused: false,
+  opening: null,
+  difficulty: null,
+  rejectionHelp: null,
   selectedLabel: '',
   rejection: null,
   debug: false,
@@ -83,6 +88,8 @@ export function App() {
   const coarse = useCoarsePointer();
   const joining = useRef(false);
   const menuFile = useRef<HTMLInputElement>(null);
+  const [difficulty, setDifficulty] = useState<VarekLevel>('normal');
+  const [guidance, setGuidance] = useState(true);
   const [replayError, setReplayError] = useState(false);
   const [screen, setScreen] = useState<Screen>(() => {
     if (joinSecret()) return { kind: 'joining' };
@@ -175,9 +182,18 @@ export function App() {
           {coarse && screen.kind === 'menu' && <p className="hint">{text.hint_touch}</p>}
           {screen.kind === 'menu' && (
             <>
-              <button type="button" onClick={() => setScreen({ kind: 'playing', mode: { kind: 'offline' } })}>
+              <fieldset className="skirmish-setup">
+                <legend>{text.difficulty_label}</legend>
+                <select aria-label={text.difficulty_label} value={difficulty} onChange={event => setDifficulty(event.target.value as VarekLevel)}>
+                  {SKIRMISH_LEVELS.map(level => <option key={level} value={level}>{text[`difficulty_${level}`]}</option>)}
+                </select>
+                <p>{text.difficulty_plan(VAREK_LEVELS[difficulty].marchTick / SIMULATION_HZ, VAREK_LEVELS[difficulty].wave)}</p>
+                <label><input type="checkbox" checked={guidance} onChange={event => setGuidance(event.target.checked)} />{text.guidance_enabled}</label>
+              </fieldset>
+              <button type="button" onClick={() => setScreen({ kind: 'playing', mode: { kind: 'offline', difficulty, guidance } })}>
                 {text.skirmish}
               </button>
+              <ControlsHelp coarse={coarse} />
               <button type="button" onClick={host}>
                 {text.host_match}
               </button>
@@ -274,11 +290,13 @@ function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const refusalRef = useRef<HTMLDivElement>(null);
   const actions = useRef<FieldActions | null>(null);
   const text = messagesFor(navigator.language);
   const coarse = useCoarsePointer();
   const [ui, setUi] = useState<FieldUi>(EMPTY);
   const [leaving, setLeaving] = useState(false);
+  useEffect(() => { refusalRef.current?.scrollIntoView({ block: 'nearest' }); }, [ui.rejection]);
   const touchHint = ui.mode === 'build' ? text.hint_touch_build : ui.mode === 'attack' ? text.hint_touch_attack : text.hint_touch;
 
   useEffect(() => {
@@ -356,9 +374,9 @@ function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
               {ui.card.production.powerShort && (ui.card.production.current || ui.card.production.queue.length > 0) && <p className="power-warning">{text.production_power}</p>}
             </>}
           </div>}
+          {ui.card.production?.available && <ResourceHelp />}
         </section>
       )}
-      {ui.rejection && <p className="refusal" role="status">{ui.rejection}</p>}
       {ui.debug && (
         <p className="debug">
           {text.tick(ui.tick)} · {text.fps(ui.fps)}
@@ -368,6 +386,8 @@ function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
       {banner && ui.playback && <p className="banner">{banner}</p>}
       {ui.paused && !result && <SessionDialog title={text.paused} onDismiss={() => actions.current?.togglePause()}>
         <p>{text.pause_help}</p>
+        {ui.difficulty && <p>{text.difficulty_label}: {text[`difficulty_${ui.difficulty}`]}</p>}
+        <ControlsHelp coarse={coarse} />
         <p>{text.duration(ui.clock)}</p>
         <button type="button" autoFocus onClick={() => actions.current?.togglePause()}>{text.resume}</button>
         <button type="button" onClick={() => actions.current?.saveReplay()}>{text.save}</button>
@@ -429,8 +449,17 @@ function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
       )}
       {!ui.playback && (
       <fieldset className="commands" disabled={ui.paused || result || leaving}>
-        {!ui.card && <p className="selection-hint">{text.no_selection}</p>}
-        {coarse && <p className="hint">{touchHint}</p>}
+        {ui.opening && <section className="opening-goal" data-step={ui.opening} aria-label={text.opening_title}>
+          <details open={!coarse}>
+            <summary><span role="status"><strong>{text.opening_title}: </strong>{text.opening_action(ui.opening)}</span></summary>
+            <p>{text.opening_step(ui.opening)}</p>
+            {coarse && <button type="button" onClick={() => actions.current?.dismissGuidance()}>{text.dismiss_guidance}</button>}
+          </details>
+          {!coarse && <button type="button" onClick={() => actions.current?.dismissGuidance()}>{text.dismiss_guidance}</button>}
+        </section>}
+        {ui.rejection && <div ref={refusalRef} className="refusal" role="status"><p>{ui.rejection}</p>{ui.rejectionHelp && <p className="refusal-help">{ui.rejectionHelp}</p>}</div>}
+        {!ui.card && !ui.opening && <p className="selection-hint">{text.no_selection}</p>}
+        {coarse && !ui.opening && <p className="hint">{touchHint}</p>}
         <button type="button" onClick={() => actions.current?.stop()}>
           <Glyph name="stop" />
           {text.stop}
@@ -452,6 +481,8 @@ function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
             {text.train(text.unitName(train.kind), train.ore, train.aether)}
           </button>
         ))}
+        {ui.buildKind === 'aether_refinery' && <p className="selection-hint">{text.help_aether}</p>}
+        {ui.buildKind === 'power_generator' && <p className="selection-hint">{text.help_power}</p>}
         {ui.buildOpen &&
           BUILDING_KINDS.map((kind) => (
             <button
@@ -483,6 +514,21 @@ function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
       )}
     </div>
   );
+}
+
+function ResourceHelp() {
+  const text = messagesFor(navigator.language);
+  return <details className="resource-help"><summary>{text.resource_help}</summary>
+    <p>{text.help_supply}</p><p>{text.help_aether}</p><p>{text.help_power}</p>
+  </details>;
+}
+
+function ControlsHelp({ coarse }: { coarse: boolean }) {
+  const text = messagesFor(navigator.language);
+  return <details className="controls-help"><summary>{text.controls_help}</summary>
+    {coarse ? <p>{text.controls_touch}</p> : <><p>{text.controls_mouse}</p><p>{text.controls_attack}</p></>}
+    <p>{text.objective}</p><p>{text.help_ore}</p><ResourceHelp />
+  </details>;
 }
 
 function MatchDiagnostics({ note }: { note: string }) {

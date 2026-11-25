@@ -38,7 +38,7 @@ type Command =
 
 A rejected command returns a reason key (`unknown_unit`, `not_owner`, `out_of_bounds`, `blocked`, `no_path`, `no_ore`, `no_aether`, `no_supply`, `footprint`, `no_refinery`, `not_visible`, `cannot_produce`, `not_engineer`, `own_target`) and does not change the checksum. A refusal never reveals what the fog hides: a foreign unit or building out of sight answers `unknown_unit` like a missing one, a missing attack target answers `not_visible` like a hidden one, a build site has to be in sight before its units are consulted, and a gather needs an explored node. The client previews a site with the same `siteRefusal`.
 
-After commands, one tick steers, moves, gathers and builds, refreshes vision, resolves shots and deaths, then remembers buildings. A decided match stops stepping. `Simulation.create(seed, seats)` says who drives each seat: `'human'` or `'varek'`. The default is the skirmish, `['human', 'varek']`. Seat control is not part of the world, so it never enters the checksum. The log keeps every human seat's orders and nothing Varek decides. A replay file is version 2: `{ version, seed, seats, ticks, commands }`. A file without a version is read as version 1, which means the skirmish seed with a human on seat 1 and Varek on seat 2. A file with an order for a seat Varek drives is unreadable, and `Simulation.replay` skips such orders. Varek is simulated again on load.
+After commands, one tick steers, moves, gathers and builds, refreshes vision, resolves shots and deaths, then remembers buildings. A decided match stops stepping. `Simulation.create(seed, seats)` says who drives each seat: `'human'`, `'varek'` (normal), `'varek_easy'` or `'varek_hard'`. The default is the skirmish, `['human', 'varek']`. Seat control is not part of the world, so it never enters the checksum. The log keeps every human seat's orders and nothing Varek decides. A replay file is version 2: `{ version, seed, seats, ticks, commands }`. A file without a version is read as version 1, which means the skirmish seed with a human on seat 1 and Varek on seat 2. A file with an order for a seat Varek drives is unreadable, and `Simulation.replay` skips such orders. Varek is simulated again on load.
 
 ## Determinism
 
@@ -65,3 +65,7 @@ The Agent Arena (`packages/arena`) allows external agents to play matches via a 
 ## Art
 
 2D animation and VFX enter through `docs/artcraft-pipeline.md`. Meshes enter through `docs/blender-pipeline.md` as verified GLB. This client is Three.js. Do not follow the Godot import notes in those documents.
+
+## Human setup and opening guidance
+
+`apps/game/src/opening.ts` maps the human difficulty selection to existing replay seats. Menu descriptions read `VAREK_LEVELS` and `SIMULATION_HZ`. `OpeningGuide` reads only own living entities and interface selection; it remembers completion and dismissal, never issues commands, changes fog or postpones AI. Retry retains the replay seats and dismissal choice, and resets observed completion. Setup can skip guidance entirely. Resource explanations map the existing refusal keys; production power status still comes from the authoritative world or guest mirror. Guidance is absent from online matches, the poster and replay playback. Touch presents a compact, expandable goal so it does not cover the workers; refusals use the scrollable command flow.

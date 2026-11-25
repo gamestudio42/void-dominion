@@ -1,6 +1,6 @@
 # Testing
 
-All tests run in Vitest. `pnpm test` or `pnpm check` runs the full suite.
+Unit and simulation tests run in Vitest. `pnpm test` or `pnpm check` runs the full suite.
 
 ## Unit Tests
 
@@ -53,9 +53,11 @@ No coverage target yet. Focus on invariants and acceptance criteria from `docs/R
 
 Run `pnpm build && pnpm test:browser`. The script serves the production build on localhost, launches an isolated headless Chrome profile, and checks English and pt-BR at 1280×720 and 1920×1080. Additional pt-BR touch checks at 360×800 and 844×390 cover selection and session controls. It requires Node 22 and Chrome (`CHROME` can override `/usr/bin/google-chrome-stable`). `SMOKE_URL` can target an already running local build. `SMOKE_CASE` filters scenario names by substring for a focused rerun (for example, `SMOKE_CASE=360x800 pnpm test:browser`). CI runs this after the build and keeps screenshots under the `browser-smoke` artifact.
 
-The checks select workers and place a building using pointer input, verify occupied placement rejection, finish a barracks and train two riflemen, inspect the current/waiting production, pause and compare state, export and independently replay the saved file, resume, restart and return to title. Complete deterministic victory and defeat files are loaded through the player's file input to exercise result/export/retry. This outcome coverage does not claim a human played those full matches live.
+The checks select one worker and place a building using pointer input, verify occupied placement rejection, finish a barracks and train two riflemen, inspect the current/waiting production, pause and compare state, export and independently replay the saved file, resume, restart and return to title. Complete deterministic victory and defeat files are loaded through the player's file input to exercise result/export/retry. This outcome coverage does not claim a human played those full matches live.
 
 Screenshots go to `test-results/browser/`, including a failure capture. The existing localhost drive exposes a read-only projection and checksum for assertions; the smoke test does not assign a winner or modify the world. Unit checks in `packages/view3d/test/session-ui.test.ts` cover clock scheduling, authoritative production reads, power starvation and guest-mirror equivalence. They do not substitute for rendering checks.
+
+Additional easy/hard setup cases in both locales check difficulty seats in exported replays, dismissal, skipped guidance, retry and expanded help scrolling. Normal opening cases follow the guide through completed rifleman production and an engine-rejected aether order with visible explanatory text. Touch cases also expand and dismiss the compact guidance.
 
 This gate uses software rendering and reports functionality, not a GPU frame-rate benchmark. It does not contact multiplayer brokers, start Ollama or close the two-network field-test requirement.
 
@@ -75,3 +77,16 @@ Initial smoke runs exposed a test click that selected a passing worker instead o
 Integrated `origin/main` at `efff2f6` (PR #31) before opening this PR. The existing touch decision 039 is preserved verbatim; the scheduling decision is appended as 040. `pnpm check` passed 214 tests across 34 files and the production build passed. The four desktop scenarios passed after integration. Focused final runs also passed touch selection, pause/resume, restart and menu at 360×800 and 844×390; assertions verify session controls do not cover resources or the minimap. Screenshots were inspected in both orientations.
 
 The touch harness queues press and release together so a slow software-rendering round trip cannot accidentally turn a tap into a hold. Result dialog buttons are scrolled into view before tapping. Portrait session controls sit below the minimap, landscape controls below the resource bar, and pause/restart clear pending touch gestures. The earlier one-machine multiplayer evidence is from before this integration; no new cross-network evidence is claimed.
+
+### Human difficulty and opening guidance — 2026-11-25
+
+Validated the local milestone 9 working tree on `codex/opening-guidance`, based on `47b36a6` (merged PR #32):
+
+- `pnpm check`: 223 tests across 35 files passed. Nine new checks cover all three human starts, human-command replay round trips, the unchanged normal default, observed tutorial progress, foreign-entity exclusion, dismissal/retry, resource refusal explanations and unchanged simulation hashes. The focused nine-test suite was also rerun successfully after presentation adjustments.
+- Final typecheck, lint and production build passed.
+- `pnpm test:browser`: all ten scenarios passed. Four setup cases exercise easy/hard in English and pt-BR, including saved seats, skipped/dismissed guidance, retry and expanded help scrolling. Four normal-opening cases exercise English/pt-BR at 1280×720 and 1920×1080, following one engineer through barracks construction, accepted training, completed riflemen and an aether refusal with visible explanation. Two touch cases at 360×800 and 844×390 select a worker, expand/dismiss compact goals and pause/resume/restart/exit.
+- Screenshots were inspected for setup, completed opening/resource refusal and touch layout. Captures and `opening-run.log` are in the ignored `test-results/browser/` folder. Replays exported from the browser reproduce their checksum independently and retain their selected seats.
+
+Early runs exposed an all-worker construction order that stopped the test economy, a Portuguese unit-name mismatch in the test, and full guidance covering workers on a landscape touch viewport. The final opening selects one builder and leaves the others mining; touch goals use a short expandable summary. Refusals share the command flow so goals cannot cover them, and expanded menu help remains scrollable. The full ten-case matrix passed after these corrections.
+
+This is local automated functional evidence, not five first-time-player sessions, a GPU benchmark, a remote CI run, a deployment or a new multiplayer field test. The external learning gate remains pending in `docs/OPENING_PLAYTEST.md`.
