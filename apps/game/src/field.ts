@@ -8,6 +8,7 @@ import {
   unitDef,
   type BuildingKind,
   type UnitKind,
+  type VarekLevel,
 } from '@void-dominion/content';
 import { FIXED_DT, SIMULATION_HZ } from '@void-dominion/kernel';
 import { HostSession, type Channels, type GuestSession } from '@void-dominion/net';
@@ -43,7 +44,8 @@ import {
   TOUCH_SLOP,
   type Gesture,
 } from './gestures.ts';
-import { messagesFor, reasonText } from './locales.ts';
+import { messagesFor, reasonText, reasonHelp } from './locales.ts';
+import { OpeningGuide, skirmishSeats, type OpeningStep } from './opening.ts';
 import { createMirror } from './mirror.ts';
 import { BUILDING_MODELS, TERRAIN_MODELS, UNIT_MODELS } from './models.ts';
 import { productionCard, SessionClock, type ProductionCard } from './session-ui.ts';
@@ -76,6 +78,9 @@ export interface SelectionCard {
 
 export interface FieldUi {
   paused: boolean;
+  opening: OpeningStep | null;
+  difficulty: VarekLevel | null;
+  rejectionHelp: string | null;
   selectedLabel: string;
   rejection: string | null;
   debug: boolean;
@@ -126,7 +131,7 @@ export interface FieldUi {
  * seats and serves the guest. As guest it runs no simulation and draws the host's views.
  */
 export type FieldMode =
-  | { kind: 'offline' }
+  | { kind: 'offline'; difficulty?: VarekLevel; guidance?: boolean }
   | { kind: 'poster' }
   | { kind: 'host'; channels: Channels }
   | { kind: 'guest'; session: GuestSession }
@@ -138,6 +143,8 @@ interface DevDrive {
   read(): {
     tick: number;
     checksum: number | null;
+    seats: readonly string[] | null;
+    opening: OpeningStep | null;
     winner: number;
     ore: number;
     reason: string | null;
@@ -149,6 +156,7 @@ interface DevDrive {
 
 export interface FieldActions {
   togglePause(): void;
+  dismissGuidance(): void;
   restart(): void;
   stop(): void;
   mine(): void;
@@ -196,7 +204,7 @@ export function startField(
     ? null
     : replayFile
       ? Simulation.replay(replayFile.commands, 0, replayFile)
-      : Simulation.create(MATCH.seed, fieldMode.kind === 'host' ? ['human', 'human'] : undefined);
+      : Simulation.create(MATCH.seed, fieldMode.kind === 'host' ? ['human', 'human'] : skirmishSeats(fieldMode.kind === 'offline' ? fieldMode.difficulty : undefined));
   const mirror = guest ? createMirror(guest.seed, me) : null;
   if (mirror && guest?.view) mirror.apply(guest.view, guest.explored);
   let world: World = sim ? sim.world : mirror!.world;
@@ -209,6 +217,7 @@ export function startField(
   view.setEffectSheets(EFFECT_SHEETS);
   let watchCombat = combatWatcher(me);
   watchCombat(world);
+  const guide = new OpeningGuide(fieldMode.kind === 'offline' && fieldMode.guidance !== false);
   const sessionClock = new SessionClock(fieldMode.kind === 'offline');
   const selected = new Set<number>();
   const keys = new Set<string>();
@@ -493,6 +502,9 @@ export function startField(
     const card = selectionCard();
     const next: FieldUi = {
       paused: sessionClock.paused,
+      opening: guide.read(world, me, selected, selectedBuilding),
+      difficulty: fieldMode.kind === 'offline' && sim ? varekLevel(sim.seats[1]) : null,
+      rejectionHelp: note || pendingTicket !== null || hideRejection ? null : reasonHelp(messages, lastReason),
       selectedLabel: card?.title ?? '',
       card,
       rejection: note ?? (pendingTicket !== null || hideRejection ? null : reasonText(messages, lastReason)),
@@ -776,9 +788,11 @@ export function startField(
 
   actions.current = {
     togglePause,
+    dismissGuidance() { guide.dismiss(); publish(); },
     restart() {
       if (fieldMode.kind !== 'offline' || !sim) return;
       adoptReplay(Simulation.create(world.seed, sim.seats));
+      guide.reset();
       cancelMode();
       pendingTicket = null;
       pendingMark = null;
@@ -881,6 +895,7 @@ export function startField(
       }
       sim = Simulation.replay(file.commands, file.ticks, file);
       world = sim.world;
+      guide.reset();
       watchCombat = combatWatcher(me);
       watchCombat(world);
       previous = capture();
@@ -1232,6 +1247,8 @@ export function startField(
         return {
           tick: world.tick,
           checksum: sim?.hashState() ?? null,
+          seats: sim?.seats ?? null,
+          opening: guide.read(world, me, selected, selectedBuilding),
           winner: world.winner,
           ore: stock?.ore ?? 0,
           reason: lastReason,

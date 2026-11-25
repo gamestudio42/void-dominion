@@ -19,14 +19,14 @@ The beat this build changes is the whole skirmish: gather ore, spend it, train s
 
 ## What this build does
 
-- Starts a Helion versus Helion skirmish on the 128×128 field. The human is player 1. General Varek, a weight-driven opponent, is player 2.
+- Starts a Helion versus Helion skirmish on the 128×128 field. The human is player 1. General Varek, a weight-driven opponent, is player 2. Human setup offers the existing easy/normal/hard plans with normal as default. Optional opening goals read own selection, barracks construction and rifleman production; dismissing them does not change the match.
 - Engineers already mine the nearest ore. Ore is delivered to a command center or a finished extractor. Aether needs a finished refinery touching the node. A squad sent to one footprint takes different cells around it, and prefers cells the camera does not stack, so several units do not draw as one. An engineer mines, delivers or builds only after stopping.
 - Builds the Helion roster from `packages/content`: extractor, refinery, generator, barracks, factory, turret and a second command center. Barracks and the factory train the combat units.
 - Fights with hit points, armor and cooldown. A unit or turret only shoots what its player can see. Destroying every command center of a player ends the match. Both lost on the same tick is a draw.
 - Hides unexplored ground. Explored ground keeps a memory of enemy buildings, including a wreck if one falls out of sight.
 - Records the human's commands. Loading that file resimulates Varek; his orders are not stored.
 - The title screen opens an Arena. A pasted or loaded script issues the same commands, against Varek or another agent, and the match ends as a version-2 replay.
-- Holds Varek's first march until the opening can finish a building. Shows Contact when an enemy unit is visible.
+- Normal Varek can march from tick 2400 (120 simulation seconds) once his wave is ready; he does not inspect human construction. Easy permits the first march at 180 seconds, hard at 120 seconds. Shows Contact when an enemy unit is visible.
 - Pins the unattended seed: `pnpm sim` checks that the same winner, tick and checksum come back.
 - Accepts one produce, group or defend plan between ticks. The plan becomes an ordinary command and cannot see hidden units. The client does not consult a model.
 - Compares three unattended seeds headless. They end on the same tick. The checksum changes with the seed, because no rule draws from the random stream yet.

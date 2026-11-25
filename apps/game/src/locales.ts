@@ -1,6 +1,42 @@
+import type { OpeningStep } from './opening.ts';
 import type { BuildingKind, UnitKind } from '@void-dominion/content';
 
 export const en = {
+  opening_action: (step: OpeningStep) => ({
+    select_engineer: "Select one engineer",
+    build_barracks: "Build a barracks",
+    constructing: "Finish the barracks",
+    select_barracks: "Select the barracks",
+    train_rifleman: "Train a rifleman",
+    training: "Wait for your rifleman",
+    complete: "First rifleman ready",
+  })[step],
+  difficulty_label: "Varek difficulty",
+  difficulty_easy: "Easy",
+  difficulty_normal: "Normal",
+  difficulty_hard: "Hard",
+  guidance_enabled: "Show opening goals",
+  opening_title: "First steps",
+  dismiss_guidance: "Hide goals",
+  controls_help: "Controls and resources",
+  controls_mouse: "Click to select; drag a box to select units; Shift adds to selection. WASD pans, the wheel zooms, and the minimap focuses the camera.",
+  controls_attack: "Select soldiers, choose Attack, then click open ground to advance and engage enemies along the way. Right-click a target to attack it directly. Escape cancels the current order mode.",
+  controls_touch: "Drag to pan and pinch to zoom. Tap a unit or building to select it. Hold on the ground to move; hold on an enemy to attack. For attack-move, select soldiers, choose Attack and tap the destination.",
+  help_ore: "Engineers deliver mined ore to a command center or a completed extractor. Keep workers gathering while you build.",
+  help_aether: "Complete a refinery touching an aether node, then order an engineer to gather from that node. Units with an aether cost need that stock before training.",
+  help_power: "If power demand exceeds production, training stops until power is restored. Complete a generator to provide power.",
+  help_supply: "Units and queued training reserve supply. Complete a generator to increase capacity; queued orders also count.",
+  resource_help: "Supply, aether and power",
+  difficulty_plan: (seconds: number, wave: number) => `First march no earlier than ${seconds}s of match time, with at least ${wave} riflemen. Varek does not wait for your construction.`,
+  opening_step: (step: OpeningStep) => ({
+    select_engineer: "Select one engineer near your command center. Leave the other workers mining.",
+    build_barracks: "Choose Build → Barracks, then a clear, visible site near your base. Keep an engineer selected.",
+    constructing: "Your barracks is being built. Wait for the engineer to finish; the progress bar appears when you select it.",
+    select_barracks: "Select your completed barracks to see its training buttons.",
+    train_rifleman: "Choose Rifleman in the command bar. The queue shows accepted training orders.",
+    training: "A rifleman is in training. Watch the production bar; it stops if your base lacks power.",
+    complete: "Your first rifleman is ready. Keep gathering, grow your army and defend every command center.",
+  })[step],
   objective: 'Destroy every enemy command center. Protect your own.',
   pause_menu: 'Pause / menu',
   paused: 'Match paused',
@@ -149,6 +185,41 @@ export const en = {
 };
 
 export const ptBR: typeof en = {
+  opening_action: (step: OpeningStep) => ({
+    select_engineer: "Selecione um engenheiro",
+    build_barracks: "Construa um quartel",
+    constructing: "Conclua o quartel",
+    select_barracks: "Selecione o quartel",
+    train_rifleman: "Treine um fuzileiro",
+    training: "Espere seu fuzileiro",
+    complete: "Primeiro fuzileiro pronto",
+  })[step],
+  difficulty_label: "Dificuldade do Varek",
+  difficulty_easy: "Fácil",
+  difficulty_normal: "Normal",
+  difficulty_hard: "Difícil",
+  guidance_enabled: "Mostrar objetivos iniciais",
+  opening_title: "Primeiros passos",
+  dismiss_guidance: "Ocultar objetivos",
+  controls_help: "Controles e recursos",
+  controls_mouse: "Clique para selecionar; arraste uma caixa para selecionar unidades; Shift adiciona à seleção. WASD move a câmera, a roda aplica zoom e o minimapa posiciona a câmera.",
+  controls_attack: "Selecione soldados, escolha Atacar e clique no terreno para avançar e enfrentar inimigos pelo caminho. Clique com o botão direito em um alvo para atacá-lo diretamente. Escape cancela o modo de ordem atual.",
+  controls_touch: "Arraste para mover a câmera e pince para aplicar zoom. Toque em uma unidade ou construção para selecioná-la. Segure no terreno para mover e em um inimigo para atacar. Para avançar atacando, selecione soldados, escolha Atacar e toque no destino.",
+  help_ore: "Engenheiros entregam minério no centro de comando ou em um extrator concluído. Mantenha trabalhadores minerando enquanto constrói.",
+  help_aether: "Conclua uma refinaria encostada em um depósito de éter e ordene a um engenheiro que colete nele. Unidades com custo em éter precisam desse estoque antes do treinamento.",
+  help_power: "Se o consumo de energia superar a geração, o treinamento para até a energia ser restabelecida. Conclua um gerador para produzir energia.",
+  help_supply: "Unidades e treinamentos na fila reservam suprimento. Conclua um gerador para aumentar a capacidade; ordens na fila também contam.",
+  resource_help: "Suprimento, éter e energia",
+  difficulty_plan: (seconds: number, wave: number) => `Primeira marcha não antes de ${seconds}s de partida, com pelo menos ${wave} fuzileiros. Varek não espera sua construção.`,
+  opening_step: (step: OpeningStep) => ({
+    select_engineer: "Selecione um engenheiro perto do centro de comando. Deixe os outros minerando.",
+    build_barracks: "Escolha Construir → Quartel e um local livre e visível perto da base. Mantenha um engenheiro selecionado.",
+    constructing: "Seu quartel está em construção. Espere o engenheiro terminar; selecione o quartel para ver o progresso.",
+    select_barracks: "Selecione o quartel concluído para ver os botões de treinamento.",
+    train_rifleman: "Escolha Fuzileiro na barra de ordens. A fila mostra os treinamentos aceitos.",
+    training: "Um fuzileiro está em treinamento. Observe a barra de produção; ela para se faltar energia na base.",
+    complete: "Seu primeiro fuzileiro está pronto. Continue minerando, amplie o exército e defenda todos os centros de comando.",
+  })[step],
   objective: 'Destrua todos os centros de comando inimigos. Proteja os seus.',
   pause_menu: 'Pausar / menu',
   paused: 'Partida pausada',
@@ -321,4 +392,12 @@ export function reasonText(messages: Messages, reason: string | null): string | 
     own_target: messages.own_target,
   };
   return table[reason] ?? reason;
+}
+
+/** Context from the engine's refusal key, never a second validator. */
+export function reasonHelp(messages: Messages, reason: string | null): string | null {
+  if (reason === 'no_supply') return messages.help_supply;
+  if (reason === 'no_aether' || reason === 'no_refinery') return messages.help_aether;
+  if (reason === 'no_ore') return messages.help_ore;
+  return null;
 }

@@ -76,8 +76,8 @@ function connection(address) {
   };
 }
 
-async function run(language, width, height, touch = false) {
-  const name = `${language}-${width}x${height}`;
+async function run(language, width, height, touch = false, level = 'normal', setupOnly = false) {
+  const name = `${language}-${width}x${height}${setupOnly ? `-${level}-setup` : ''}`;
   if (process.env.SMOKE_CASE && !name.includes(process.env.SMOKE_CASE)) return;
   console.log(`RUN ${name}`);
   const profile = join(work, name);
@@ -98,6 +98,7 @@ async function run(language, width, height, touch = false) {
     restart: pt ? 'Reiniciar partida' : 'Restart match', menu: pt ? 'Voltar ao menu' : 'Back to the menu',
     stop: pt ? 'Parar' : 'Stop', build: pt ? 'Construir' : 'Build',
     barracks: pt ? 'Quartel 150' : 'Barracks 150', rifle: pt ? 'Fuzileiro 50' : 'Rifleman 50',
+    dismiss: pt ? 'Ocultar objetivos' : 'Hide goals',
     save: pt ? 'Salvar replay' : 'Save replay', again: pt ? 'Jogar novamente' : 'Play again',
     victory: pt ? 'Vitória' : 'Victory', defeat: pt ? 'Derrota' : 'Defeat',
   };
@@ -140,6 +141,7 @@ async function run(language, width, height, touch = false) {
       await button(label.save);
       const path = join(downloads, 'void-dominion-replay.json');
       await until(async () => { try { return (await readFile(path)).length > 0; } catch { return false; } }, 'replay download');
+      assert.deepEqual(JSON.parse(await readFile(path, 'utf8')).seats, expected.seats, 'export preserves difficulty seats');
       const actual = JSON.parse(execFileSync(process.execPath, [...replayArgs, 'verify', path], { cwd: root, encoding: 'utf8' }));
       assert.deepEqual(actual, { checksum: expected.checksum, tick: expected.tick, winner: expected.winner });
       await rm(path);
@@ -152,8 +154,59 @@ async function run(language, width, height, touch = false) {
     await page.call('Network.setUserAgentOverride', { userAgent, acceptLanguage: language });
     await page.call('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads });
     await page.call('Page.navigate', { url });
+    await wait('document.querySelector(".skirmish-setup select")', 'skirmish setup');
+    assert.equal(await evaluate("document.querySelector('.skirmish-setup select').value"), 'normal', 'normal is the default');
+    await evaluate(`(() => {
+      const select = document.querySelector('.skirmish-setup select');
+      select.value = ${JSON.stringify(level)};
+      select.dispatchEvent(new Event('change', {bubbles: true}));
+    })()`);
+    await screenshot('setup');
+    if (setupOnly) {
+      assert.equal(await evaluate(`(() => {
+        const menu = document.querySelector('.menu');
+        const help = menu.querySelector('.controls-help');
+        help.open = true;
+        help.querySelector('.resource-help').open = true;
+        menu.scrollTop = menu.scrollHeight;
+        const last = [...menu.querySelectorAll('button')].at(-1).getBoundingClientRect();
+        const reachable = last.top >= 0 && last.bottom <= innerHeight;
+        help.open = false;
+        menu.scrollTop = 0;
+        return reachable;
+      })()`), true, 'expanded menu help keeps the last action reachable');
+    }
     await button(label.start);
     await wait('window.__vd && window.__vd.read().tick > 2', 'skirmish starts');
+    const expectedSeats = ['human', level === 'normal' ? 'varek' : `varek_${level}`];
+    assert.deepEqual(await evaluate('window.__vd.read().seats'), expectedSeats);
+    await wait('document.querySelector(".opening-goal")?.dataset.step === "select_engineer"', 'initial opening goal');
+    if (setupOnly) {
+      await button(label.dismiss);
+      await wait('!document.querySelector(".opening-goal")', 'goals dismissed');
+      await button(label.pause);
+      await wait('document.querySelector("dialog[open]")', 'setup pause');
+      await evaluate("document.querySelector('dialog .controls-help').open = true");
+      await screenshot('help');
+      await checkExport();
+      await button(label.restart);
+      await wait('window.__vd.read().tick < 20 && !document.querySelector("dialog[open]")', 'setup retry');
+      assert.deepEqual(await evaluate('window.__vd.read().seats'), expectedSeats);
+      assert.equal(await evaluate('window.__vd.read().opening'), null, 'retry keeps dismissed guidance hidden');
+      await button(label.pause);
+      await button(label.menu);
+      await wait('document.querySelector(".skirmish-setup input")', 'setup returns');
+      await evaluate("document.querySelector('.skirmish-setup input').click()");
+      await button(label.start);
+      await wait('window.__vd && window.__vd.read().tick > 2', 'unguided start');
+      assert.equal(await evaluate('window.__vd.read().opening'), null, 'checkbox skips guidance');
+      await button(label.pause);
+      await button(label.menu);
+      await wait('!window.__vd', 'unguided exit');
+      assert.deepEqual(page.errors, []);
+      console.log(`PASS ${name}: selected difficulty, guidance dismissal/skip, replay seats, help, retry`);
+      return;
+    }
     if (touch) {
       await wait('window.__vd.read().tick > 20', 'touch field has rendered');
       assert.equal(await evaluate(`(() => {
@@ -175,7 +228,7 @@ async function run(language, width, height, touch = false) {
         const target = await evaluate(`(() => {
           const scope = document.querySelector('dialog[open]') ?? document;
           const el = [...scope.querySelectorAll('button')].find(el => el.textContent.trim() === ${JSON.stringify(text)});
-          if (scope !== document) el.scrollIntoView({block: 'nearest'});
+          el.scrollIntoView({block: 'nearest'});
           const r = el.getBoundingClientRect();
           return {x: r.x + r.width / 2, y: r.y + r.height / 2};
         })()`);
@@ -187,6 +240,13 @@ async function run(language, width, height, touch = false) {
       })()`));
       await wait(`document.querySelector('.card')?.textContent.includes(${JSON.stringify(pt ? 'Engenheiro' : 'Engineer')})`, 'touch selects worker');
       await screenshot('touch-selection');
+      await tap(await evaluate(`(() => {
+        const r = document.querySelector('.opening-goal summary').getBoundingClientRect();
+        return {x: r.x + r.width / 2, y: r.y + r.height / 2};
+      })()`));
+      await wait('document.querySelector(".opening-goal details")?.open', 'touch expands guidance');
+      await tapButton(label.dismiss);
+      await wait('!document.querySelector(".opening-goal")', 'touch dismisses guidance');
       await tapButton(label.pause);
       await wait('document.querySelector("dialog[open]")', 'touch opens pause');
       const paused = await evaluate('window.__vd.read()');
@@ -210,15 +270,12 @@ async function run(language, width, height, touch = false) {
     await wait('window.__vd.read().ore >= 250', 'ore for a barracks and two riflemen');
 
     // Real pointer selection and placement, with projection supplied by the existing localhost test hook.
-    const bounds = await evaluate(`(() => {
-      const p = window.__vd.read().units.filter(u => u.owner === 1).map(u => window.__vd.project(u.x, u.y));
-      return {left: Math.min(...p.map(p => p.x))-20, right: Math.max(...p.map(p => p.x))+20,
-        top: Math.min(...p.map(p => p.y))-30, bottom: Math.max(...p.map(p => p.y))+30};
-    })()`);
-    await page.call('Input.dispatchMouseEvent', { type: 'mousePressed', x: bounds.left, y: bounds.top, button: 'left', clickCount: 1 });
-    await page.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: bounds.right, y: bounds.bottom, button: 'left', buttons: 1 });
-    await page.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: bounds.right, y: bounds.bottom, button: 'left', clickCount: 1 });
+    await click(await evaluate(`(() => {
+      const worker = window.__vd.read().units.find(unit => unit.owner === 1 && unit.kind === 'engineer');
+      return window.__vd.project(worker.x, worker.y);
+    })()`));
     await wait(`document.querySelector('.card')?.textContent.includes(${JSON.stringify(pt ? 'Engenheiro' : 'Engineer')})`, 'workers selected');
+    await wait('document.querySelector(".opening-goal")?.dataset.step === "build_barracks"', 'selection advances guidance');
     await button(label.build);
     await button(label.barracks);
     await click(await point(10, 98));
@@ -234,6 +291,7 @@ async function run(language, width, height, touch = false) {
     await button(label.rifle);
     await button(label.rifle);
     await wait('document.querySelector(".production ol li")', 'waiting production visible');
+    await wait('document.querySelector(".opening-goal")?.dataset.step === "training"', 'accepted order advances guidance');
     await screenshot('production');
     console.log(`  ${name}: construction and production visible`);
 
@@ -247,6 +305,17 @@ async function run(language, width, height, touch = false) {
     await button(label.resume);
     await wait(`window.__vd.read().tick > ${paused.tick}`, 'resume steps');
     await wait('window.__vd.read().units.filter(u => u.owner === 1 && u.kind === "rifleman").length === 2', 'two riflemen produced');
+    await wait('document.querySelector(".opening-goal")?.dataset.step === "complete"', 'first rifleman completes opening');
+    await wait('window.__vd.read().ore >= 75', 'ore for aether rejection');
+    await button(pt ? 'Foguetista 75+25' : 'Rocketeer 75+25');
+    await wait('window.__vd.read().reason === "no_aether" && document.querySelector(".refusal-help")', 'engine refusal explains aether');
+    assert.equal(await evaluate(`(() => {
+      const refusal = document.querySelector('.refusal').getBoundingClientRect();
+      const goals = document.querySelector('.opening-goal').getBoundingClientRect();
+      const commands = document.querySelector('.commands').getBoundingClientRect();
+      return refusal.top >= goals.bottom && refusal.top >= commands.top && refusal.bottom <= commands.bottom;
+    })()`), true, 'resource refusal stays visible without covering goals');
+    await screenshot('opening-complete');
     await button(label.pause);
     await button(label.restart);
     await wait('window.__vd.read().tick < 20 && window.__vd.read().units.filter(u => u.owner === 1).length === 4 && !window.__vd.read().buildings.some(b => b.owner === 1 && b.kind === "barracks")', 'restart resets match');
@@ -291,9 +360,12 @@ async function run(language, width, height, touch = false) {
 try {
   await until(async () => { try { return (await fetch(url)).ok; } catch { return false; } }, 'preview server');
   for (const language of ['en-US', 'pt-BR']) {
-    for (const [width, height] of [[1280, 720], [1920, 1080]]) await run(language, width, height);
+    for (const level of ['easy', 'hard']) await run(language, 1280, 720, false, level, true);
   }
   for (const [width, height] of [[360, 800], [844, 390]]) await run('pt-BR', width, height, true);
+  for (const language of ['en-US', 'pt-BR']) {
+    for (const [width, height] of [[1280, 720], [1920, 1080]]) await run(language, width, height);
+  }
 } finally {
   await stop(server);
   await rm(work, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

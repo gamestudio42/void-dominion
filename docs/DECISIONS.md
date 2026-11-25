@@ -231,3 +231,11 @@ On 2026-11-12 the match was still a flat sheet, so the rock walls and the bases 
 
 **Consequences**: Offline pause changes frame scheduling only; it introduces no simulation command or checksum change. Production UI reads the existing local world or guest mirror. Online matches receive no pause/restart rule: leaving a host disconnects the guest; leaving a guest pauses the host without a forfeit or reconnect. The interface explains this before leaving. The milestone's tests must distinguish local browser evidence from the outstanding external session.
 
+## 041. Human difficulty selects existing seats; opening guidance only observes
+
+**Context**: Milestone 9 makes the first economy/build/production loop understandable. Easy and hard already exist in content and replay v2, but the human title button previously selected normal unconditionally. Claims that Varek waits for the human to finish construction were inaccurate: his march has a minimum tick and wave size.
+
+**Decision**: The human setup selects the existing Varek level, defaulting to normal; descriptions derive from `VAREK_LEVELS`. An optional, dismissible client guide reads own selection, barracks progress and accepted rifleman production. It never changes the world or AI timing. Restart keeps the current seats and the choice to hide guidance while resetting completion. Controls/resource help remains available in setup and the offline pause menu; resource refusals use engine keys.
+
+**Consequences**: No simulation, command, replay schema or pinned checksum changes are needed. Difficulty survives exported replay and restart. Automated checks and browser runs validate mechanics and presentation, not the proposed usability target: five first-time-player sessions remain required before milestone 9 is fully accepted. Work stays on milestone 9 until that evidence exists; no claim about human learning is inferred from an agent or script.
+
