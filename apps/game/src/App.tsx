@@ -1,7 +1,7 @@
 import { BUILDING_KINDS, BUILDINGS } from '@void-dominion/content';
 import { formatFieldReport } from '@void-dominion/net';
 import { deserializeReplay } from '@void-dominion/simulation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { decodeReplayLink } from '../../../packages/arena/src/sandbox.ts';
 import { ArenaPanel } from './arena.tsx';
 import { startField, type FieldActions, type FieldMode, type FieldUi } from './field.ts';
@@ -34,6 +34,7 @@ function replayDataRequest(): string | null {
 }
 
 const EMPTY: FieldUi = {
+  paused: false,
   selectedLabel: '',
   rejection: null,
   debug: false,
@@ -141,7 +142,15 @@ export function App() {
     );
   }
 
-  if (screen.kind === 'playing') return <Field mode={screen.mode} />;
+  if (screen.kind === 'playing') return <Field mode={screen.mode} onExit={() => {
+    if (screen.mode.kind === 'host' || screen.mode.kind === 'guest') {
+      // A new document closes the peer connection, including all session listeners.
+      location.assign(location.pathname);
+      return;
+    }
+    history.replaceState(null, '', location.pathname);
+    setScreen({ kind: 'menu' });
+  }} />;
   return (
     <>
       <Poster />
@@ -237,13 +246,14 @@ function Link({ link, copy, copied }: { link: string; copy: string; copied: stri
   );
 }
 
-function Field({ mode }: { mode: FieldMode }) {
+function Field({ mode, onExit }: { mode: FieldMode; onExit: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const actions = useRef<FieldActions | null>(null);
   const text = messagesFor(navigator.language);
   const [ui, setUi] = useState<FieldUi>(EMPTY);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -253,7 +263,11 @@ function Field({ mode }: { mode: FieldMode }) {
   }, [mode]);
 
   const banner = ui.banner === 'victory' ? text.victory : ui.banner === 'defeat' ? text.defeat : ui.banner === 'draw' ? text.draw : null;
-  const [diagnosticsCopied, setDiagnosticsCopied] = useState(false);
+  const resultDetail = ui.banner === 'victory' ? text.victory_detail : ui.banner === 'defeat' ? text.defeat_detail : text.draw_detail;
+  const canSave = ui.online !== 'guest' || ui.audit !== null;
+  const offline = mode.kind === 'offline';
+  const result = Boolean(banner) && !ui.playback;
+  const audit = ui.online && banner ? (ui.audit === 'ok' ? text.verified : ui.audit === 'failed' ? text.unverified : text.audit_checking) : null;
   const diagnostics = ui.online
     ? formatFieldReport({
         role: ui.online,
@@ -279,9 +293,13 @@ function Field({ mode }: { mode: FieldMode }) {
         {ui.latency !== null && <span className="chip">{text.latency(ui.latency)}</span>}
         <span className="clock">{ui.clock}</span>
       </header>
+      {!ui.playback && <div className="session-controls">
+        <p className="objective">{text.objective}</p>
+        {!banner && (offline
+          ? <button type="button" onClick={() => actions.current?.togglePause()}>{text.pause_menu}</button>
+          : <button type="button" onClick={() => setLeaving(true)}>{text.leave_match}</button>)}
+      </div>}
       {ui.peerGone && !banner && <p className="contact">{text.peer_left}</p>}
-      {banner && ui.online && !ui.audit && <p className="audit">{text.audit_checking}</p>}
-      {banner && ui.audit && <p className={ui.audit === 'ok' ? 'audit' : 'audit failed'}>{ui.audit === 'ok' ? text.verified : text.unverified}</p>}
       {ui.card && (
         <section className="card">
           <p className="selected">{ui.card.title}</p>
@@ -295,17 +313,55 @@ function Field({ mode }: { mode: FieldMode }) {
           )}
           {ui.card.damage > 0 && <p>{text.damage(ui.card.damage)}</p>}
           {ui.card.range > 0 && <p>{text.reach(ui.card.range)}</p>}
-          {(ui.card.ore > 0 || ui.card.aether > 0) && <p>{text.cost(ui.card.ore, ui.card.aether)}</p>}
+          {(ui.card.ore > 0 || ui.card.aether > 0) && <p>{text.cost_label(ui.card.ore, ui.card.aether)}</p>}
+          {ui.card.production && <div className="production">
+            {ui.card.production.construction < 100 && <>
+              <p>{text.construction_progress(ui.card.production.construction)}</p>
+              <progress aria-label={text.construction_progress(ui.card.production.construction)} value={ui.card.production.construction} max={100} />
+            </>}
+            {ui.card.production.available && <>
+              <p className="selected">{text.production}</p>
+              <p data-testid="production-current">{ui.card.production.current
+                ? text.production_current(text.unitName(ui.card.production.current.kind), ui.card.production.current.seconds)
+                : text.production_idle}</p>
+              {ui.card.production.current && <progress aria-label={text.production} value={ui.card.production.current.percent} max={100} />}
+              <p data-testid="production-queue">{text.production_queue(ui.card.production.queue.length)}</p>
+              {ui.card.production.queue.length > 0 && <ol>{ui.card.production.queue.map((kind, index) => <li key={index}>{text.unitName(kind)}</li>)}</ol>}
+              {ui.card.production.powerShort && (ui.card.production.current || ui.card.production.queue.length > 0) && <p className="power-warning">{text.production_power}</p>}
+            </>}
+          </div>}
         </section>
       )}
-      {ui.rejection && <p className="refusal">{ui.rejection}</p>}
+      {ui.rejection && <p className="refusal" role="status">{ui.rejection}</p>}
       {ui.debug && (
         <p className="debug">
           {text.tick(ui.tick)} · {text.fps(ui.fps)}
         </p>
       )}
       {ui.contact && !banner && <p className="contact">{text.contact}</p>}
-      {banner && <p className="banner">{banner}</p>}
+      {banner && ui.playback && <p className="banner">{banner}</p>}
+      {ui.paused && !result && <SessionDialog title={text.paused} onDismiss={() => actions.current?.togglePause()}>
+        <p>{text.pause_help}</p>
+        <p>{text.duration(ui.clock)}</p>
+        <button type="button" autoFocus onClick={() => actions.current?.togglePause()}>{text.resume}</button>
+        <button type="button" onClick={() => actions.current?.saveReplay()}>{text.save}</button>
+        <button type="button" onClick={() => actions.current?.restart()}>{text.restart}</button>
+        <button type="button" onClick={onExit}>{text.menu}</button>
+      </SessionDialog>}
+      {result && !leaving && <SessionDialog title={banner!}>
+        <p>{resultDetail}</p>
+        <p>{text.duration(ui.clock)}</p>
+        {audit && <p className={ui.audit === 'failed' ? 'power-warning' : 'audit-result'} role="status">{audit}</p>}
+        {ui.online && <MatchDiagnostics note={diagnostics} />}
+        {canSave && <button type="button" onClick={() => actions.current?.saveReplay()}>{text.save}</button>}
+        {offline && <button type="button" onClick={() => actions.current?.restart()}>{text.play_again}</button>}
+        <button type="button" onClick={() => ui.online && !ui.audit ? setLeaving(true) : onExit()}>{text.menu}</button>
+      </SessionDialog>}
+      {leaving && <SessionDialog title={text.leave_match} onDismiss={() => setLeaving(false)}>
+        <p>{result ? text.leave_result : ui.online === 'host' ? text.leave_host : text.leave_guest}</p>
+        <button type="button" autoFocus onClick={() => setLeaving(false)}>{text.keep_playing}</button>
+        <button type="button" onClick={onExit}>{text.leave_match}</button>
+      </SessionDialog>}
       {ui.box && (
         <div
           className="box"
@@ -313,17 +369,7 @@ function Field({ mode }: { mode: FieldMode }) {
         />
       )}
       <canvas ref={mapRef} className="minimap" width={168} height={168} />
-      {ui.online && (
-        <section className="diagnostics">
-          <textarea readOnly aria-label={text.diagnostics} value={diagnostics} onFocus={(event) => event.target.select()} />
-          <button
-            type="button"
-            onClick={() => void navigator.clipboard?.writeText(diagnostics).then(() => setDiagnosticsCopied(true))}
-          >
-            {diagnosticsCopied ? text.diagnostics_copied : text.copy_diagnostics}
-          </button>
-        </section>
-      )}
+      {ui.online && !result && <MatchDiagnostics note={diagnostics} />}
       {ui.playback && (
         <section className="playback">
           <button type="button" onClick={() => actions.current?.togglePlayback()}>
@@ -349,13 +395,14 @@ function Field({ mode }: { mode: FieldMode }) {
           />
           <span className="outcome">{ui.playback.outcome}</span>
           <span className="clock">{text.tick(ui.playback.tick)}</span>
-          <button type="button" onClick={() => location.assign(location.pathname)}>
+          <button type="button" onClick={onExit}>
             {text.replay_back}
           </button>
         </section>
       )}
       {!ui.playback && (
-      <section className="commands">
+      <fieldset className="commands" disabled={ui.paused || result || leaving}>
+        {!ui.card && <p className="selection-hint">{text.no_selection}</p>}
         <button type="button" onClick={() => actions.current?.stop()}>
           <Glyph name="stop" />
           {text.stop}
@@ -404,10 +451,38 @@ function Field({ mode }: { mode: FieldMode }) {
             void file.text().then((body) => actions.current?.loadReplay(body));
           }}
         />
-      </section>
+      </fieldset>
       )}
     </div>
   );
+}
+
+function MatchDiagnostics({ note }: { note: string }) {
+  const text = messagesFor(navigator.language);
+  const [copied, setCopied] = useState(false);
+  return <section className="diagnostics">
+    <textarea readOnly aria-label={text.diagnostics} value={note} onFocus={(event) => event.target.select()} />
+    <button type="button" onClick={() => void navigator.clipboard?.writeText(note).then(() => setCopied(true))}>
+      {copied ? text.diagnostics_copied : text.copy_diagnostics}
+    </button>
+  </section>;
+}
+
+/** Native modal provides focus containment and makes the field inert while open. */
+function SessionDialog({ title, children, onDismiss }: { title: string; children: ReactNode; onDismiss?: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    dialog?.showModal();
+    return () => dialog?.close();
+  }, []);
+  return <dialog ref={ref} className="session-dialog" aria-labelledby="session-title" onCancel={(event) => {
+    event.preventDefault();
+    onDismiss?.();
+  }}>
+    <h2 id="session-title">{title}</h2>
+    {children}
+  </dialog>;
 }
 
 function Glyph({ name }: { name: 'stop' | 'mine' | 'attack' | 'build' }) {

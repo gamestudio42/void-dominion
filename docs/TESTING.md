@@ -21,7 +21,7 @@ Every package under `packages/*/test/` has unit tests. The deterministic package
 `packages/arena/test/` verifies Agent Arena functionality:
 
 ### MVP1: External vs Varek
-- 100 consecutive headless matches without crash/deadlock/orphan process
+- 100 consecutive headless matches using in-process noop agents (scheduler/simulation stress, not child-process cleanup proof)
 - Same replay+engine+seed produces identical final checksum
 - Invalid commands rejected without state change
 - Timeouts/crashed processes/malformed JSON trigger correct policy
@@ -48,3 +48,24 @@ vitest run packages/arena/test/mvp1.test.ts    # Arena MVP1
 ## Coverage
 
 No coverage target yet. Focus on invariants and acceptance criteria from `docs/ROADMAP.md`.
+
+## Browser smoke gate
+
+Run `pnpm build && pnpm test:browser`. The script serves the production build on localhost, launches an isolated headless Chrome profile, and checks English and pt-BR at 1280×720 and 1920×1080. It requires Node 22 and Chrome (`CHROME` can override `/usr/bin/google-chrome-stable`). `SMOKE_URL` can target an already running local build. CI runs this after the build and keeps screenshots under the `browser-smoke` artifact.
+
+The checks select workers and place a building using pointer input, verify occupied placement rejection, finish a barracks and train two riflemen, inspect the current/waiting production, pause and compare state, export and independently replay the saved file, resume, restart and return to title. Complete deterministic victory and defeat files are loaded through the player's file input to exercise result/export/retry. This outcome coverage does not claim a human played those full matches live.
+
+Screenshots go to `test-results/browser/`, including a failure capture. The existing localhost drive exposes a read-only projection and checksum for assertions; the smoke test does not assign a winner or modify the world. Unit checks in `packages/view3d/test/session-ui.test.ts` cover clock scheduling, authoritative production reads, power starvation and guest-mirror equivalence. They do not substitute for rendering checks.
+
+This gate uses software rendering and reports functionality, not a GPU frame-rate benchmark. It does not contact multiplayer brokers, start Ollama or close the two-network field-test requirement.
+
+### Session and production slice — 2026-11-25
+
+Validated the local milestone 8 working tree based on `1cf1f44`, before any commit or publication:
+
+- `pnpm check`: 205 tests across 32 files passed, including seven new session/production checks. Child-process tests ran outside the restricted execution environment.
+- `pnpm build`: production build passed. Final typecheck, lint and whitespace checks passed.
+- `pnpm test:browser`: all four locale/viewport combinations passed. Each exercised the opening, placement rejection, construction, two produced riflemen, pause/resume, independently verified replay export, restart, restored victory/defeat and return to title. No uncaught browser exceptions were reported.
+- Screenshots were inspected for production, pause and result layout; final captures and the run log are in the ignored `test-results/browser/` directory.
+
+Initial smoke runs exposed a test click that selected a passing worker instead of the barracks and a wall-time limit too short for loaded software rendering. The final script clicks the building roof and uses bounded functional waits. The complete matrix was rerun successfully. This is not a frame-rate result, external-player playtest or remote CI result.

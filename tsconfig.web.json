@@ -12,6 +12,7 @@
     "apps/game/vite.config.ts",
     "vitest.config.ts",
     "tools/bench",
+    "tools/browser",
     "eslint.config.js"
   ]
 }

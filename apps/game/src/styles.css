@@ -110,12 +110,15 @@ canvas.field,
   flex-direction: column;
   gap: 4px;
   min-width: 160px;
+  max-width: 260px;
+  max-height: calc(100vh - 270px);
+  overflow: auto;
   margin: 0;
   padding: 8px 12px;
   background: rgba(18, 21, 28, 0.9);
   border: 1px solid #3d4d62;
   font-size: 13px;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .card p {
@@ -194,7 +197,29 @@ canvas.field,
   padding: 8px;
   background: rgba(18, 21, 28, 0.9);
   border: 1px solid #3d4d62;
+  margin: 0;
+  min-width: 0;
 }
+
+.commands:disabled { opacity: 0.5; }
+.selection-hint { margin: 0; flex-basis: 100%; font-size: 13px; color: #c9c2b4; }
+.production { border-top: 1px solid #3d4d62; padding-top: 8px; display: grid; gap: 6px; }
+.production progress { width: 100%; height: 8px; accent-color: #e0a045; }
+.production ol { margin: 0; padding-left: 20px; }
+.power-warning { color: #f0c2bc; }
+.audit-result { color: #9fd0b0; }
+.session-controls { position: fixed; top: 12px; right: 16px; width: 360px; max-width: 40vw; text-align: right; }
+.objective { margin: 0 0 8px; font-size: 13px; color: #e7e1d6; background: #12151ce6; padding: 6px 8px; }
+.session-controls button,
+.session-dialog button { background: #243044; color: #e7e1d6; border: 1px solid #3d4d62; border-radius: 4px; padding: 10px 14px; font: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid #e0a045; outline-offset: 3px; }
+.session-dialog { box-sizing: border-box; width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; background: #12151c; color: #e7e1d6; border: 1px solid #3d4d62; padding: 24px; }
+.session-dialog::backdrop { background: #080a0eb8; }
+.session-dialog h2 { margin: 0 0 16px; font-size: 28px; color: #f4e7c8; }
+.session-dialog p { line-height: 1.5; }
+.session-dialog > button { display: block; width: 100%; margin-top: 10px; text-align: left; }
+.session-dialog > button:hover { border-color: #e0a045; }
+.session-dialog .diagnostics { position: static; width: auto; margin: 12px 0; }
 
 .commands button {
   display: inline-flex;

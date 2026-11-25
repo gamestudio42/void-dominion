@@ -215,3 +215,11 @@ On 2026-11-12 the match was still a flat sheet, so the rock walls and the bases 
 
 **Consequences**: A replay v2 file may name any of the four seat controls. An older reader refuses `varek_easy` and `varek_hard` instead of playing the wrong opponent. The skirmish from the title screen is still the normal level. The leaderboard was regenerated: its matches against `varek` are the same games as before.
 
+## 039. Defer the external network evidence while completing the human match flow
+
+**Context**: The 2026-11-25 review identifies session controls and production visibility as the next human-facing slice. The owner asked to proceed. Milestone 7 has implemented transport and local verification, but its remaining acceptance test needs two people on different networks, including a mobile connection. A local automated run cannot supply that evidence. Blocking all independent client work on that external session would prevent progress on the reviewed game flow.
+
+**Decision**: Apply repository rule 12 to the milestone order: defer only milestone 7's cross-network field session and work on milestone 8 next. This supersedes the scheduling requirement in decision 025 that the two-network proof be the next work. Milestone 7 remains incomplete; the field-test acceptance criteria in decision 024 and `docs/FIELD_TEST.md` are unchanged. Finish milestone 8 before starting milestone 9. The cross-network session remains a release gate.
+
+**Consequences**: Offline pause changes frame scheduling only; it introduces no simulation command or checksum change. Production UI reads the existing local world or guest mirror. Online matches receive no pause/restart rule: leaving a host disconnects the guest; leaving a guest pauses the host without a forfeit or reconnect. The interface explains this before leaving. The milestone's tests must distinguish local browser evidence from the outstanding external session.
+
