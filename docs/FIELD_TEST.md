@@ -16,7 +16,7 @@ Milestone 7 stays open until this test has been played by two people on differen
 2. One person chooses **Host an online match** and copies the link. The link has `#join=` in it. Send the link in a chat message. Do not publish it.
 3. The other person opens that link. The fragment is dropped after the join, so a reload does not join again.
 4. Play a normal skirmish until one command center falls. Mine, build a barracks, train riflemen, and attack the other base. Engineers do not damage buildings, so the match does not end on its own.
-5. When the banner appears, wait for the line under it. **Result verified** means the guest replayed the host's file and the checksum matched, including the guest's own orders. **Result not verified** means it did not. Both screens show the same verdict. The host learns it from the guest's report.
+5. When the result panel appears, wait for its verification status. **Result verified** means the guest replayed the host's file and the checksum matched, including the guest's own orders. **Result not verified** means it did not. Both screens show the same verdict. The host learns it from the guest's report.
 6. On each screen, press **Copy diagnostics** (or select the note and copy it) and paste both notes into the report.
 
 If the join fails, the page says the two networks could not reach each other. That is the expected result when both sides are behind carrier-grade NAT. There is no relay. Write that down; it is a useful result, not a crash. A TURN server is only worth adding if this happens often.
@@ -91,3 +91,39 @@ result: defeat
 ```
 
 This does not close milestone 7.
+
+## One machine, 2026-11-25 — session controls and result panel
+
+Ran `FIELD_URL=http://127.0.0.1:4174/ node tools/field-session.mjs` against the local production build of milestone 8, based on `1cf1f44` with uncommitted session/production changes. Two isolated Chrome instances joined through the public brokers and WebRTC. Both could open and cancel the leave confirmation; the host kept stepping and neither exposed an offline pause. The finished result dialogs contained the diagnostics inside their focus boundary.
+
+Join: 17 s. Match: 119.3 s. The host built a barracks, produced riflemen and destroyed the guest command center through ordinary commands. Both sides finished at tick 2045, with passing audits and zero drops. These times are local observations under software rendering, not performance gates.
+
+Host:
+
+```text
+void-dominion field test
+role: host
+tick: 2045
+ping_ms: 157
+ice_local: host
+ice_remote: host
+drops: 0
+audit: pass
+result: victory
+```
+
+Guest:
+
+```text
+void-dominion field test
+role: guest
+tick: 2045
+ping_ms: 161
+ice_local: host
+ice_remote: host
+drops: 0
+audit: pass
+result: defeat
+```
+
+The test script also needed its host-ready predicate invoked and current Chrome software rendering enabled. An initial concurrent run was stopped to avoid competing with the offline browser matrix; the isolated final run passed. This does not close milestone 7 or replace the two-person, two-network session.

@@ -9,7 +9,7 @@ import {
   type BuildingKind,
   type UnitKind,
 } from '@void-dominion/content';
-import { FIXED_DT, FixedStepper } from '@void-dominion/kernel';
+import { FIXED_DT, SIMULATION_HZ } from '@void-dominion/kernel';
 import { HostSession, type Channels, type GuestSession } from '@void-dominion/net';
 import type { CommandBody } from '@void-dominion/protocol';
 import {
@@ -46,6 +46,7 @@ import {
 import { messagesFor, reasonText } from './locales.ts';
 import { createMirror } from './mirror.ts';
 import { BUILDING_MODELS, TERRAIN_MODELS, UNIT_MODELS } from './models.ts';
+import { productionCard, SessionClock, type ProductionCard } from './session-ui.ts';
 
 export interface Box {
   left: number;
@@ -70,9 +71,11 @@ export interface SelectionCard {
   range: number;
   ore: number;
   aether: number;
+  production?: ProductionCard | null;
 }
 
 export interface FieldUi {
+  paused: boolean;
   selectedLabel: string;
   rejection: string | null;
   debug: boolean;
@@ -134,15 +137,19 @@ interface DevDrive {
   order(cmd: Command): void;
   read(): {
     tick: number;
+    checksum: number | null;
     winner: number;
     ore: number;
     reason: string | null;
     units: { id: number; owner: number; kind: string; x: number; y: number }[];
     buildings: { id: number; owner: number; kind: string; x: number; y: number }[];
   };
+  project(x: number, y: number): Point;
 }
 
 export interface FieldActions {
+  togglePause(): void;
+  restart(): void;
   stop(): void;
   mine(): void;
   attack(): void;
@@ -202,7 +209,7 @@ export function startField(
   view.setEffectSheets(EFFECT_SHEETS);
   let watchCombat = combatWatcher(me);
   watchCombat(world);
-  const stepper = new FixedStepper({ dt: FIXED_DT, maxFrameTime: 0.25, maxStepsPerFrame: 8 });
+  const sessionClock = new SessionClock(fieldMode.kind === 'offline');
   const selected = new Set<number>();
   const keys = new Set<string>();
   const blot = document.createElement('canvas');
@@ -285,7 +292,7 @@ export function startField(
     current = capture();
     selected.clear();
     selectedBuilding = null;
-    stepper.reset();
+    sessionClock.reset();
   }
 
   function capture(): Map<number, Point> {
@@ -307,7 +314,7 @@ export function startField(
   }
 
   function issue(cmd: Command, mark: Point | null): void {
-    if (replayFile || !playing() || peerGone) return;
+    if (replayFile || !playing() || peerGone || sessionClock.paused) return;
     hideRejection = false;
     note = null;
     pendingMark = mark;
@@ -421,7 +428,7 @@ export function startField(
         building.progress < def.buildTicks
           ? messages.constructing(name, Math.floor((building.progress / def.buildTicks) * 100))
           : name;
-      return { title, hp: building.hp, maxHp: def.hp, damage: def.damage, range: def.range, ore: def.ore, aether: def.aether };
+      return { title, hp: building.hp, maxHp: def.hp, damage: def.damage, range: def.range, ore: def.ore, aether: def.aether, production: productionCard(world, building, me) };
     }
     const units = world.units.filter((unit) => selected.has(unit.id) && unit.hp > 0);
     if (units.length === 0) return null;
@@ -453,7 +460,7 @@ export function startField(
   }
 
   function clock(tick: number): string {
-    const total = Math.floor(tick / 20);
+    const total = Math.floor(tick / SIMULATION_HZ);
     const minutes = Math.floor(total / 60);
     const seconds = total % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -485,6 +492,7 @@ export function startField(
     const trains = trainChoices();
     const card = selectionCard();
     const next: FieldUi = {
+      paused: sessionClock.paused,
       selectedLabel: card?.title ?? '',
       card,
       rejection: note ?? (pendingTicket !== null || hideRejection ? null : reasonText(messages, lastReason)),
@@ -663,6 +671,7 @@ export function startField(
   }
 
   function selectIds(ids: number[], add: boolean): void {
+    note = null;
     if (!add) {
       selected.clear();
       selectedBuilding = null;
@@ -680,7 +689,8 @@ export function startField(
 
   function orderAt(clientX: number, clientY: number): void {
     const ids = selectedIds();
-    if (ids.length === 0 || !playing()) return;
+    if (!playing() || sessionClock.paused) return;
+    if (ids.length === 0) { selectionHint(); return; }
     const enemy = pick(clientX, clientY, lastAlpha, null);
     const enemyUnit = enemy === null ? null : world.units.find((unit) => unit.id === enemy && unit.owner !== me);
     if (enemyUnit) {
@@ -718,7 +728,7 @@ export function startField(
     if (!cell) return;
     const miners = engineerIds();
     const ids = miners.length > 0 ? miners : selectedIds();
-    if (ids.length === 0) return;
+    if (ids.length === 0) { selectionHint(); return; }
     issue({ type: 'build', playerId: me, unitIds: ids, kind: buildKind, at: cell }, cell);
   }
 
@@ -740,21 +750,63 @@ export function startField(
     return best;
   }
 
+  function selectionHint(): void {
+    note = messages.select_units;
+    publish();
+  }
+
+  function cancelMode(): void {
+    clearHold();
+    gesture = emptyGesture();
+    mode = 'none';
+    buildKind = null;
+    buildOpen = false;
+    drag = null;
+    box = null;
+    keys.clear();
+  }
+
+  function togglePause(): void {
+    if (!playing()) return;
+    sessionClock.toggle();
+    cancelMode();
+    lastTime = performance.now();
+    publish();
+  }
+
   actions.current = {
+    togglePause,
+    restart() {
+      if (fieldMode.kind !== 'offline' || !sim) return;
+      adoptReplay(Simulation.create(world.seed, sim.seats));
+      cancelMode();
+      pendingTicket = null;
+      pendingMark = null;
+      marker = null;
+      lastReason = null;
+      hideRejection = false;
+      note = null;
+      hover = null;
+      lastTime = performance.now();
+      view.focus(home.cc.x + 6, home.cc.y + 2);
+      publish();
+    },
     stop() {
       const ids = selectedIds();
-      if (ids.length === 0) return;
+      if (ids.length === 0) { selectionHint(); return; }
       issue({ type: 'stop', playerId: me, unitIds: ids }, null);
     },
     mine() {
       const miners = engineerIds();
       const ids = miners.length > 0 ? miners : selectedIds();
       const nodeId = nearestOre();
-      if (ids.length === 0 || nodeId === null) return;
+      if (ids.length === 0) { selectionHint(); return; }
+      if (nodeId === null) { note = messages.select_engineer; publish(); return; }
       const node = world.nodes.find((entry) => entry.id === nodeId);
       issue({ type: 'gather', playerId: me, unitIds: ids, nodeId }, node ? { x: node.x, y: node.y } : null);
     },
     attack() {
+      if (selectedIds().length === 0) { selectionHint(); return; }
       mode = mode === 'attack' ? 'none' : 'attack';
       if (mode === 'attack') buildKind = null;
       publish();
@@ -778,9 +830,7 @@ export function startField(
       issue({ type: 'produce', playerId: me, buildingId: selectedBuilding, kind }, null);
     },
     cancel() {
-      mode = 'none';
-      buildKind = null;
-      buildOpen = false;
+      cancelMode();
       publish();
     },
     saveReplay() {
@@ -817,7 +867,7 @@ export function startField(
         replayCursor = replayCursorAt(world.tick);
         previous = capture();
         current = previous;
-        stepper.reset();
+        sessionClock.reset();
       }
       publish();
     },
@@ -844,6 +894,8 @@ export function startField(
       marker = null;
       lastReason = null;
       note = null;
+      sessionClock.reset();
+      lastTime = performance.now();
       publish();
     },
   };
@@ -858,6 +910,7 @@ export function startField(
     if (building !== null) {
       if (!add) selected.clear();
       selectedBuilding = building;
+      note = null;
       hideRejection = true;
       return;
     }
@@ -956,6 +1009,7 @@ export function startField(
   }
 
   function onPointerDown(event: PointerEvent): void {
+    if (sessionClock.paused || !playing() && !replayFile) return;
     if (touchLike(event)) {
       beginTouch(event);
       return;
@@ -987,6 +1041,7 @@ export function startField(
   }
 
   function onPointerUp(event: PointerEvent): void {
+    if (sessionClock.paused || !playing() && !replayFile) return;
     if (touchLike(event)) {
       endTouch(event, true);
       return;
@@ -1017,18 +1072,22 @@ export function startField(
   }
 
   function onKey(event: KeyboardEvent, down: boolean): void {
+    if (!down) keys.delete(event.code);
+    if (event.target instanceof Element && event.target.closest('input, textarea, select, dialog')) return;
+    if (event.repeat && down) return;
     if (event.code === 'F3' && down) {
       debug = !debug;
       event.preventDefault();
       return;
     }
     if (event.code === 'Escape' && down) {
-      mode = 'none';
-      buildKind = null;
-      buildOpen = false;
+      if (mode !== 'none' || buildOpen) cancelMode();
+      else togglePause();
+      publish();
       event.preventDefault();
       return;
     }
+    if (sessionClock.paused) return;
     if (event.code === 'KeyW' || event.code === 'KeyA' || event.code === 'KeyS' || event.code === 'KeyD') {
       if (down) keys.add(event.code);
       else keys.delete(event.code);
@@ -1069,7 +1128,7 @@ export function startField(
 
     /** A host waits for a guest who dropped; a guest only draws. */
     const stepping = Boolean(sim) && !poster && !(host && peerGone) && (!replayFile || (replayPlaying && world.winner === 0 && world.tick < replayFile.ticks));
-    const stepped = stepper.advance(stepping ? elapsed : 0);
+    const stepped = sessionClock.advance(elapsed, stepping);
     const steps = replayFile ? stepped.steps * replaySpeed : stepped.steps;
     if (sim && steps > 0) {
       previous = current;
@@ -1164,6 +1223,7 @@ export function startField(
   if (dev && !poster) {
     devWindow.__vdToken = devToken;
     devWindow.__vd = {
+      project(x, y) { return view.project(x, y, 0.35); },
       order(cmd) {
         issue(cmd, null);
       },
@@ -1171,6 +1231,7 @@ export function startField(
         const stock = world.players.find((player) => player.id === me);
         return {
           tick: world.tick,
+          checksum: sim?.hashState() ?? null,
           winner: world.winner,
           ore: stock?.ore ?? 0,
           reason: lastReason,
@@ -1203,6 +1264,7 @@ export function startField(
     window.removeEventListener('keyup', keyUp);
     window.removeEventListener('resize', view.resize);
     host?.close();
+    cues.dispose();
     // Development runs this effect twice. A stale cleanup must not drop the live hook.
     if (devWindow.__vdToken === devToken) delete devWindow.__vd;
     view.dispose();

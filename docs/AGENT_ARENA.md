@@ -387,7 +387,7 @@ pnpm arena:replay       # Replay from trace
 All tests run without Ollama, network, or external APIs.
 
 ### MVP1: External vs Varek
-- 100 consecutive headless matches without crash/deadlock/orphan process
+- 100 consecutive headless matches with in-process noop agents; real subprocess failure cases are tested separately, and this stress test does not prove child-process cleanup
 - Same replay+engine+seed produces identical final checksum
 - Invalid commands rejected without state change
 - Timeouts/crashed processes/malformed JSON trigger correct policy

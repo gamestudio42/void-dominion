@@ -3,6 +3,7 @@
  * One sound per event, never a loop.
  */
 export interface Cues {
+  dispose(): void;
   accept(): void;
   refuse(): void;
   shot(): void;
@@ -36,6 +37,10 @@ export function createCues(): Cues {
   }
 
   return {
+    dispose() {
+      if (ctx) void ctx.close();
+      ctx = null;
+    },
     accept() {
       tone(620, 0.05, 'square', 0.03);
     },

@@ -101,6 +101,9 @@ A refused order leaves its reason on screen and spends nothing.
 | Move, attack, gather | right click on the ground, a unit or a node |
 | Place a building | `Construir`, pick the kind, then left click on the site |
 | Leave the current order mode | right click or `Esc` |
+| Pause / resume the offline match | `Pause / menu`; `Esc` when no order mode is active |
+| Restart or return to the title | pause menu, or the match result panel |
+| Inspect training progress and waiting units | select your production building |
 | Pan / zoom / focus the camera | `W` `A` `S` `D` / wheel / click the minimap |
 | Stop, mine, attack, build, train | the command card |
 | Tick and frames per second | `F3` |
@@ -136,6 +139,7 @@ pnpm dev        # http://localhost:5173
 | Command | Purpose |
 |---|---|
 | `pnpm check` | Type check, lint and unit tests |
+| `pnpm test:browser` | Production-build Chrome smoke checks, both locales and desktop resolutions (run `pnpm build` first) |
 | `pnpm sim` | Plays the three pinned seeds headless and compares the reports |
 | `pnpm bench` | Times every step of those seeds and prints the speed table (`docs/BENCHMARKS.md`) |
 | `pnpm bench:view` | Measures the view a multiplayer host sends its guest (`docs/BENCHMARKS.md`) |

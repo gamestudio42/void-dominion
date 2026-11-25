@@ -18,6 +18,8 @@ Dependencies point down only: `game` uses `view3d` and `simulation`; `view3d` do
 
 `apps/game` owns the frame loop. `FixedStepper` converts frame time into whole 1/20 s steps. Frames longer than 0.25 s and anything beyond 8 steps per frame are dropped. The renderer interpolates with the leftover alpha. Wall time never enters the simulation.
 
+`SessionClock` in `apps/game/src/session-ui.ts` wraps this scheduling for offline pause only. Paused frame time is discarded and the wall-time anchor is refreshed on resume, so no catch-up is queued. Restart creates a new simulation with the current seed and seats and clears selection, pending feedback and timing. Production cards read existing building jobs and catalog durations; they work on either a local world or the guest mirror. Native dialogs contain focus while paused or showing a result. Leaving an online match navigates to a new document, closing the peer connection without inventing a forfeit rule.
+
 `packages/view3d` draws units, buildings, nodes, rocks and the fog. It does not decide whether an order is legal. Selection is interface state. The client sends intentions: move, stop, attack, attack-move, gather, build and produce.
 
 ## Commands

@@ -34,6 +34,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
+      - run: pnpm test:browser
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: browser-smoke
+          path: test-results/browser
+          retention-days: 3
       - uses: actions/upload-artifact@v5
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         with:

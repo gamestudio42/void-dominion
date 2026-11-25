@@ -23,10 +23,10 @@ function launch(port, userData, url) {
   return spawn(CHROME, [
     '--headless=new',
     '--no-sandbox',
-    '--disable-gpu',
     '--disable-dev-shm-usage',
     '--use-gl=angle',
     '--use-angle=swiftshader-webgl',
+    '--enable-unsafe-swiftshader',
     '--no-first-run',
     '--autoplay-policy=no-user-gesture-required',
     `--remote-debugging-port=${port}`,
@@ -118,17 +118,41 @@ try {
   })()`, 15_000, 'the host button');
   if (!clicked) throw new Error('host button was not clicked');
   const link = await waitFor(host, `(() => {
-    const input = document.querySelector('input[readonly]');
-    return input && String(input.value).includes('#join=') ? input.value : '';
+    const link = document.querySelector('.link-url')?.textContent.trim();
+    return link?.includes('#join=') ? link : '';
   })()`, 20_000, 'the match link');
   await guest.call('Page.navigate', { url: link });
-  await waitFor(host, `(() => window.__vd && document.querySelector('.diagnostics textarea') ? true : false)`, JOIN_MS, 'the host field');
+  await waitFor(host, `Boolean(window.__vd && document.querySelector('.diagnostics textarea'))`, JOIN_MS, 'the host field');
   await waitFor(guest, `(() => {
     const box = document.querySelector('.diagnostics textarea');
     return box && box.value.includes('role: guest') ? true : false;
   })()`, JOIN_MS, 'the guest field');
   const fieldAt = Date.now();
   console.error(`field ready in ${((fieldAt - joinedAt) / 1000).toFixed(1)}s`);
+
+  // Online menus must not introduce an offline pause or silently disconnect a player.
+  for (const page of [host, guest]) {
+    const controls = await evaluate(page, `(() => {
+      const buttons = [...document.querySelectorAll('button')];
+      if (buttons.some((el) => ['pause / menu', 'pausar / menu'].includes(el.textContent.trim().toLowerCase()))) return false;
+      const leave = buttons.find((el) => /^(leave match|sair da partida)$/i.test(el.textContent.trim()));
+      if (!leave) return false;
+      leave.click();
+      return true;
+    })()`);
+    if (!controls) throw new Error('online session controls missing or local pause exposed');
+    await waitFor(page, `Boolean(document.querySelector('dialog[open]'))`, 5000, 'leave confirmation');
+    const before = await evaluate(host, 'window.__vd.read().tick');
+    await waitFor(host, `window.__vd.read().tick > ${before}`, 5000, 'host keeps stepping during leave confirmation');
+    const canceled = await evaluate(page, `(() => {
+      const button = [...document.querySelectorAll('dialog[open] button')].find((el) => /^(keep playing|continuar jogando)$/i.test(el.textContent.trim()));
+      if (!button) return false;
+      button.click();
+      return true;
+    })()`);
+    if (!canceled) throw new Error('could not cancel leaving');
+    await waitFor(page, `!document.querySelector('dialog[open]')`, 5000, 'leave canceled');
+  }
 
   const drive = `(async () => {
     const vd = window.__vd;
@@ -205,6 +229,10 @@ try {
   })()`;
   const hostNote = await waitFor(host, finished, 30_000, 'the host audit');
   const guestNote = await waitFor(guest, finished, 30_000, 'the guest audit');
+  for (const page of [host, guest]) {
+    const accessible = await evaluate(page, `Boolean(document.querySelector('dialog[open] .diagnostics textarea'))`);
+    if (!accessible) throw new Error('result dialog hides diagnostics outside its focus boundary');
+  }
   const endedAt = Date.now();
   console.log(JSON.stringify({
     joinSeconds: Number(((fieldAt - joinedAt) / 1000).toFixed(1)),

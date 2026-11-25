@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_ARENA_CONFIG, DEFAULT_SEAT_CONFIG, DeterministicAgentFactory, runMatch, type ArenaConfig } from '../src/index.ts';
 
 describe('MVP1: external vs Varek', () => {
-  it('runs 100 consecutive headless matches without crash/deadlock/orphan process', async () => {
+  it('runs 100 consecutive headless matches with in-process noop agents', async () => {
     const factory = new DeterministicAgentFactory();
     const config: ArenaConfig = {
       ...DEFAULT_ARENA_CONFIG,
